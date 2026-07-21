@@ -1,0 +1,9 @@
+# secrets
+.env
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
