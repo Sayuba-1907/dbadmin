@@ -71,3 +71,31 @@ One line per notable decision: what was chosen, what was ruled out, why.
 - **Schema creation**: `spring.jpa.hibernate.ddl-auto=update`.
   Ruled out: Flyway/Liquibase migrations.
   Why: the assignment's scope doesn't call for migration tooling, and Hibernate auto-DDL is enough to create the Tablo/Kolon/Tag metadata tables for this project's size.
+
+## Controller / DTO / API
+
+- **Response shape**: dedicated DTOs (`TabloResponse`/`KolonResponse`) instead of returning entities from the controller.
+  Ruled out: returning `Tablo`/`Kolon` entities directly.
+  Why: `Tablo` and `Kolon` reference each other (`Tablo.kolonlar` and `Kolon.tablo`); serializing an entity graph like that recurses forever (`Tablo` → its `kolonlar` → each `Kolon`'s `tablo` → its `kolonlar` → ...). The response DTOs only point one way, so the cycle can't happen.
+
+- **Changing a column's name vs. its tag**: two separate endpoints (`PATCH /kolonlar/{id}/name`, `PATCH /kolonlar/{id}/tag`) instead of one combined partial-update endpoint.
+  Ruled out: a single `PATCH /kolonlar/{id}` accepting optional `name`/`tagId` fields.
+  Why: a Java record can't tell "field not sent" apart from "field sent as null" without an extra wrapper type, and `tagId == null` is a meaningful value here (clear the tag). A combined endpoint would make "clear the tag" and "don't touch the tag" indistinguishable; two endpoints sidesteps the ambiguity entirely.
+
+- **Error handling**: centralized in one `@RestControllerAdvice` (`GlobalExceptionHandler`) mapping `ValidationException`/`NotFoundException`/`ConflictException` to 400/404/409 with a shared `ErrorResponse` body.
+  Ruled out: `try`/`catch` in each controller method.
+  Why: keeps every controller method free of error-handling boilerplate and guarantees the frontend always gets the same error shape back, no matter which operation failed.
+
+## Testing
+
+- **Shared Postgres across integration tests**: one `static` `PostgreSQLContainer` in an `AbstractIntegrationTest` base class, extended by every integration test.
+  Ruled out: a fresh `@Container` per test class.
+  Why: container startup is paid once for the whole test run instead of once per class; this is Testcontainers' own recommended singleton-container pattern.
+
+- **Integration test assertions**: query `information_schema.tables`/`information_schema.columns` directly via `JdbcTemplate`, in addition to checking the `Tablo`/`Kolon` metadata rows.
+  Ruled out: asserting only against the JPA repositories/entities.
+  Why: the whole point of this project is that metadata and the real database object stay in sync; a test that only checks metadata would still pass if the real `CREATE TABLE` silently failed or drifted from what the metadata claims.
+
+- **`BackendApplicationTests`**: made it extend `AbstractIntegrationTest` instead of leaving it a bare `@SpringBootTest`.
+  Ruled out: deleting the placeholder now that real tests exist.
+  Why: it's a legitimate "does the whole app context boot" smoke test; it just had no datasource to boot against outside of docker compose, which Testcontainers now provides.
