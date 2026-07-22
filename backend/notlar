@@ -1,0 +1,13 @@
+1) docker-compose.yml -> PostgreSQL
+2)https://github.com/obra/superpowers
+3)Daha iyi bir package nasıl yaparım?
+4)LLM'i kullanırken aynı zamanda sorular da sor.
+5)Controller.
+6)Dbeaver -> docker container'ın içine gir postgresql container'ın
+7)docker-hub -> docker-compose
+8) pom.xml -> maven -> maven repository
+9)Cascade, Fetch Type
+10) Test türleri. Unit, integration, endtoend.
+
+
+a)Entity,DTO, Controller, Servis ucu,Repository

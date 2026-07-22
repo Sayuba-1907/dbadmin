@@ -18,8 +18,11 @@ import jakarta.persistence.UniqueConstraint;
         // tablo_id is looked up on every "list this table's columns" call,
         // so it is indexed; (tablo_id, name) is unique so a column name
         // only has to be unique within its own table, not globally.
+        //tablo ıd ye göre araama yaptı kolona göe yapmamasının sebebi performans.
         indexes = @Index(name = "idx_kolon_tablo_id", columnList = "tablo_id"),
         uniqueConstraints = @UniqueConstraint(columnNames = {"tablo_id", "name"})
+        //aynı tablo içinde tablo ıd ve name kontrolu her birinden 1er tane olmasına bakıyor.
+
 )
 public class Kolon {
 

@@ -34,7 +34,8 @@ public class TabloService {
         this.tagRepository = tagRepository;
         this.ddlExecutor = ddlExecutor;
     }
-
+    // Transactiona:Bir iş parçasının içindeki tüm veritabanı işlemlerini tek bir paket yapar;
+    // hepsi başarılı olursa kaydeder, biri bile hata verirse her şeyi kusursuz bir şekilde iptal edip eski haline getirir.
     @Transactional(readOnly = true)
     public List<Tablo> listTablolar() {
         return tabloRepository.findAll();
@@ -110,7 +111,8 @@ public class TabloService {
             throw new ConflictException("a column named '" + tanim.name() + "' already exists in this table");
         }
         ColumnType type = ColumnType.fromMetadataValue(tanim.type());
-
+        //resolveTag: Eğer kullanıcı kolon oluştururken bir tagId gönderdiyse,
+        // gider o ID'li etiketi bulur. Göndermediyse (null ise) hiçbir şey yapmaz.
         Kolon kolon = new Kolon(tanim.name(), type.metadataValue(), tablo);
         kolon.setTag(resolveTag(tanim.tagId()));
         tablo.addKolon(kolon);

@@ -12,8 +12,9 @@ import org.springframework.stereotype.Component;
 // concatenated into SQL - this is what keeps it safe from SQL injection
 // even though the SQL text itself is hand-built.
 @Component
+//Component: önceden üretilen nesneyi alıp ihtiyaca göre tekrar kullanma işlemidir.
 public class TableDdlExecutor {
-
+        //hatalı giriş ve hackerşardan korunmak için yazılmıs bir metot.
     private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("^[a-z0-9_][A-Za-z0-9_]{1,29}$");
 
     private final JdbcTemplate jdbcTemplate;

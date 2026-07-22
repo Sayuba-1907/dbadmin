@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
+//Veritabanındaki bir tablonun, Java'daki nesne (object) karşılığıdır.
 @Table(name = "tag", uniqueConstraints = @jakarta.persistence.UniqueConstraint(columnNames = "name"))
 public class Tag {
 
