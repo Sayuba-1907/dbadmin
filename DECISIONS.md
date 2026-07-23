@@ -24,6 +24,10 @@ One line per notable decision: what was chosen, what was ruled out, why.
   Ruled out: running everything through `sudo docker ...` permanently.
   Why: group changes only apply to new login sessions; `sg docker` lets that be confirmed without a full logout/reboot mid-session.
 
+- **Volume persistence, verified empirically**: created a table, ran `docker compose down` (no `-v`) + `up` — table survived even though every container was destroyed and recreated. Then ran `docker compose down -v` + `up` — table was gone.
+  Ruled out: trusting the `pgdata:/var/lib/postgresql/data` volume mapping in `docker-compose.yml` without proving it.
+  Why: containers are ephemeral by design; the `-v` vs. no-`-v` contrast is the actual proof that data survival comes from the named volume, not from the container itself.
+
 ## Domain model / Entities
 
 - **Tablo → Kolon relationship**: `@OneToMany(mappedBy = "tablo", cascade = CascadeType.ALL, orphanRemoval = true)`.
