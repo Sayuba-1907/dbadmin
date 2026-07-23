@@ -90,11 +90,27 @@ One line per notable decision: what was chosen, what was ruled out, why.
   Ruled out: `try`/`catch` in each controller method.
   Why: keeps every controller method free of error-handling boilerplate and guarantees the frontend always gets the same error shape back, no matter which operation failed.
 
+- **Tag CRUD (`TagController`/`TagService`, 2026-07-23)**: added `GET /api/tags` and `POST /api/tags`, reusing `NameValidator` and the same 409-on-duplicate pattern as tables/columns.
+  Ruled out: leaving tag creation out entirely (tags already existed as an entity referenced by `Kolon`, but nothing could ever create one).
+  Why: `changeKolonTag` only ever looked up an existing tag by id - there was no way to get a tag into the database through the API at all, so "change a column's tag" was unusable end-to-end without this.
+
+- **CORS (`WebConfig`)**: `@Configuration` implementing `WebMvcConfigurer`, allowing `http://localhost:3000` on `/api/**` for GET/POST/PATCH/DELETE.
+  Ruled out: `@CrossOrigin` annotations on each controller.
+  Why: one place to allow the frontend's origin instead of repeating it per controller; the browser silently blocks the frontend's fetch calls without this.
+
 ## Testing
 
 - **Shared Postgres across integration tests**: one `static` `PostgreSQLContainer` in an `AbstractIntegrationTest` base class, extended by every integration test.
   Ruled out: a fresh `@Container` per test class.
   Why: container startup is paid once for the whole test run instead of once per class; this is Testcontainers' own recommended singleton-container pattern.
+
+- **Correction (2026-07-23) - the `@Testcontainers` + `@Container` combo above was not actually a singleton**: switched to a plain `static` initializer block (`static { POSTGRES.start(); }`), no `@Testcontainers`/`@Container` annotations.
+  Ruled out: keeping `@Testcontainers`/`@Container` on the static field.
+  Why: adding a 5th test class (`TagControllerIntegrationTest`) exposed that the annotation-based approach was silently starting a brand-new container per test class instead of reusing one (visible in the logs: four different containers, four different mapped ports, in a single `mvn test` run). The last class's container connection then failed under the accumulated slowdown, turning into 30s connection-timeout errors. A plain `static` initializer block is Testcontainers' documented fallback for this exact case: it runs exactly once when the class first loads, with no dependency on how the JUnit5 extension discovers `@Container` fields across subclasses. Fix cut full-suite test time from ~2m15s to ~7s.
+
+- **Test data isolation**: once the container was genuinely shared, a real cross-test collision surfaced (two unrelated tests both inserting a tag named "onemli") and failed with 409 instead of 201.
+  Ruled out: adding `@Transactional` + rollback to integration tests to auto-isolate them.
+  Why: these tests intentionally commit real data to verify the metadata/real-table sync (see the `information_schema` assertions above) - rollback-per-test would undermine that. Simplest correct fix was giving each test's fixture data a name unique enough not to collide with any other test in the suite.
 
 - **Integration test assertions**: query `information_schema.tables`/`information_schema.columns` directly via `JdbcTemplate`, in addition to checking the `Tablo`/`Kolon` metadata rows.
   Ruled out: asserting only against the JPA repositories/entities.
@@ -103,3 +119,21 @@ One line per notable decision: what was chosen, what was ruled out, why.
 - **`BackendApplicationTests`**: made it extend `AbstractIntegrationTest` instead of leaving it a bare `@SpringBootTest`.
   Ruled out: deleting the placeholder now that real tests exist.
   Why: it's a legitimate "does the whole app context boot" smoke test; it just had no datasource to boot against outside of docker compose, which Testcontainers now provides.
+
+## Frontend
+
+- **Layout**: minimal admin/dashboard - left sidebar (table list), right detail panel (columns + tag), modal for table creation.
+  Ruled out: a marketing-site-style landing page, or no visual system at all (bare unstyled HTML).
+  Why: DBAdmin is an internal tool, not a product marketing site - the assignment explicitly says polish is not expected, only that every operation has a visible UI counterpart. A dashboard layout is the standard shape for this kind of tool (phpMyAdmin/Supabase/Prisma Studio all use it) and needed no extra library.
+
+- **Notifications**: colour derived directly from the HTTP status code returned (`<300` green, `409` amber, anything else red), via a small `NotificationProvider` context.
+  Ruled out: a fixed "success"/"error" boolean with no distinction for conflicts.
+  Why: the assignment explicitly requires the HTTP status to be visibly reflected in the UI (success vs. client error vs. conflict), not just "did it work or not."
+
+- **API error shape on the frontend (`ApiError`)**: a small class carrying `status` + `message`, thrown by the fetch wrapper whenever `response.ok` is false.
+  Ruled out: returning `null`/`undefined` on failure and checking for it at each call site.
+  Why: every call site needs the HTTP status to color its notification correctly; throwing keeps that data attached to the error instead of re-deriving it, and lets normal `try/catch` control flow handle both success and failure paths.
+
+- **Full docker-compose verification (2026-07-23)**: after building out the dashboard, ran `docker compose up -d --build` for all three services together (not just `db`+`backend` as during earlier development) and exercised create/list/delete through the nginx-served production build at `localhost:3000`.
+  Ruled out: only ever testing the frontend via `npm start` (webpack dev server) against a manually-started backend.
+  Why: `npm start` and the real Docker image are different builds (dev server vs. static files behind nginx) - the assignment's actual acceptance bar is "comes up cleanly via `docker compose up`", so that's the thing that needed to be tested, not just the dev workflow.
