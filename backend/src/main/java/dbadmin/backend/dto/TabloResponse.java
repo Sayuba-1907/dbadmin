@@ -2,11 +2,16 @@ package dbadmin.backend.dto;
 
 import dbadmin.backend.entity.Tablo;
 import java.util.List;
-//TabloResponse, içindeki kolonlarıyla birlikte bir tabloyu dış dünyaya emniyetli ve temiz bir şekilde sunan ana cevap tabağıdır.
-// API-facing shape for Tablo: no back-reference to Kolon's Tablo field,
-// so this can never recurse the way returning the entity directly would.
+
+/**
+ * API'nin disari verdigi Tablo govdesi — {@link Tablo} entity'sinin kendisi degil.
+ * Neden ayri bir tip: entity'yi dogrudan JSON'a cevirmeye kalksak, Kolon entity'sinin
+ * icindeki Tablo referansi yuzunden sonsuz donguye (tablo -> kolon -> tablo -> ...) girerdi.
+ * Bu record'da geriye referans olmadigi icin o sorun hic yasanmaz.
+ */
 public record TabloResponse(Long id, String name, List<KolonResponse> kolonlar) {
 
+    /** Entity'den DTO'ya cevirici — entity'yi controller'a hic sizdirmadan burada donusturuyoruz. */
     public static TabloResponse from(Tablo tablo) {
         List<KolonResponse> kolonlar = tablo.getKolonlar().stream()
                 .map(KolonResponse::from)

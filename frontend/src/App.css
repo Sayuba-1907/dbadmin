@@ -7,6 +7,9 @@
 }
 
 .app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 12px 20px;
   border-bottom: 1px solid #e2e8f0;
   background-color: #fff;
@@ -15,6 +18,27 @@
 .app-header h1 {
   margin: 0;
   font-size: 18px;
+}
+
+.language-switcher {
+  display: flex;
+  gap: 4px;
+}
+
+.language-switcher-btn {
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.language-switcher-btn.active {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  cursor: default;
 }
 
 .dashboard {
@@ -27,6 +51,17 @@
   border-right: 1px solid #e2e8f0;
   padding: 12px;
   background-color: #fff;
+}
+
+.sidebar-search {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
 }
 
 .tablo-list {

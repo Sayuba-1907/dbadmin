@@ -1,15 +1,19 @@
 package dbadmin.backend.dto;
 
 import java.time.Instant;
-//ErrorResponse, projede bir hata çıktığında ön yüzün kafası karışmasın ve
-// hep aynı standart formatta hata mesajı okuyabilsin diye tasarlanmış standart hata raporu kâğıdıdır.
+import java.util.Map;
 
-// Consistent error body for every 4xx/5xx response, so the frontend always
-// has the same shape to read a message off of, regardless of which
-// exception type triggered it.
-public record ErrorResponse(Instant timestamp, int status, String error, String message) {
+/**
+ * Her 4xx/5xx cevabinin ayni sekilde donen govdesi (bkz. {@link dbadmin.backend.exception.GlobalExceptionHandler}) —
+ * frontend hangi exception firladigina bakmaksizin hep ayni alanlardan mesaji okuyabilir.
+ * {@code message} her zaman Ingilizce (log/Postman icin); {@code code} + {@code details} ise
+ * frontend'in i18next ile kendi diline cevirmesi icin (bkz. errors.* ceviri anahtarlari).
+ */
+public record ErrorResponse(
+        Instant timestamp, int status, String error, String message, String code, Map<String, String> details) {
 
-    public static ErrorResponse of(int status, String error, String message) {
-        return new ErrorResponse(Instant.now(), status, error, message);
+    public static ErrorResponse of(
+            int status, String error, String message, String code, Map<String, String> details) {
+        return new ErrorResponse(Instant.now(), status, error, message, code, details);
     }
 }

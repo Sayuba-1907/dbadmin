@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Tag endpoint'leri — TabloController'a benzer ince bir katman, is mantigi {@link TagService}'te. */
 @RestController
 @RequestMapping("/api/tags")
 public class TagController {
@@ -22,11 +23,13 @@ public class TagController {
         this.tagService = tagService;
     }
 
+    /** GET /api/tags — tum etiketlerin listesi. */
     @GetMapping
     public List<TagResponse> list() {
         return tagService.listTags().stream().map(TagResponse::from).toList();
     }
 
+    /** POST /api/tags — yeni etiket olusturur, 201 Created doner. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TagResponse create(@RequestBody CreateTagRequest request) {

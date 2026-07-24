@@ -137,3 +137,21 @@ One line per notable decision: what was chosen, what was ruled out, why.
 - **Full docker-compose verification (2026-07-23)**: after building out the dashboard, ran `docker compose up -d --build` for all three services together (not just `db`+`backend` as during earlier development) and exercised create/list/delete through the nginx-served production build at `localhost:3000`.
   Ruled out: only ever testing the frontend via `npm start` (webpack dev server) against a manually-started backend.
   Why: `npm start` and the real Docker image are different builds (dev server vs. static files behind nginx) - the assignment's actual acceptance bar is "comes up cleanly via `docker compose up`", so that's the thing that needed to be tested, not just the dev workflow.
+
+## Internationalization (i18n) (2026-07-24)
+
+- **i18n library**: `react-i18next` + `i18next`, with a `LanguageSwitcher` (TR/EN) in the header and the choice persisted to `localStorage`.
+  Ruled out: a hand-rolled Context provider (same pattern as `NotificationProvider`) with a plain key→string lookup object.
+  Why: mentor explicitly asked for a "real" i18n setup; `react-i18next` also gives interpolation (`{{name}}`) for free, which the error-message translations below depend on. Pinned to `react-i18next@14`/`i18next@23` because the newer `react-i18next@17` requires TypeScript ^5, and this project is still on CRA's default TS 4.9.
+
+- **Backend error translation (`code` + `details` on `ErrorResponse`)**: exceptions (`ValidationException`/`ConflictException`/`NotFoundException`) now carry a machine-readable `code` (e.g. `CONFLICT_DUPLICATE_TABLE_NAME`) and a `details` map (e.g. `{"name": "school"}`) alongside the existing English `message`.
+  Ruled out: translating the message on the backend itself (Spring `MessageSource` + `Accept-Language` header negotiation).
+  Why: the frontend already owns language switching and needs no round-trip to change it; keeping `message` in English also means logs/Postman/`curl` stay readable regardless of what language a client is running in. The backend's job is just to name *what* went wrong (`code`) and hand over the variable parts (`details`) - the frontend decides how to say it.
+
+- **Unknown/unrecognized error codes**: frontend calls `t('errors.' + code, { ...details, defaultValue: message })`.
+  Ruled out: treating a missing translation as an error, or always showing the raw code string.
+  Why: if a future backend error is added without a matching translation key yet, this falls back to the backend's plain English message instead of showing a broken `errors.SOME_CODE` string to the user - degrades gracefully instead of breaking.
+
+- **Native `required` field validation messages**: overridden per-input via `input.setCustomValidity(t('validation.required'))` on `onInvalid`, cleared on `onChange`.
+  Ruled out: dropping the `required` attribute and re-implementing "field is empty" validation by hand (state + conditional error text).
+  Why: discovered that Chrome's native validation bubble text follows the *browser's* own UI language setting, not the page's `lang` attribute or the app's selected language - so even with `document.documentElement.lang` set correctly, the bubble stayed in whatever language Chrome itself was in. `setCustomValidity` keeps the native behaviour (focus, submit-blocking) while making the displayed text follow the app's language instead.

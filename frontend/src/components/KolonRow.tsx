@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Kolon } from "../api/tablolar";
 import { Tag } from "../api/tags";
 
@@ -10,7 +11,13 @@ interface KolonRowProps {
   onDelete: (kolonId: number) => void;
 }
 
+/**
+ * Kolon tablosunda tek bir satir: isim (duzenlenebilir), tip (sabit — duzenlenemez, cunku
+ * backend'de {@code updatable = false}), tag secici (dropdown) ve sil butonu.
+ */
 export function KolonRow({ kolon, tags, onRename, onChangeTag, onDelete }: KolonRowProps) {
+  const { t } = useTranslation();
+  // editing: bu satir su an "isim duzenleme" modunda mi. draftName: input'taki henuz kaydedilmemis metin.
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(kolon.name);
 
@@ -32,7 +39,7 @@ export function KolonRow({ kolon, tags, onRename, onChangeTag, onDelete }: Kolon
               autoFocus
             />
             <button type="submit" className="btn btn-link">
-              Kaydet
+              {t("common.save")}
             </button>
             <button
               type="button"
@@ -42,14 +49,14 @@ export function KolonRow({ kolon, tags, onRename, onChangeTag, onDelete }: Kolon
                 setEditing(false);
               }}
             >
-              Vazgec
+              {t("common.cancel")}
             </button>
           </form>
         ) : (
           <>
             {kolon.name}{" "}
             <button className="btn btn-link" onClick={() => setEditing(true)}>
-              Duzenle
+              {t("common.edit")}
             </button>
           </>
         )}
@@ -62,7 +69,7 @@ export function KolonRow({ kolon, tags, onRename, onChangeTag, onDelete }: Kolon
           value={kolon.tagId ?? ""}
           onChange={(e) => onChangeTag(kolon.id, e.target.value ? Number(e.target.value) : null)}
         >
-          <option value="">- tag yok -</option>
+          <option value="">{t("kolonRow.noTag")}</option>
           {tags.map((tag) => (
             <option key={tag.id} value={tag.id}>
               {tag.name}
@@ -71,8 +78,15 @@ export function KolonRow({ kolon, tags, onRename, onChangeTag, onDelete }: Kolon
         </select>
       </td>
       <td>
-        <button className="btn btn-link btn-danger" onClick={() => onDelete(kolon.id)}>
-          Sil
+        <button
+          className="btn btn-link btn-danger"
+          onClick={() => {
+            if (window.confirm(t("kolonRow.confirmDelete", { name: kolon.name }))) {
+              onDelete(kolon.id);
+            }
+          }}
+        >
+          {t("common.delete")}
         </button>
       </td>
     </tr>

@@ -2,8 +2,12 @@ package dbadmin.backend.dto;
 
 import dbadmin.backend.entity.Kolon;
 import dbadmin.backend.entity.Tag;
-//KolonResponse, veritabanındaki bir kolonu dış dünyaya (ön yüze) güvenli ve
-//anlaşılır bir şekilde raporlamak için kullanılan sunum tabağıdır.
+
+/**
+ * API'nin disari verdigi Kolon govdesi. Tag'i tum {@code Tag} nesnesi olarak degil
+ * {@code tagId} + {@code tagName} olarak duz (flatten) veriyoruz — frontend'in ekstra
+ * bir nested object'i parse etmesine gerek kalmiyor.
+ */
 public record KolonResponse(Long id, String name, String type, Long tagId, String tagName) {
 
     public static KolonResponse from(Kolon kolon) {

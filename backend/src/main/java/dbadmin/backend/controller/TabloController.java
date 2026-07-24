@@ -19,10 +19,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-//@RestController: Java kodlarını internetin evrensel veri taşıma formatı olan JSON'a çeviren otomatik bir tercüman ve dağıtım merkezidir.
+
+/**
+ * Tablo ve Kolon icin HTTP endpoint'leri. {@code @RestController} donen degeri otomatik
+ * JSON'a cevirir; {@code @RequestMapping} tum metodlar icin ortak "/api/tablolar" on-ekini
+ * belirler. Burasi ince bir katman: dogrulama/is mantigi yok, hepsi {@link TabloService}'te —
+ * bu sinifin isi sadece HTTP <-> DTO <-> service cevirisi yapmak.
+ */
 @RestController
-//RequestMapping, o sınıfın içindeki tüm metotlar için ortak bir "başlangıç rotası"
-//(ortak adres) belirler. Kod tekrarını önler ve projeni son derece düzenli tutar!
 @RequestMapping("/api/tablolar")
 public class TabloController {
 
@@ -32,20 +36,26 @@ public class TabloController {
         this.tabloService = tabloService;
     }
 
+    /** GET /api/tablolar — tum tablolarin listesi. Entity degil DTO ({@link TabloResponse}) doner; bkz. dto paketi neden ayri. */
     @GetMapping
     public List<TabloResponse> list() {
         return tabloService.listTablolar().stream()
                 .map(TabloResponse::from)
                 .toList();
     }
-//@GetMapping, veritabanından veri okumak ve dışarıya listelemek için kullanılan,
-//veritabanında hiçbir şeyi silmeyen veya değiştirmeyen (salt okunur) en güvenli istek türüdür.
+
+    /** GET /api/tablolar/{id} — tek bir tablonun detayi (kolonlariyla birlikte). */
     @GetMapping("/{id}")
     public TabloResponse get(@PathVariable Long id) {
         return TabloResponse.from(tabloService.getTablo(id));
     }
-    //@PostMapping, sisteme sıfırdan yeni bir şeyler eklemek (kayıt oluşturmak) için
-    //kullanılır ve genelde işlemin başarılı olduğunu belirten 201 Created koduyla birlikte çalışır.
+
+    /**
+     * POST /api/tablolar — yeni tablo olusturur. {@code @ResponseStatus(CREATED)} basarili
+     * sonucta 200 degil 201 dondurur (REST konvansiyonu: "yeni kaynak yaratildi").
+     * Request'teki kolon listesi burada DTO'dan ({@link CreateKolonRequest}) service'in
+     * bekledigi ic tipe ({@link KolonTanimi}) cevriliyor.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TabloResponse create(@RequestBody CreateTabloRequest request) {
@@ -54,37 +64,42 @@ public class TabloController {
                 : request.kolonlar().stream().map(CreateKolonRequest::toKolonTanimi).toList();
         return TabloResponse.from(tabloService.createTablo(request.name(), kolonTanimlari));
     }
-        //@PatchMapping, kelime anlamı olarak "yama yapmak" veya "kısmi güncelleme yapmak" demektir.
-        // Bütün evi yıkıp baştan yapmaz; sadece bozulan musluğu tamir eder.
+
+    /** PATCH /api/tablolar/{id} — sadece ismi degistirir (PATCH = kismi guncelleme, PUT gibi tum kaynagi degistirmez). */
     @PatchMapping("/{id}")
     public TabloResponse rename(@PathVariable Long id, @RequestBody RenameRequest request) {
         return TabloResponse.from(tabloService.renameTablo(id, request.name()));
     }
 
+    /** DELETE /api/tablolar/{id} — tablo ve kolonlarini siler. Govde donmedigi icin 204 No Content. */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         tabloService.deleteTablo(id);
     }
 
+    /** POST /api/tablolar/{id}/kolonlar — var olan tabloya yeni kolon ekler. */
     @PostMapping("/{id}/kolonlar")
     @ResponseStatus(HttpStatus.CREATED)
     public KolonResponse addKolon(@PathVariable Long id, @RequestBody CreateKolonRequest request) {
         return KolonResponse.from(tabloService.addKolon(id, request.toKolonTanimi()));
     }
 
+    /** DELETE /api/tablolar/{id}/kolonlar/{kolonId} — tek bir kolonu siler. */
     @DeleteMapping("/{id}/kolonlar/{kolonId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteKolon(@PathVariable Long id, @PathVariable Long kolonId) {
         tabloService.deleteKolon(id, kolonId);
     }
 
+    /** PATCH .../name — kolonun adini degistirir (tipi degil, tip olusturulduktan sonra sabit). */
     @PatchMapping("/{id}/kolonlar/{kolonId}/name")
     public KolonResponse renameKolon(
             @PathVariable Long id, @PathVariable Long kolonId, @RequestBody RenameRequest request) {
         return KolonResponse.from(tabloService.renameKolon(id, kolonId, request.name()));
     }
 
+    /** PATCH .../tag — kolonun etiketini degistirir/kaldirir (tagId null gonderilirse etiket kaldirilir). */
     @PatchMapping("/{id}/kolonlar/{kolonId}/tag")
     public KolonResponse changeKolonTag(
             @PathVariable Long id, @PathVariable Long kolonId, @RequestBody ChangeTagRequest request) {

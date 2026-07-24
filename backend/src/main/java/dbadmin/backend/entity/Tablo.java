@@ -13,6 +13,11 @@ import jakarta.persistence.UniqueConstraint;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Kullanicinin olusturdugu bir "tablo"nun metadata karsiligi (entity = DB satirinin Java karsiligi).
+ * Bu class'in kendisi gercek Postgres tablosu degil, onu tanimlayan kayittir; gercek
+ * {@code CREATE TABLE} islemini {@link dbadmin.backend.ddl.TableDdlExecutor} yapar.
+ */
 @Entity
 @Table(name = "tablo", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
 public class Tablo {
@@ -40,6 +45,7 @@ public class Tablo {
     @OneToMany(mappedBy = "tablo", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Kolon> kolonlar = new ArrayList<>();
 
+    /** Parametresiz constructor JPA/Hibernate'in nesneyi reflection ile olusturabilmesi icin zorunlu; sen bunu hic cagirmazsin. */
     protected Tablo() {
     }
 
@@ -63,16 +69,27 @@ public class Tablo {
         return kolonlar;
     }
 
+    /**
+     * Iliskinin iki tarafini da (Tablo->Kolon listesi ve Kolon->Tablo referansi) ayni anda
+     * gunceller. Sadece {@code kolonlar.add(kolon)} yapsaydik, Kolon tarafindaki
+     * {@code tablo} alani null kalir ve DB'ye kaydedilirken hata/tutarsizlik olurdu.
+     */
     public void addKolon(Kolon kolon) {
         kolonlar.add(kolon);
         kolon.setTablo(this);
     }
 
+    /** addKolon'un tersi: listeden cikarir ve Kolon'un tablo referansini da temizler. */
     public void removeKolon(Kolon kolon) {
         kolonlar.remove(kolon);
         kolon.setTablo(null);
     }
 
+    /**
+     * JPA entity'lerde equals/hashCode klasik tuzagi: sadece {@code id} uzerinden kiyaslariz,
+     * cunku henuz DB'ye kaydedilmemis (id = null) iki nesne asla esit sayilmamali, ve
+     * Hibernate proxy'leri yuzunden getClass()/instanceof karisikligi olabilir.
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -84,6 +101,7 @@ public class Tablo {
         return id != null && id.equals(other.id);
     }
 
+    /** Sabit bir hashCode donuyoruz: id zamanla degistigi icin (once null, sonra DB'nin verdigi deger) id'yi hashCode'a katmak, nesne bir Set/Map'teyken "kaybolmasina" yol acabilirdi. */
     @Override
     public int hashCode() {
         return getClass().hashCode();

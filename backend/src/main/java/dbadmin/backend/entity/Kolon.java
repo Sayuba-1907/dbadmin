@@ -24,6 +24,13 @@ import jakarta.persistence.UniqueConstraint;
         //aynı tablo içinde tablo ıd ve name kontrolu her birinden 1er tane olmasına bakıyor.
 
 )
+/**
+ * Bir tablonun tek bir kolonunu temsil eden metadata kaydi.
+ * {@code type} alani sabit bir whitelist'ten gelir (numeric/text/datetime/boolean, kontrolu
+ * {@link dbadmin.backend.service.TabloService}'te), ve olusturulduktan sonra degistirilemez
+ * ({@code updatable = false}) — bir kolonun gercek DB tipini sonradan degistirmek migration
+ * gerektirir, bu proje kapsaminda yok.
+ */
 public class Kolon {
 
     @Id
@@ -51,6 +58,7 @@ public class Kolon {
     @JoinColumn(name = "tag_id")
     private Tag tag;
 
+    /** JPA/Hibernate'in reflection ile nesne olusturabilmesi icin zorunlu parametresiz constructor. */
     protected Kolon() {
     }
 
@@ -80,6 +88,7 @@ public class Kolon {
         return tablo;
     }
 
+    /** Package-private: sadece Tablo.addKolon/removeKolon cagirsin diye disariya kapali (public degil). */
     void setTablo(Tablo tablo) {
         this.tablo = tablo;
     }
@@ -92,6 +101,7 @@ public class Kolon {
         this.tag = tag;
     }
 
+    /** Sadece id'ye gore esitlik: kaydedilmemis (id=null) nesneler asla birbirine esit sayilmaz. */
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -103,6 +113,7 @@ public class Kolon {
         return id != null && id.equals(other.id);
     }
 
+    /** Sabit deger: id degisebildigi (once null, sonra atanan deger) icin id'yi hashCode'a katmiyoruz. */
     @Override
     public int hashCode() {
         return getClass().hashCode();

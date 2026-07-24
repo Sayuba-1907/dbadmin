@@ -1,7 +1,7 @@
 package dbadmin.backend.dto;
 
 import java.util.List;
-//CreateTabloRequest, dış dünyadan "Şu isimde bir
-//tablo kur ve içine de şu kolonları yerleştir" emri geldiğinde kullanılan ana sipariş formudur.
+
+/** POST /api/tablolar icin request govdesi: "bu isimde tablo kur, icine bu kolonlari koy". */
 public record CreateTabloRequest(String name, List<CreateKolonRequest> kolonlar) {
 }

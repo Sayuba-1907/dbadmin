@@ -2,12 +2,37 @@
   position: fixed;
   bottom: 20px;
   right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px 18px;
   border-radius: 6px;
   color: #fff;
   font-size: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   max-width: 360px;
+}
+
+.notification-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.notification-message {
+  flex: 1;
+}
+
+.notification-action {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .notification-success {

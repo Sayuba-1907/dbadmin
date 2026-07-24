@@ -15,10 +15,18 @@ import dbadmin.backend.validation.NameValidator;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Is mantiginin (business logic) yasadigi yer — controller'lar burayi cagirir, burasi degil onlari.
+ * Her public metod iki isi birden yapar: (1) metadata'yi ({@code Tablo}/{@code Kolon} satirlari)
+ * gunceller, (2) {@link TableDdlExecutor} uzerinden gercek Postgres semasini ayni yonde degistirir.
+ * Ikisi de ayni {@code @Transactional} icinde oldugu icin biri patlarsa oburu de geri alinir,
+ * boylece metadata ile gercek DB semasi hicbir zaman birbirinden kopmaz.
+ */
 @Service
 public class TabloService {
 
@@ -34,30 +42,40 @@ public class TabloService {
         this.tagRepository = tagRepository;
         this.ddlExecutor = ddlExecutor;
     }
-    // Transactiona:Bir iş parçasının içindeki tüm veritabanı işlemlerini tek bir paket yapar;
-    // hepsi başarılı olursa kaydeder, biri bile hata verirse her şeyi kusursuz bir şekilde iptal edip eski haline getirir.
+    /**
+     * {@code @Transactional}: bu metod icindeki tum DB islemlerini tek bir islem paketine alir;
+     * hepsi basarili olursa commit eder, biri hata verirse tumunu geri alir (rollback).
+     * {@code readOnly = true} sadece okuma yapildigi icin performans ipucu — yazma islemi yapmaz.
+     */
     @Transactional(readOnly = true)
     public List<Tablo> listTablolar() {
         return tabloRepository.findAll();
     }
 
+    /** Id ile tek tablo bulur; yoksa 404'e cevrilecek {@link NotFoundException} firlatir (bkz. GlobalExceptionHandler). */
     @Transactional(readOnly = true)
     public Tablo getTablo(Long id) {
         return tabloRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("tablo not found: " + id));
+                .orElseThrow(() -> new NotFoundException(
+                        "NOT_FOUND_TABLE", "tablo not found: " + id, Map.of("id", String.valueOf(id))));
     }
 
-    // Metadata write + real CREATE TABLE happen in one transaction: if the
-    // DDL fails, the metadata insert is rolled back too, so the two layers
-    // (Tablo/Kolon rows vs. the real table) never drift apart.
+    /**
+     * Yeni tablo olusturur: once metadata (Tablo + Kolon satirlari) DB'ye yazilir, sonra ayni
+     * transaction icinde gercek {@code CREATE TABLE} calistirilir. DDL patlarsa metadata insert'i
+     * de otomatik geri alinir — iki katman asla birbirinden kopmaz.
+     */
     @Transactional
     public Tablo createTablo(String name, List<KolonTanimi> kolonTanimlari) {
-        NameValidator.validate("table name", name);
+        NameValidator.validate("table name", "VALIDATION_INVALID_TABLE_NAME", name);
         if (tabloRepository.existsByName(name)) {
-            throw new ConflictException("a table named '" + name + "' already exists");
+            throw new ConflictException(
+                    "CONFLICT_DUPLICATE_TABLE_NAME",
+                    "a table named '" + name + "' already exists",
+                    Map.of("name", name));
         }
         if (kolonTanimlari == null || kolonTanimlari.isEmpty()) {
-            throw new ValidationException("a table needs at least one column");
+            throw new ValidationException("VALIDATION_TABLE_NEEDS_COLUMN", "a table needs at least one column");
         }
 
         Tablo tablo = new Tablo(name);
@@ -65,9 +83,12 @@ public class TabloService {
         List<TableDdlExecutor.ColumnDefinition> ddlColumns = new ArrayList<>();
 
         for (KolonTanimi tanim : kolonTanimlari) {
-            NameValidator.validate("column name", tanim.name());
+            NameValidator.validate("column name", "VALIDATION_INVALID_COLUMN_NAME", tanim.name());
             if (!seenNames.add(tanim.name())) {
-                throw new ConflictException("duplicate column name in request: " + tanim.name());
+                throw new ConflictException(
+                        "CONFLICT_DUPLICATE_COLUMN_IN_REQUEST",
+                        "duplicate column name in request: " + tanim.name(),
+                        Map.of("name", tanim.name()));
             }
             ColumnType type = ColumnType.fromMetadataValue(tanim.type());
 
@@ -82,12 +103,16 @@ public class TabloService {
         return saved;
     }
 
+    /** Hem metadata'daki (Tablo.name) hem gercek Postgres tablosunun adini degistirir. */
     @Transactional
     public Tablo renameTablo(Long id, String newName) {
         Tablo tablo = getTablo(id);
-        NameValidator.validate("table name", newName);
+        NameValidator.validate("table name", "VALIDATION_INVALID_TABLE_NAME", newName);
         if (!tablo.getName().equals(newName) && tabloRepository.existsByName(newName)) {
-            throw new ConflictException("a table named '" + newName + "' already exists");
+            throw new ConflictException(
+                    "CONFLICT_DUPLICATE_TABLE_NAME",
+                    "a table named '" + newName + "' already exists",
+                    Map.of("name", newName));
         }
         String oldName = tablo.getName();
         tablo.setName(newName);
@@ -95,6 +120,7 @@ public class TabloService {
         return tablo;
     }
 
+    /** Tablo silinince {@code tabloRepository.delete} JPA cascade sayesinde altindaki tum Kolon satirlarini da siler; sonra gercek tablo da drop edilir. */
     @Transactional
     public void deleteTablo(Long id) {
         Tablo tablo = getTablo(id);
@@ -103,16 +129,18 @@ public class TabloService {
         ddlExecutor.dropTable(name);
     }
 
+    /** Mevcut bir tabloya yeni kolon ekler; metadata + gercek {@code ALTER TABLE ADD COLUMN} birlikte gider. */
     @Transactional
     public Kolon addKolon(Long tabloId, KolonTanimi tanim) {
         Tablo tablo = getTablo(tabloId);
-        NameValidator.validate("column name", tanim.name());
+        NameValidator.validate("column name", "VALIDATION_INVALID_COLUMN_NAME", tanim.name());
         if (kolonRepository.existsByTabloAndName(tablo, tanim.name())) {
-            throw new ConflictException("a column named '" + tanim.name() + "' already exists in this table");
+            throw new ConflictException(
+                    "CONFLICT_DUPLICATE_COLUMN_NAME",
+                    "a column named '" + tanim.name() + "' already exists in this table",
+                    Map.of("name", tanim.name()));
         }
         ColumnType type = ColumnType.fromMetadataValue(tanim.type());
-        //resolveTag: Eğer kullanıcı kolon oluştururken bir tagId gönderdiyse,
-        // gider o ID'li etiketi bulur. Göndermediyse (null ise) hiçbir şey yapmaz.
         Kolon kolon = new Kolon(tanim.name(), type.metadataValue(), tablo);
         kolon.setTag(resolveTag(tanim.tagId()));
         tablo.addKolon(kolon);
@@ -122,9 +150,11 @@ public class TabloService {
         return saved;
     }
 
-    // Removing from Tablo's managed collection (rather than calling
-    // kolonRepository.delete directly) is what triggers orphanRemoval -
-    // see Tablo.removeKolon and the cascade config on its @OneToMany.
+    /**
+     * Dogrudan {@code kolonRepository.delete(...)} cagirmiyoruz — bilerek {@code tablo.removeKolon(kolon)}
+     * kullaniyoruz, cunku Kolon'u Tablo'nun kendi listesinden cikarmak, Tablo entity'sindeki
+     * {@code orphanRemoval = true} sayesinde otomatik DB'den silinmesini tetikler.
+     */
     @Transactional
     public void deleteKolon(Long tabloId, Long kolonId) {
         Tablo tablo = getTablo(tabloId);
@@ -134,13 +164,17 @@ public class TabloService {
         ddlExecutor.dropColumn(tablo.getName(), columnName);
     }
 
+    /** Kolonun sadece adini degistirir — tipi olusturulduktan sonra hic degistirilemez (bkz. Kolon.type, updatable=false). */
     @Transactional
     public Kolon renameKolon(Long tabloId, Long kolonId, String newName) {
         Tablo tablo = getTablo(tabloId);
         Kolon kolon = findKolonInTablo(tablo, kolonId);
-        NameValidator.validate("column name", newName);
+        NameValidator.validate("column name", "VALIDATION_INVALID_COLUMN_NAME", newName);
         if (!kolon.getName().equals(newName) && kolonRepository.existsByTabloAndName(tablo, newName)) {
-            throw new ConflictException("a column named '" + newName + "' already exists in this table");
+            throw new ConflictException(
+                    "CONFLICT_DUPLICATE_COLUMN_NAME",
+                    "a column named '" + newName + "' already exists in this table",
+                    Map.of("name", newName));
         }
         String oldName = kolon.getName();
         kolon.setName(newName);
@@ -148,8 +182,7 @@ public class TabloService {
         return kolon;
     }
 
-    // Tag has no DDL counterpart - it only ever lived in metadata, so this
-    // is a plain entity update, no TableDdlExecutor call.
+    /** Tag'in gercek DB semasinda hic karsiligi yok (sadece metadata) — o yuzden burada ddlExecutor cagrisi yok, sade bir entity guncellemesi. */
     @Transactional
     public Kolon changeKolonTag(Long tabloId, Long kolonId, Long tagId) {
         Tablo tablo = getTablo(tabloId);
@@ -158,18 +191,24 @@ public class TabloService {
         return kolon;
     }
 
+    /** Kolonu, tablonun zaten yuklu {@code kolonlar} listesi icinde arar (ekstra sorgu atmadan) — kolon bu tabloya ait degilse 404 doner. */
     private Kolon findKolonInTablo(Tablo tablo, Long kolonId) {
         return tablo.getKolonlar().stream()
                 .filter(k -> k.getId().equals(kolonId))
                 .findFirst()
-                .orElseThrow(() -> new NotFoundException("column not found in this table: " + kolonId));
+                .orElseThrow(() -> new NotFoundException(
+                        "NOT_FOUND_COLUMN",
+                        "column not found in this table: " + kolonId,
+                        Map.of("id", String.valueOf(kolonId))));
     }
 
+    /** tagId null ise (kullanici tag secmediyse) null doner; doluysa o Tag'i bulur, yoksa 404. */
     private Tag resolveTag(Long tagId) {
         if (tagId == null) {
             return null;
         }
         return tagRepository.findById(tagId)
-                .orElseThrow(() -> new NotFoundException("tag not found: " + tagId));
+                .orElseThrow(() -> new NotFoundException(
+                        "NOT_FOUND_TAG", "tag not found: " + tagId, Map.of("id", String.valueOf(tagId))));
     }
 }

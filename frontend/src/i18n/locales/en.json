@@ -1,0 +1,78 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "undo": "Undo"
+  },
+  "sidebar": {
+    "newTable": "+ New Table",
+    "empty": "No tables yet",
+    "searchPlaceholder": "Search tables...",
+    "noSearchResults": "No matching tables"
+  },
+  "dashboard": {
+    "loading": "Loading...",
+    "selectTable": "Select a table"
+  },
+  "tabloDetail": {
+    "deleteTable": "Delete Table",
+    "confirmDeleteTable": "Are you sure you want to delete \"{{name}}\"?",
+    "colName": "Column",
+    "colType": "Type",
+    "colTag": "Tag",
+    "emptyColumns": "No columns yet",
+    "columnNamePlaceholder": "column_name",
+    "addColumn": "Add Column",
+    "tagNamePlaceholder": "new_tag_name",
+    "createTag": "Create Tag"
+  },
+  "kolonRow": {
+    "noTag": "- no tag -",
+    "confirmDelete": "Are you sure you want to delete the \"{{name}}\" column?"
+  },
+  "createTabloForm": {
+    "title": "New Table",
+    "tableNameLabel": "Table name",
+    "tableNamePlaceholder": "table_name",
+    "addColumnRow": "+ Add column",
+    "submit": "Create"
+  },
+  "notifications": {
+    "loadFailed": "Failed to load data",
+    "tableCreated": "\"{{name}}\" table created",
+    "tableCreateFailed": "Failed to create table",
+    "tableDeleted": "Table deleted",
+    "tableDeleteFailed": "Failed to delete table",
+    "tableRenamed": "Table renamed",
+    "tableRenameFailed": "Failed to rename table",
+    "columnCreated": "\"{{name}}\" column added",
+    "columnCreateFailed": "Failed to add column",
+    "columnDeleted": "Column deleted",
+    "columnDeleteFailed": "Failed to delete column",
+    "columnRenamed": "Column renamed",
+    "columnRenameFailed": "Failed to rename column",
+    "tagOnColumnUpdated": "Column's tag updated",
+    "tagUpdateFailed": "Failed to update tag",
+    "tagCreated": "\"{{name}}\" tag created",
+    "tagCreateFailed": "Failed to create tag"
+  },
+  "validation": {
+    "required": "Please fill out this field"
+  },
+  "errors": {
+    "VALIDATION_INVALID_TABLE_NAME": "Table name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
+    "VALIDATION_INVALID_COLUMN_NAME": "Column name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
+    "VALIDATION_INVALID_TAG_NAME": "Tag name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
+    "VALIDATION_INVALID_COLUMN_TYPE": "Type must be one of: numeric, text, datetime, boolean",
+    "VALIDATION_TABLE_NEEDS_COLUMN": "A table needs at least one column",
+    "CONFLICT_DUPLICATE_TABLE_NAME": "A table named \"{{name}}\" already exists",
+    "CONFLICT_DUPLICATE_COLUMN_NAME": "A column named \"{{name}}\" already exists in this table",
+    "CONFLICT_DUPLICATE_COLUMN_IN_REQUEST": "The name \"{{name}}\" is used more than once in this request",
+    "CONFLICT_DUPLICATE_TAG_NAME": "A tag named \"{{name}}\" already exists",
+    "NOT_FOUND_TABLE": "Table not found (id: {{id}})",
+    "NOT_FOUND_COLUMN": "Column not found in this table (id: {{id}})",
+    "NOT_FOUND_TAG": "Tag not found (id: {{id}})"
+  }
+}

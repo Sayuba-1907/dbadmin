@@ -7,8 +7,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Bir kolona iliştirilebilen basit etiket. Kolon'a gore bagimsiz yasar: bir kolon ya da
+ * tablo silinse de Tag silinmez (Kolon->Tag iliskisinde cascade YOK, bkz. {@link Kolon#getTag()}).
+ */
 @Entity
-//Veritabanındaki bir tablonun, Java'daki nesne (object) karşılığıdır.
 @Table(name = "tag", uniqueConstraints = @jakarta.persistence.UniqueConstraint(columnNames = "name"))
 public class Tag {
 
@@ -19,6 +22,7 @@ public class Tag {
     @Column(nullable = false)
     private String name;
 
+    /** JPA/Hibernate'in reflection ile nesne olusturabilmesi icin zorunlu parametresiz constructor. */
     protected Tag() {
     }
 
@@ -38,6 +42,7 @@ public class Tag {
         this.name = name;
     }
 
+    /** Sadece id'ye gore esitlik: kaydedilmemis (id=null) nesneler asla birbirine esit sayilmaz. */
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -49,6 +54,7 @@ public class Tag {
         return id != null && id.equals(other.id);
     }
 
+    /** Sabit deger: id degisebildigi icin id'yi hashCode'a katmiyoruz. */
     @Override
     public int hashCode() {
         return getClass().hashCode();

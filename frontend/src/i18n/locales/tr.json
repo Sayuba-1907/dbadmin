@@ -1,0 +1,78 @@
+{
+  "common": {
+    "save": "Kaydet",
+    "cancel": "Vazgeç",
+    "edit": "Düzenle",
+    "delete": "Sil",
+    "undo": "Geri Al"
+  },
+  "sidebar": {
+    "newTable": "+ Yeni Tablo",
+    "empty": "Henüz tablo yok",
+    "searchPlaceholder": "Tablo ara...",
+    "noSearchResults": "Eşleşen tablo yok"
+  },
+  "dashboard": {
+    "loading": "Yükleniyor...",
+    "selectTable": "Bir tablo seç"
+  },
+  "tabloDetail": {
+    "deleteTable": "Tabloyu Sil",
+    "confirmDeleteTable": "\"{{name}}\" tablosunu silmek istediğinize emin misiniz?",
+    "colName": "Kolon",
+    "colType": "Tip",
+    "colTag": "Tag",
+    "emptyColumns": "Henüz kolon yok",
+    "columnNamePlaceholder": "kolon_adi",
+    "addColumn": "Kolon Ekle",
+    "tagNamePlaceholder": "yeni_tag_adi",
+    "createTag": "Tag Oluştur"
+  },
+  "kolonRow": {
+    "noTag": "- tag yok -",
+    "confirmDelete": "\"{{name}}\" kolonunu silmek istediğinize emin misiniz?"
+  },
+  "createTabloForm": {
+    "title": "Yeni Tablo",
+    "tableNameLabel": "Tablo adı",
+    "tableNamePlaceholder": "tablo_adi",
+    "addColumnRow": "+ Kolon ekle",
+    "submit": "Oluştur"
+  },
+  "notifications": {
+    "loadFailed": "Veriler yüklenemedi",
+    "tableCreated": "\"{{name}}\" tablosu oluşturuldu",
+    "tableCreateFailed": "Tablo oluşturulamadı",
+    "tableDeleted": "Tablo silindi",
+    "tableDeleteFailed": "Tablo silinemedi",
+    "tableRenamed": "Tablo yeniden adlandırıldı",
+    "tableRenameFailed": "Tablo yeniden adlandırılamadı",
+    "columnCreated": "\"{{name}}\" kolonu eklendi",
+    "columnCreateFailed": "Kolon eklenemedi",
+    "columnDeleted": "Kolon silindi",
+    "columnDeleteFailed": "Kolon silinemedi",
+    "columnRenamed": "Kolon yeniden adlandırıldı",
+    "columnRenameFailed": "Kolon yeniden adlandırılamadı",
+    "tagOnColumnUpdated": "Kolonun tag'i güncellendi",
+    "tagUpdateFailed": "Tag güncellenemedi",
+    "tagCreated": "\"{{name}}\" tag'i oluşturuldu",
+    "tagCreateFailed": "Tag oluşturulamadı"
+  },
+  "validation": {
+    "required": "Lütfen bu alanı doldurun"
+  },
+  "errors": {
+    "VALIDATION_INVALID_TABLE_NAME": "Tablo adı 2-30 karakter olmalı, büyük harfle başlayamaz ve sadece harf, rakam, alt çizgi içerebilir",
+    "VALIDATION_INVALID_COLUMN_NAME": "Kolon adı 2-30 karakter olmalı, büyük harfle başlayamaz ve sadece harf, rakam, alt çizgi içerebilir",
+    "VALIDATION_INVALID_TAG_NAME": "Tag adı 2-30 karakter olmalı, büyük harfle başlayamaz ve sadece harf, rakam, alt çizgi içerebilir",
+    "VALIDATION_INVALID_COLUMN_TYPE": "Tip numeric, text, datetime veya boolean olmalı",
+    "VALIDATION_TABLE_NEEDS_COLUMN": "Bir tablonun en az bir kolonu olmalı",
+    "CONFLICT_DUPLICATE_TABLE_NAME": "\"{{name}}\" adında bir tablo zaten var",
+    "CONFLICT_DUPLICATE_COLUMN_NAME": "\"{{name}}\" adında bir kolon bu tabloda zaten var",
+    "CONFLICT_DUPLICATE_COLUMN_IN_REQUEST": "\"{{name}}\" adı istekte birden fazla kez kullanılmış",
+    "CONFLICT_DUPLICATE_TAG_NAME": "\"{{name}}\" adında bir tag zaten var",
+    "NOT_FOUND_TABLE": "Tablo bulunamadı (id: {{id}})",
+    "NOT_FOUND_COLUMN": "Bu tabloda böyle bir kolon bulunamadı (id: {{id}})",
+    "NOT_FOUND_TAG": "Tag bulunamadı (id: {{id}})"
+  }
+}

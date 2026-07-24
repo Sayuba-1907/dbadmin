@@ -1,8 +1,14 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
 
+/**
+ * Backend'in whitelist'iyle (ColumnType enum) ayni deger seti. `as const` + `typeof [number]`
+ * kalibiyla hem calisma zamaninda kullanilabilecek bir dizi hem de derleme zamaninda
+ * "numeric" | "text" | "datetime" | "boolean" birlesim tipi (union type) elde ediyoruz.
+ */
 export const KOLON_TYPES = ["numeric", "text", "datetime", "boolean"] as const;
 export type KolonType = (typeof KOLON_TYPES)[number];
 
+/** Backend'in KolonResponse DTO'suyla ayni sekil. */
 export interface Kolon {
   id: number;
   name: string;
@@ -11,17 +17,20 @@ export interface Kolon {
   tagName: string | null;
 }
 
+/** Backend'in TabloResponse DTO'suyla ayni sekil. */
 export interface Tablo {
   id: number;
   name: string;
   kolonlar: Kolon[];
 }
 
+/** Tablo olustururken/kolon eklerken forma girilen kolon bilgisi (henuz id/tagName yok). */
 export interface CreateKolonInput {
   name: string;
   type: KolonType;
 }
 
+/** Bu dosyadaki her fonksiyon, TabloController'daki bir endpoint'in birebir karsiligidir. */
 export function getTablolar(): Promise<Tablo[]> {
   return apiGet<Tablo[]>("/api/tablolar");
 }

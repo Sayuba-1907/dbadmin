@@ -1,8 +1,11 @@
 import { FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CreateKolonInput, KOLON_TYPES, Tablo, KolonType } from "../api/tablolar";
 import { Tag } from "../api/tags";
 import { KolonRow } from "./KolonRow";
+import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation";
 
+/** Handler'lar Dashboard'dan geliyor (bkz. Dashboard'daki handle* fonksiyonlari); bu component sadece cagirir, kendisi API'ye dokunmaz. */
 interface TabloDetailProps {
   tablo: Tablo;
   tags: Tag[];
@@ -15,6 +18,12 @@ interface TabloDetailProps {
   onCreateTag: (name: string) => Promise<void>;
 }
 
+/**
+ * Secili tablonun detay paneli: baslik (duzenlenebilir isim + sil butonu), kolon tablosu,
+ * "kolon ekle" ve "tag olustur" formlari hepsi burada. Kendi local UI state'i var
+ * (hangi input'un su an duzenlenebilir modda oldugu, form draft'lari) ama gercek veri
+ * (tablo, tags) her zaman Dashboard'dan prop olarak gelir.
+ */
 export function TabloDetail({
   tablo,
   tags,
@@ -26,10 +35,13 @@ export function TabloDetail({
   onChangeKolonTag,
   onCreateTag,
 }: TabloDetailProps) {
+  const { t } = useTranslation();
   const [kolonName, setKolonName] = useState("");
   const [kolonType, setKolonType] = useState<KolonType>(KOLON_TYPES[0]);
+  // Form gonderilirken butonu disabled yapmak icin — cift tiklamayla ayni istegi iki kez atmayi onler.
   const [submitting, setSubmitting] = useState(false);
 
+  // editingTabloName: "duzenle" moduna gecildi mi. tabloNameDraft: input'taki henuz kaydedilmemis metin.
   const [editingTabloName, setEditingTabloName] = useState(false);
   const [tabloNameDraft, setTabloNameDraft] = useState(tablo.name);
 
@@ -70,7 +82,7 @@ export function TabloDetail({
               autoFocus
             />
             <button type="submit" className="btn btn-link">
-              Kaydet
+              {t("common.save")}
             </button>
             <button
               type="button"
@@ -80,28 +92,35 @@ export function TabloDetail({
                 setEditingTabloName(false);
               }}
             >
-              Vazgec
+              {t("common.cancel")}
             </button>
           </form>
         ) : (
           <h2>
             {tablo.name}{" "}
             <button className="btn btn-link" onClick={() => setEditingTabloName(true)}>
-              Duzenle
+              {t("common.edit")}
             </button>
           </h2>
         )}
-        <button className="btn btn-danger" onClick={() => onDeleteTablo(tablo.id)}>
-          Tabloyu Sil
+        <button
+          className="btn btn-danger"
+          onClick={() => {
+            if (window.confirm(t("tabloDetail.confirmDeleteTable", { name: tablo.name }))) {
+              onDeleteTablo(tablo.id);
+            }
+          }}
+        >
+          {t("tabloDetail.deleteTable")}
         </button>
       </div>
 
       <table className="kolon-table">
         <thead>
           <tr>
-            <th>Kolon</th>
-            <th>Tip</th>
-            <th>Tag</th>
+            <th>{t("tabloDetail.colName")}</th>
+            <th>{t("tabloDetail.colType")}</th>
+            <th>{t("tabloDetail.colTag")}</th>
             <th></th>
           </tr>
         </thead>
@@ -119,7 +138,7 @@ export function TabloDetail({
           {tablo.kolonlar.length === 0 && (
             <tr>
               <td colSpan={4} className="empty-hint">
-                Henuz kolon yok
+                {t("tabloDetail.emptyColumns")}
               </td>
             </tr>
           )}
@@ -129,9 +148,13 @@ export function TabloDetail({
       <form className="add-kolon-form" onSubmit={handleAddKolon}>
         <input
           type="text"
-          placeholder="kolon_adi"
+          placeholder={t("tabloDetail.columnNamePlaceholder")}
           value={kolonName}
-          onChange={(e) => setKolonName(e.target.value)}
+          onChange={(e) => {
+            clearCustomValidity(e);
+            setKolonName(e.target.value);
+          }}
+          onInvalid={onRequiredInvalid(t)}
           required
         />
         <select value={kolonType} onChange={(e) => setKolonType(e.target.value as KolonType)}>
@@ -142,20 +165,24 @@ export function TabloDetail({
           ))}
         </select>
         <button className="btn" type="submit" disabled={submitting}>
-          Kolon Ekle
+          {t("tabloDetail.addColumn")}
         </button>
       </form>
 
       <form className="add-tag-form" onSubmit={handleCreateTagSubmit}>
         <input
           type="text"
-          placeholder="yeni_tag_adi"
+          placeholder={t("tabloDetail.tagNamePlaceholder")}
           value={newTagName}
-          onChange={(e) => setNewTagName(e.target.value)}
+          onChange={(e) => {
+            clearCustomValidity(e);
+            setNewTagName(e.target.value);
+          }}
+          onInvalid={onRequiredInvalid(t)}
           required
         />
         <button className="btn" type="submit">
-          Tag Olustur
+          {t("tabloDetail.createTag")}
         </button>
       </form>
     </section>
