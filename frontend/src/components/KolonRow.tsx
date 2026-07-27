@@ -64,6 +64,7 @@ export function KolonRow({ kolon, tags, onRename, onChangeTag, onDelete }: Kolon
       <td>
         <span className="type-badge">{kolon.type}</span>
       </td>
+      <td>{kolon.primaryKey && <span className="pk-badge">PK</span>}</td>
       <td>
         <select
           value={kolon.tagId ?? ""}

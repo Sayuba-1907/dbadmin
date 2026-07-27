@@ -8,12 +8,13 @@ import dbadmin.backend.entity.Tag;
  * {@code tagId} + {@code tagName} olarak duz (flatten) veriyoruz — frontend'in ekstra
  * bir nested object'i parse etmesine gerek kalmiyor.
  */
-public record KolonResponse(Long id, String name, String type, Long tagId, String tagName) {
+public record KolonResponse(Long id, String name, String type, Long tagId, String tagName, boolean primaryKey) {
 
     public static KolonResponse from(Kolon kolon) {
         Tag tag = kolon.getTag();
         Long tagId = tag == null ? null : tag.getId();
         String tagName = tag == null ? null : tag.getName();
-        return new KolonResponse(kolon.getId(), kolon.getName(), kolon.getType(), tagId, tagName);
+        return new KolonResponse(
+                kolon.getId(), kolon.getName(), kolon.getType(), tagId, tagName, kolon.isPrimaryKey());
     }
 }

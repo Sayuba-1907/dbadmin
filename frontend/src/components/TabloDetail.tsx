@@ -38,6 +38,7 @@ export function TabloDetail({
   const { t } = useTranslation();
   const [kolonName, setKolonName] = useState("");
   const [kolonType, setKolonType] = useState<KolonType>(KOLON_TYPES[0]);
+  const [kolonPrimaryKey, setKolonPrimaryKey] = useState(false);
   // Form gonderilirken butonu disabled yapmak icin — cift tiklamayla ayni istegi iki kez atmayi onler.
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,8 +52,9 @@ export function TabloDetail({
     event.preventDefault();
     setSubmitting(true);
     try {
-      await onAddKolon(tablo.id, { name: kolonName, type: kolonType });
+      await onAddKolon(tablo.id, { name: kolonName, type: kolonType, primaryKey: kolonPrimaryKey });
       setKolonName("");
+      setKolonPrimaryKey(false);
     } finally {
       setSubmitting(false);
     }
@@ -120,6 +122,7 @@ export function TabloDetail({
           <tr>
             <th>{t("tabloDetail.colName")}</th>
             <th>{t("tabloDetail.colType")}</th>
+            <th>{t("tabloDetail.colPrimaryKey")}</th>
             <th>{t("tabloDetail.colTag")}</th>
             <th></th>
           </tr>
@@ -137,7 +140,7 @@ export function TabloDetail({
           ))}
           {tablo.kolonlar.length === 0 && (
             <tr>
-              <td colSpan={4} className="empty-hint">
+              <td colSpan={5} className="empty-hint">
                 {t("tabloDetail.emptyColumns")}
               </td>
             </tr>
@@ -164,6 +167,14 @@ export function TabloDetail({
             </option>
           ))}
         </select>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={kolonPrimaryKey}
+            onChange={(e) => setKolonPrimaryKey(e.target.checked)}
+          />
+          {t("tabloDetail.primaryKeyLabel")}
+        </label>
         <button className="btn" type="submit" disabled={submitting}>
           {t("tabloDetail.addColumn")}
         </button>

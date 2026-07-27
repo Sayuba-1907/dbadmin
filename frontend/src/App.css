@@ -131,11 +131,22 @@
   font-size: 12px;
 }
 
+.pk-badge {
+  font-family: monospace;
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .add-kolon-form,
 .add-tag-form {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
+  align-items: center;
 }
 
 .inline-edit-form {
@@ -219,6 +230,15 @@
 .kolon-row {
   display: flex;
   gap: 8px;
+}
+
+label.checkbox-label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .modal-actions {

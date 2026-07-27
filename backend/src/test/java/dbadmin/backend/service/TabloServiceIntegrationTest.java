@@ -159,4 +159,19 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     void getTablo_unknownId_isNotFound() {
         assertThrows(NotFoundException.class, () -> tabloService.getTablo(-1L));
     }
+
+    @Test
+    void createTablo_primaryKeyFlag_isMetadataOnlyAndDoesNotChangeRealPk() {
+        Tablo tablo = tabloService.createTablo("urun5",
+                List.of(new KolonTanimi("ad", "text", null, true), new KolonTanimi("kod", "text", null, false)));
+
+        assertTrue(tablo.getKolonlar().get(0).isPrimaryKey());
+        assertFalse(tablo.getKolonlar().get(1).isPrimaryKey());
+        // Gercek DB'de PRIMARY KEY hala sadece otomatik "id" kolonunda - bu flag DDL'e dokunmuyor.
+        Integer realPkColumnCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.key_column_usage "
+                        + "WHERE table_name = ? AND column_name = 'ad'",
+                Integer.class, "urun5");
+        assertEquals(0, realPkColumnCount);
+    }
 }

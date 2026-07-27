@@ -12,6 +12,8 @@ import dbadmin.backend.repository.KolonRepository;
 import dbadmin.backend.repository.TabloRepository;
 import dbadmin.backend.repository.TagRepository;
 import dbadmin.backend.validation.NameValidator;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -35,12 +37,27 @@ public class TabloService {
     private final TagRepository tagRepository;
     private final TableDdlExecutor ddlExecutor;
 
+    // Is olaylarini sayan kumulatif sayaclar (Prometheus'ta _total soneki alir) — "kac tablo
+    // olusturuldu" gibi sorular icin. Anlik durum ("su an kac tablo var") icin ise Gauge
+    // kullaniliyor (asagida, constructor'da kaydediliyor) cunku o hep DB'nin canli sayisini yansitir.
+    private final Counter tablesCreatedCounter;
+    private final Counter tablesDeletedCounter;
+    private final Counter columnsCreatedCounter;
+
     public TabloService(TabloRepository tabloRepository, KolonRepository kolonRepository,
-            TagRepository tagRepository, TableDdlExecutor ddlExecutor) {
+            TagRepository tagRepository, TableDdlExecutor ddlExecutor, MeterRegistry meterRegistry) {
         this.tabloRepository = tabloRepository;
         this.kolonRepository = kolonRepository;
         this.tagRepository = tagRepository;
         this.ddlExecutor = ddlExecutor;
+        // Dikkat: isim ".created" ile bitmesin — Prometheus/OpenMetrics'te "_created" ayri bir
+        // anlam tasiyan (sayacin olusturulma zaman damgasi) rezerve bir sonek; Micrometer bunu
+        // fark edip "created" kelimesini sessizce siliyor (ör. "dbadmin.tables.created" ->
+        // "dbadmin_tables_total" olarak cikiyor, "created" kayboluyor). "creations" cakismiyor.
+        this.tablesCreatedCounter = meterRegistry.counter("dbadmin.tables.creations");
+        this.tablesDeletedCounter = meterRegistry.counter("dbadmin.tables.deletions");
+        this.columnsCreatedCounter = meterRegistry.counter("dbadmin.columns.creations");
+        meterRegistry.gauge("dbadmin.tables.active", tabloRepository, TabloRepository::count);
     }
     /**
      * {@code @Transactional}: bu metod icindeki tum DB islemlerini tek bir islem paketine alir;
@@ -94,12 +111,15 @@ public class TabloService {
 
             Kolon kolon = new Kolon(tanim.name(), type.metadataValue(), tablo);
             kolon.setTag(resolveTag(tanim.tagId()));
+            kolon.setPrimaryKey(tanim.primaryKey());
             tablo.addKolon(kolon);
             ddlColumns.add(new TableDdlExecutor.ColumnDefinition(tanim.name(), type));
         }
 
         Tablo saved = tabloRepository.save(tablo);
         ddlExecutor.createTable(saved.getName(), ddlColumns);
+        tablesCreatedCounter.increment();
+        columnsCreatedCounter.increment(ddlColumns.size());
         return saved;
     }
 
@@ -127,6 +147,7 @@ public class TabloService {
         String name = tablo.getName();
         tabloRepository.delete(tablo);
         ddlExecutor.dropTable(name);
+        tablesDeletedCounter.increment();
     }
 
     /** Mevcut bir tabloya yeni kolon ekler; metadata + gercek {@code ALTER TABLE ADD COLUMN} birlikte gider. */
@@ -143,10 +164,12 @@ public class TabloService {
         ColumnType type = ColumnType.fromMetadataValue(tanim.type());
         Kolon kolon = new Kolon(tanim.name(), type.metadataValue(), tablo);
         kolon.setTag(resolveTag(tanim.tagId()));
+        kolon.setPrimaryKey(tanim.primaryKey());
         tablo.addKolon(kolon);
         Kolon saved = kolonRepository.save(kolon);
 
         ddlExecutor.addColumn(tablo.getName(), saved.getName(), type);
+        columnsCreatedCounter.increment();
         return saved;
     }
 

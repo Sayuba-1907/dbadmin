@@ -22,9 +22,11 @@
     "colName": "Kolon",
     "colType": "Tip",
     "colTag": "Tag",
+    "colPrimaryKey": "PK",
     "emptyColumns": "Henüz kolon yok",
     "columnNamePlaceholder": "kolon_adi",
     "addColumn": "Kolon Ekle",
+    "primaryKeyLabel": "Birincil Anahtar",
     "tagNamePlaceholder": "yeni_tag_adi",
     "createTag": "Tag Oluştur"
   },

@@ -9,7 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,9 +16,13 @@ import java.util.List;
  * Kullanicinin olusturdugu bir "tablo"nun metadata karsiligi (entity = DB satirinin Java karsiligi).
  * Bu class'in kendisi gercek Postgres tablosu degil, onu tanimlayan kayittir; gercek
  * {@code CREATE TABLE} islemini {@link dbadmin.backend.ddl.TableDdlExecutor} yapar.
+ * <p>
+ * {@code name} benzersizligi burada bir DB constraint'i ile degil, uygulama katmaninda
+ * ({@link dbadmin.backend.service.TabloService#createTablo}, {@code existsByName} kontrolu)
+ * saglanir.
  */
 @Entity
-@Table(name = "tablo", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
+@Table(name = "tablo")
 public class Tablo {
 
     @Id

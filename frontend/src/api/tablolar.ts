@@ -15,6 +15,7 @@ export interface Kolon {
   type: string;
   tagId: number | null;
   tagName: string | null;
+  primaryKey: boolean;
 }
 
 /** Backend'in TabloResponse DTO'suyla ayni sekil. */
@@ -28,6 +29,7 @@ export interface Tablo {
 export interface CreateKolonInput {
   name: string;
   type: KolonType;
+  primaryKey?: boolean;
 }
 
 /** Bu dosyadaki her fonksiyon, TabloController'daki bir endpoint'in birebir karsiligidir. */

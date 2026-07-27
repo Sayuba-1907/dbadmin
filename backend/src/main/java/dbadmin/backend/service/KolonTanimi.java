@@ -6,5 +6,10 @@ package dbadmin.backend.service;
  * controller'dan service'e gecerken (String, String, Long) parametre listesi yerine
  * kullanilan ic (internal) bir tip.
  */
-public record KolonTanimi(String name, String type, Long tagId) {
+public record KolonTanimi(String name, String type, Long tagId, boolean primaryKey) {
+
+    /** primaryKey belirtilmedigi cagrilar icin (mevcut testler/cagiranlar) kisayol: varsayilan false. */
+    public KolonTanimi(String name, String type, Long tagId) {
+        this(name, type, tagId, false);
+    }
 }

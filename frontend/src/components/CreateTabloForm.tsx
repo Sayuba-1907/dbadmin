@@ -12,13 +12,16 @@ interface CreateTabloFormProps {
 interface DraftKolon {
   name: string;
   type: KolonType;
+  primaryKey: boolean;
 }
 
 /** "Yeni Tablo" modal formu: tablo adi + dinamik sayida kolon satiri (ekle/sil). */
 export function CreateTabloForm({ onSubmit, onClose }: CreateTabloFormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
-  const [kolonlar, setKolonlar] = useState<DraftKolon[]>([{ name: "", type: KOLON_TYPES[0] }]);
+  const [kolonlar, setKolonlar] = useState<DraftKolon[]>([
+    { name: "", type: KOLON_TYPES[0], primaryKey: false },
+  ]);
   const [submitting, setSubmitting] = useState(false);
 
   /** Listedeki tek bir kolon satirini gunceller — React'ta array state'i dogrudan mutate etmek yerine hep yeni bir array olusturulur (immutability). */
@@ -27,7 +30,7 @@ export function CreateTabloForm({ onSubmit, onClose }: CreateTabloFormProps) {
   }
 
   function addKolonRow() {
-    setKolonlar((prev) => [...prev, { name: "", type: KOLON_TYPES[0] }]);
+    setKolonlar((prev) => [...prev, { name: "", type: KOLON_TYPES[0], primaryKey: false }]);
   }
 
   function removeKolonRow(index: number) {
@@ -41,7 +44,7 @@ export function CreateTabloForm({ onSubmit, onClose }: CreateTabloFormProps) {
     try {
       const validKolonlar: CreateKolonInput[] = kolonlar
         .filter((k) => k.name.trim() !== "")
-        .map((k) => ({ name: k.name, type: k.type }));
+        .map((k) => ({ name: k.name, type: k.type, primaryKey: k.primaryKey }));
       await onSubmit(name, validKolonlar);
     } finally {
       setSubmitting(false);
@@ -87,6 +90,14 @@ export function CreateTabloForm({ onSubmit, onClose }: CreateTabloFormProps) {
                   </option>
                 ))}
               </select>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={kolon.primaryKey}
+                  onChange={(e) => updateKolon(index, { primaryKey: e.target.checked })}
+                />
+                {t("tabloDetail.primaryKeyLabel")}
+              </label>
               <button
                 type="button"
                 className="btn btn-link btn-danger"

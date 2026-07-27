@@ -58,6 +58,13 @@ public class Kolon {
     @JoinColumn(name = "tag_id")
     private Tag tag;
 
+    // Metadata-only isaretleme: gercek tablonun PRIMARY KEY'i her zaman otomatik eklenen
+    // "id" kolonudur (bkz. TableDdlExecutor). Bu alan sadece kullanicinin "bu kolon benim
+    // gozumde birincil anahtar" diye isaretleyebilmesi icin var, DB'de ekstra bir constraint
+    // olusturmaz.
+    @Column(nullable = false)
+    private boolean primaryKey;
+
     /** JPA/Hibernate'in reflection ile nesne olusturabilmesi icin zorunlu parametresiz constructor. */
     protected Kolon() {
     }
@@ -99,6 +106,14 @@ public class Kolon {
 
     public void setTag(Tag tag) {
         this.tag = tag;
+    }
+
+    public boolean isPrimaryKey() {
+        return primaryKey;
+    }
+
+    public void setPrimaryKey(boolean primaryKey) {
+        this.primaryKey = primaryKey;
     }
 
     /** Sadece id'ye gore esitlik: kaydedilmemis (id=null) nesneler asla birbirine esit sayilmaz. */

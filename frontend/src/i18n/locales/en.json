@@ -22,9 +22,11 @@
     "colName": "Column",
     "colType": "Type",
     "colTag": "Tag",
+    "colPrimaryKey": "PK",
     "emptyColumns": "No columns yet",
     "columnNamePlaceholder": "column_name",
     "addColumn": "Add Column",
+    "primaryKeyLabel": "Primary Key",
     "tagNamePlaceholder": "new_tag_name",
     "createTag": "Create Tag"
   },
