@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dbadmin.backend.AbstractIntegrationTest;
 import dbadmin.backend.entity.Kolon;
+import dbadmin.backend.entity.Schema;
 import dbadmin.backend.entity.Tablo;
 import dbadmin.backend.entity.Tag;
 import dbadmin.backend.exception.ConflictException;
@@ -36,12 +37,19 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     private TagRepository tagRepository;
 
     @Autowired
+    private SchemaService schemaService;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     private boolean realTableExists(String tableName) {
+        return realTableExists("public", tableName);
+    }
+
+    private boolean realTableExists(String schemaName, String tableName) {
         Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ?",
-                Integer.class, tableName);
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
+                Integer.class, schemaName, tableName);
         return count != null && count > 0;
     }
 
@@ -55,7 +63,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createTablo_createsMetadataAndRealTable() {
-        Tablo tablo = tabloService.createTablo("ogrenci1",
+        Tablo tablo = tabloService.createTablo("ogrenci1", null,
                 List.of(new KolonTanimi("ad", "text", null), new KolonTanimi("yas", "numeric", null)));
 
         assertTrue(realTableExists("ogrenci1"));
@@ -66,16 +74,16 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createTablo_duplicateName_isConflict() {
-        tabloService.createTablo("ogrenci2", List.of(new KolonTanimi("ad", "text", null)));
+        tabloService.createTablo("ogrenci2", null, List.of(new KolonTanimi("ad", "text", null)));
 
         assertThrows(ConflictException.class,
-                () -> tabloService.createTablo("ogrenci2", List.of(new KolonTanimi("baska", "text", null))));
+                () -> tabloService.createTablo("ogrenci2", null, List.of(new KolonTanimi("baska", "text", null))));
     }
 
     @Test
     void createTablo_invalidTableName_isRejectedBeforeAnyDdl() {
         assertThrows(ValidationException.class,
-                () -> tabloService.createTablo("Buyuk", List.of(new KolonTanimi("ad", "text", null))));
+                () -> tabloService.createTablo("Buyuk", null, List.of(new KolonTanimi("ad", "text", null))));
 
         assertFalse(realTableExists("Buyuk"));
         assertFalse(realTableExists("buyuk"));
@@ -84,14 +92,14 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createTablo_invalidColumnType_isRejected() {
         assertThrows(ValidationException.class,
-                () -> tabloService.createTablo("ogrenci3", List.of(new KolonTanimi("ad", "varchar", null))));
+                () -> tabloService.createTablo("ogrenci3", null, List.of(new KolonTanimi("ad", "varchar", null))));
 
         assertFalse(realTableExists("ogrenci3"));
     }
 
     @Test
     void renameTablo_renamesRealTable() {
-        Tablo tablo = tabloService.createTablo("kurs1", List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("kurs1", null, List.of(new KolonTanimi("ad", "text", null)));
 
         tabloService.renameTablo(tablo.getId(), "kurs1_yeni");
 
@@ -101,7 +109,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void deleteTablo_dropsRealTableAndCascadesColumns() {
-        Tablo tablo = tabloService.createTablo("kurs2",
+        Tablo tablo = tabloService.createTablo("kurs2", null,
                 List.of(new KolonTanimi("ad", "text", null), new KolonTanimi("kontenjan", "numeric", null)));
         Long kolonId = tablo.getKolonlar().get(0).getId();
 
@@ -113,7 +121,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void addKolon_addsRealColumn() {
-        Tablo tablo = tabloService.createTablo("urun1", List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("urun1", null, List.of(new KolonTanimi("ad", "text", null)));
 
         tabloService.addKolon(tablo.getId(), new KolonTanimi("fiyat", "numeric", null));
 
@@ -123,7 +131,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void deleteKolon_dropsRealColumnButKeepsTag() {
         Tag tag = tagRepository.save(new Tag("onemli"));
-        Tablo tablo = tabloService.createTablo("urun2", List.of(new KolonTanimi("ad", "text", tag.getId())));
+        Tablo tablo = tabloService.createTablo("urun2", null, List.of(new KolonTanimi("ad", "text", tag.getId())));
         Kolon kolon = tablo.getKolonlar().get(0);
 
         tabloService.deleteKolon(tablo.getId(), kolon.getId());
@@ -134,7 +142,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void renameKolon_renamesRealColumn() {
-        Tablo tablo = tabloService.createTablo("urun3", List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("urun3", null, List.of(new KolonTanimi("ad", "text", null)));
         Kolon kolon = tablo.getKolonlar().get(0);
 
         tabloService.renameKolon(tablo.getId(), kolon.getId(), "isim");
@@ -146,7 +154,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void changeKolonTag_updatesReferenceWithoutTouchingRealTable() {
         Tag tag = tagRepository.save(new Tag("etiket1"));
-        Tablo tablo = tabloService.createTablo("urun4", List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("urun4", null, List.of(new KolonTanimi("ad", "text", null)));
         Kolon kolon = tablo.getKolonlar().get(0);
 
         Kolon updated = tabloService.changeKolonTag(tablo.getId(), kolon.getId(), tag.getId());
@@ -162,7 +170,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createTablo_primaryKeyFlag_isMetadataOnlyAndDoesNotChangeRealPk() {
-        Tablo tablo = tabloService.createTablo("urun5",
+        Tablo tablo = tabloService.createTablo("urun5", null,
                 List.of(new KolonTanimi("ad", "text", null, true), new KolonTanimi("kod", "text", null, false)));
 
         assertTrue(tablo.getKolonlar().get(0).isPrimaryKey());
@@ -173,5 +181,87 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
                         + "WHERE table_name = ? AND column_name = 'ad'",
                 Integer.class, "urun5");
         assertEquals(0, realPkColumnCount);
+    }
+
+    @Test
+    void createTablo_noSchemaId_defaultsToPublicSchema() {
+        Tablo tablo = tabloService.createTablo("urun6", null, List.of(new KolonTanimi("ad", "text", null)));
+
+        assertEquals("public", tablo.getSchema().getName());
+        assertTrue(realTableExists("public", "urun6"));
+    }
+
+    @Test
+    void createTablo_withSchemaId_createsRealTableInThatSchema() {
+        Schema schema = schemaService.createSchema("raporlama1");
+
+        Tablo tablo = tabloService.createTablo("rapor1", schema.getId(),
+                List.of(new KolonTanimi("ad", "text", null)));
+
+        assertEquals(schema.getId(), tablo.getSchema().getId());
+        assertTrue(realTableExists("raporlama1", "rapor1"));
+        assertFalse(realTableExists("public", "rapor1"));
+    }
+
+    @Test
+    void createTablo_unknownSchemaId_isNotFound() {
+        assertThrows(NotFoundException.class,
+                () -> tabloService.createTablo("rapor2", -1L, List.of(new KolonTanimi("ad", "text", null))));
+
+        assertFalse(realTableExists("rapor2"));
+    }
+
+    @Test
+    void listTablolarBySchema_returnsOnlyThatSchemasTables() {
+        Schema schema = schemaService.createSchema("raporlama2");
+        Tablo inSchema = tabloService.createTablo("rapor3", schema.getId(),
+                List.of(new KolonTanimi("ad", "text", null)));
+        tabloService.createTablo("rapor4", null, List.of(new KolonTanimi("ad", "text", null)));
+
+        List<Tablo> result = tabloService.listTablolarBySchema(schema.getId());
+
+        assertEquals(1, result.size());
+        assertEquals(inSchema.getId(), result.get(0).getId());
+    }
+
+    @Test
+    void changeSchema_movesRealTableToNewSchema() {
+        Schema hedefSchema = schemaService.createSchema("hedef1");
+        Tablo tablo = tabloService.createTablo("tasinan1", null, List.of(new KolonTanimi("ad", "text", null)));
+
+        Tablo moved = tabloService.changeSchema(tablo.getId(), hedefSchema.getId());
+
+        assertEquals(hedefSchema.getId(), moved.getSchema().getId());
+        assertTrue(realTableExists("hedef1", "tasinan1"));
+        assertFalse(realTableExists("public", "tasinan1"));
+    }
+
+    @Test
+    void changeSchema_missingSchemaId_isRejected() {
+        Tablo tablo = tabloService.createTablo("tasinan2", null, List.of(new KolonTanimi("ad", "text", null)));
+
+        assertThrows(ValidationException.class, () -> tabloService.changeSchema(tablo.getId(), null));
+
+        assertTrue(realTableExists("public", "tasinan2"));
+    }
+
+    @Test
+    void changeSchema_unknownSchemaId_isNotFound() {
+        Tablo tablo = tabloService.createTablo("tasinan3", null, List.of(new KolonTanimi("ad", "text", null)));
+
+        assertThrows(NotFoundException.class, () -> tabloService.changeSchema(tablo.getId(), -1L));
+
+        assertTrue(realTableExists("public", "tasinan3"));
+    }
+
+    @Test
+    void changeSchema_sameSchema_isNoopAndDoesNotError() {
+        Tablo tablo = tabloService.createTablo("tasinan4", null, List.of(new KolonTanimi("ad", "text", null)));
+        Long publicSchemaId = tablo.getSchema().getId();
+
+        Tablo result = tabloService.changeSchema(tablo.getId(), publicSchemaId);
+
+        assertEquals(publicSchemaId, result.getSchema().getId());
+        assertTrue(realTableExists("public", "tasinan4"));
     }
 }

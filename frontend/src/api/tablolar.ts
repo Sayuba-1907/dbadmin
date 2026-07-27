@@ -22,6 +22,8 @@ export interface Kolon {
 export interface Tablo {
   id: number;
   name: string;
+  schemaId: number;
+  schemaName: string;
   kolonlar: Kolon[];
 }
 
@@ -37,8 +39,12 @@ export function getTablolar(): Promise<Tablo[]> {
   return apiGet<Tablo[]>("/api/tablolar");
 }
 
-export function createTablo(name: string, kolonlar: CreateKolonInput[]): Promise<Tablo> {
-  return apiPost<Tablo>("/api/tablolar", { name, kolonlar });
+export function createTablo(
+  name: string,
+  kolonlar: CreateKolonInput[],
+  schemaId?: number | null
+): Promise<Tablo> {
+  return apiPost<Tablo>("/api/tablolar", { name, schemaId: schemaId ?? null, kolonlar });
 }
 
 export function deleteTablo(id: number): Promise<void> {
@@ -55,6 +61,10 @@ export function deleteKolon(tabloId: number, kolonId: number): Promise<void> {
 
 export function renameTablo(id: number, name: string): Promise<Tablo> {
   return apiPatch<Tablo>(`/api/tablolar/${id}`, { name });
+}
+
+export function changeTabloSchema(id: number, schemaId: number): Promise<Tablo> {
+  return apiPatch<Tablo>(`/api/tablolar/${id}/schema`, { schemaId });
 }
 
 export function renameKolon(tabloId: number, kolonId: number, name: string): Promise<Kolon> {

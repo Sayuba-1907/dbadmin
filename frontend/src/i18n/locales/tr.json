@@ -8,15 +8,19 @@
   },
   "sidebar": {
     "newTable": "+ Yeni Tablo",
-    "empty": "Henüz tablo yok",
+    "newSchema": "+ Yeni Schema",
+    "empty": "Henüz schema yok",
     "searchPlaceholder": "Tablo ara...",
-    "noSearchResults": "Eşleşen tablo yok"
+    "noSearchResults": "Eşleşen tablo yok",
+    "noTablesInSchema": "Bu schema'da henüz tablo yok",
+    "confirmDeleteSchema": "\"{{name}}\" schema'sını silmek istediğinize emin misiniz? Bu, içindeki {{count}} tabloyu da kalıcı olarak silecek."
   },
   "dashboard": {
     "loading": "Yükleniyor...",
     "selectTable": "Bir tablo seç"
   },
   "tabloDetail": {
+    "schemaLabel": "Schema",
     "deleteTable": "Tabloyu Sil",
     "confirmDeleteTable": "\"{{name}}\" tablosunu silmek istediğinize emin misiniz?",
     "colName": "Kolon",
@@ -38,7 +42,14 @@
     "title": "Yeni Tablo",
     "tableNameLabel": "Tablo adı",
     "tableNamePlaceholder": "tablo_adi",
+    "schemaLabel": "Schema",
     "addColumnRow": "+ Kolon ekle",
+    "submit": "Oluştur"
+  },
+  "createSchemaForm": {
+    "title": "Yeni Schema",
+    "schemaNameLabel": "Schema adı",
+    "schemaNamePlaceholder": "schema_adi",
     "submit": "Oluştur"
   },
   "notifications": {
@@ -58,7 +69,15 @@
     "tagOnColumnUpdated": "Kolonun tag'i güncellendi",
     "tagUpdateFailed": "Tag güncellenemedi",
     "tagCreated": "\"{{name}}\" tag'i oluşturuldu",
-    "tagCreateFailed": "Tag oluşturulamadı"
+    "tagCreateFailed": "Tag oluşturulamadı",
+    "schemaCreated": "\"{{name}}\" schema'sı oluşturuldu",
+    "schemaCreateFailed": "Schema oluşturulamadı",
+    "schemaRenamed": "Schema yeniden adlandırıldı",
+    "schemaRenameFailed": "Schema yeniden adlandırılamadı",
+    "schemaDeleted": "Schema silindi",
+    "schemaDeleteFailed": "Schema silinemedi",
+    "tableSchemaChanged": "Tablo yeni schema'ya taşındı",
+    "tableSchemaChangeFailed": "Tablo yeni schema'ya taşınamadı"
   },
   "validation": {
     "required": "Lütfen bu alanı doldurun"
@@ -75,6 +94,13 @@
     "CONFLICT_DUPLICATE_TAG_NAME": "\"{{name}}\" adında bir tag zaten var",
     "NOT_FOUND_TABLE": "Tablo bulunamadı (id: {{id}})",
     "NOT_FOUND_COLUMN": "Bu tabloda böyle bir kolon bulunamadı (id: {{id}})",
-    "NOT_FOUND_TAG": "Tag bulunamadı (id: {{id}})"
+    "NOT_FOUND_TAG": "Tag bulunamadı (id: {{id}})",
+    "VALIDATION_INVALID_SCHEMA_NAME": "Schema adı 2-30 karakter olmalı, büyük harfle başlayamaz ve sadece harf, rakam, alt çizgi içerebilir",
+    "VALIDATION_RESERVED_SCHEMA_NAME": "\"public\" rezerve bir schema adıdır, kullanılamaz",
+    "CONFLICT_DUPLICATE_SCHEMA_NAME": "\"{{name}}\" adında bir schema zaten var",
+    "NOT_FOUND_SCHEMA": "Schema bulunamadı (id: {{id}})",
+    "VALIDATION_CANNOT_DELETE_PUBLIC_SCHEMA": "\"public\" schema'sı sistem tarafından gerekli, silinemez",
+    "VALIDATION_CANNOT_RENAME_PUBLIC_SCHEMA": "\"public\" schema'sı sistem tarafından gerekli, yeniden adlandırılamaz",
+    "VALIDATION_MISSING_SCHEMA": "Bir hedef schema belirtilmeli"
   }
 }

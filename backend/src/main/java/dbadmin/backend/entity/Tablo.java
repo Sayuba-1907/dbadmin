@@ -7,6 +7,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
@@ -31,6 +33,14 @@ public class Tablo {
 
     @Column(nullable = false)
     private String name;
+
+    // DB kolonu bilerek nullable birakildi (nullable=false yazmadik): Hibernate ddl-auto=update
+    // var olan satirlari doldurmadan NOT NULL bir kolon acamiyor. "Her tablo bir schema'ya
+    // ait olmali" kurali burada DB constraint'iyle degil, uygulama katmaninda
+    // (SchemaBootstrapRunner + TabloService#createTablo) saglanir.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schema_id")
+    private Schema schema;
 
     // Composition: a Kolon cannot exist without its Tablo, so the parent
     // owns the lifecycle of its columns (cascade + orphanRemoval).
@@ -66,6 +76,14 @@ public class Tablo {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Schema getSchema() {
+        return schema;
+    }
+
+    public void setSchema(Schema schema) {
+        this.schema = schema;
     }
 
     public List<Kolon> getKolonlar() {

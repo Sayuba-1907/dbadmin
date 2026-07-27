@@ -1,6 +1,7 @@
 package dbadmin.backend.repository;
 
 import dbadmin.backend.entity.Tablo;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -16,4 +17,10 @@ public interface TabloRepository extends JpaRepository<Tablo, Long> {
 
     /** Tam satiri cekmeden sadece var/yok bilgisini doner — uniqueness kontrolu icin findByName'den daha ucuz. */
     boolean existsByName(String name);
+
+    /** Bir schema'nin altindaki tablolari listeler (sidebar'da schema -> tablo hiyerarsisi icin). */
+    List<Tablo> findBySchemaId(Long schemaId);
+
+    /** SchemaBootstrapRunner'in "public"'e baglanmamis eski tablolari bulup baglamasi icin. */
+    List<Tablo> findBySchemaIsNull();
 }

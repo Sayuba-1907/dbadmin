@@ -8,15 +8,19 @@
   },
   "sidebar": {
     "newTable": "+ New Table",
-    "empty": "No tables yet",
+    "newSchema": "+ New Schema",
+    "empty": "No schemas yet",
     "searchPlaceholder": "Search tables...",
-    "noSearchResults": "No matching tables"
+    "noSearchResults": "No matching tables",
+    "noTablesInSchema": "No tables in this schema yet",
+    "confirmDeleteSchema": "Delete schema \"{{name}}\"? This will also permanently delete its {{count}} table(s)."
   },
   "dashboard": {
     "loading": "Loading...",
     "selectTable": "Select a table"
   },
   "tabloDetail": {
+    "schemaLabel": "Schema",
     "deleteTable": "Delete Table",
     "confirmDeleteTable": "Are you sure you want to delete \"{{name}}\"?",
     "colName": "Column",
@@ -38,7 +42,14 @@
     "title": "New Table",
     "tableNameLabel": "Table name",
     "tableNamePlaceholder": "table_name",
+    "schemaLabel": "Schema",
     "addColumnRow": "+ Add column",
+    "submit": "Create"
+  },
+  "createSchemaForm": {
+    "title": "New Schema",
+    "schemaNameLabel": "Schema name",
+    "schemaNamePlaceholder": "schema_name",
     "submit": "Create"
   },
   "notifications": {
@@ -58,7 +69,15 @@
     "tagOnColumnUpdated": "Column's tag updated",
     "tagUpdateFailed": "Failed to update tag",
     "tagCreated": "\"{{name}}\" tag created",
-    "tagCreateFailed": "Failed to create tag"
+    "tagCreateFailed": "Failed to create tag",
+    "schemaCreated": "\"{{name}}\" schema created",
+    "schemaCreateFailed": "Failed to create schema",
+    "schemaRenamed": "Schema renamed",
+    "schemaRenameFailed": "Failed to rename schema",
+    "schemaDeleted": "Schema deleted",
+    "schemaDeleteFailed": "Failed to delete schema",
+    "tableSchemaChanged": "Table moved to new schema",
+    "tableSchemaChangeFailed": "Failed to move table to new schema"
   },
   "validation": {
     "required": "Please fill out this field"
@@ -75,6 +94,13 @@
     "CONFLICT_DUPLICATE_TAG_NAME": "A tag named \"{{name}}\" already exists",
     "NOT_FOUND_TABLE": "Table not found (id: {{id}})",
     "NOT_FOUND_COLUMN": "Column not found in this table (id: {{id}})",
-    "NOT_FOUND_TAG": "Tag not found (id: {{id}})"
+    "NOT_FOUND_TAG": "Tag not found (id: {{id}})",
+    "VALIDATION_INVALID_SCHEMA_NAME": "Schema name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
+    "VALIDATION_RESERVED_SCHEMA_NAME": "\"public\" is a reserved schema name and cannot be used",
+    "CONFLICT_DUPLICATE_SCHEMA_NAME": "A schema named \"{{name}}\" already exists",
+    "NOT_FOUND_SCHEMA": "Schema not found (id: {{id}})",
+    "VALIDATION_CANNOT_DELETE_PUBLIC_SCHEMA": "The \"public\" schema is required by the system and cannot be deleted",
+    "VALIDATION_CANNOT_RENAME_PUBLIC_SCHEMA": "The \"public\" schema is required by the system and cannot be renamed",
+    "VALIDATION_MISSING_SCHEMA": "A target schema must be specified"
   }
 }

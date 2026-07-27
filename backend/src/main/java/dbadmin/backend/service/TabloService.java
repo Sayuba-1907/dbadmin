@@ -3,12 +3,14 @@ package dbadmin.backend.service;
 import dbadmin.backend.ddl.ColumnType;
 import dbadmin.backend.ddl.TableDdlExecutor;
 import dbadmin.backend.entity.Kolon;
+import dbadmin.backend.entity.Schema;
 import dbadmin.backend.entity.Tablo;
 import dbadmin.backend.entity.Tag;
 import dbadmin.backend.exception.ConflictException;
 import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.KolonRepository;
+import dbadmin.backend.repository.SchemaRepository;
 import dbadmin.backend.repository.TabloRepository;
 import dbadmin.backend.repository.TagRepository;
 import dbadmin.backend.validation.NameValidator;
@@ -35,6 +37,7 @@ public class TabloService {
     private final TabloRepository tabloRepository;
     private final KolonRepository kolonRepository;
     private final TagRepository tagRepository;
+    private final SchemaRepository schemaRepository;
     private final TableDdlExecutor ddlExecutor;
 
     // Is olaylarini sayan kumulatif sayaclar (Prometheus'ta _total soneki alir) — "kac tablo
@@ -45,10 +48,12 @@ public class TabloService {
     private final Counter columnsCreatedCounter;
 
     public TabloService(TabloRepository tabloRepository, KolonRepository kolonRepository,
-            TagRepository tagRepository, TableDdlExecutor ddlExecutor, MeterRegistry meterRegistry) {
+            TagRepository tagRepository, SchemaRepository schemaRepository, TableDdlExecutor ddlExecutor,
+            MeterRegistry meterRegistry) {
         this.tabloRepository = tabloRepository;
         this.kolonRepository = kolonRepository;
         this.tagRepository = tagRepository;
+        this.schemaRepository = schemaRepository;
         this.ddlExecutor = ddlExecutor;
         // Dikkat: isim ".created" ile bitmesin — Prometheus/OpenMetrics'te "_created" ayri bir
         // anlam tasiyan (sayacin olusturulma zaman damgasi) rezerve bir sonek; Micrometer bunu
@@ -69,6 +74,12 @@ public class TabloService {
         return tabloRepository.findAll();
     }
 
+    /** Sidebar'daki schema -> tablo hiyerarsisi icin: sadece bir schema'nin altindaki tablolar. */
+    @Transactional(readOnly = true)
+    public List<Tablo> listTablolarBySchema(Long schemaId) {
+        return tabloRepository.findBySchemaId(schemaId);
+    }
+
     /** Id ile tek tablo bulur; yoksa 404'e cevrilecek {@link NotFoundException} firlatir (bkz. GlobalExceptionHandler). */
     @Transactional(readOnly = true)
     public Tablo getTablo(Long id) {
@@ -81,9 +92,11 @@ public class TabloService {
      * Yeni tablo olusturur: once metadata (Tablo + Kolon satirlari) DB'ye yazilir, sonra ayni
      * transaction icinde gercek {@code CREATE TABLE} calistirilir. DDL patlarsa metadata insert'i
      * de otomatik geri alinir — iki katman asla birbirinden kopmaz.
+     * {@code schemaId} null gelirse tablo varsayilan olarak "public" schema'ya baglanir (bkz.
+     * {@link #resolveSchema}); dolu gelirse o id'deki Schema'ya baglanir, yoksa 404.
      */
     @Transactional
-    public Tablo createTablo(String name, List<KolonTanimi> kolonTanimlari) {
+    public Tablo createTablo(String name, Long schemaId, List<KolonTanimi> kolonTanimlari) {
         NameValidator.validate("table name", "VALIDATION_INVALID_TABLE_NAME", name);
         if (tabloRepository.existsByName(name)) {
             throw new ConflictException(
@@ -94,8 +107,10 @@ public class TabloService {
         if (kolonTanimlari == null || kolonTanimlari.isEmpty()) {
             throw new ValidationException("VALIDATION_TABLE_NEEDS_COLUMN", "a table needs at least one column");
         }
+        Schema schema = resolveSchema(schemaId);
 
         Tablo tablo = new Tablo(name);
+        tablo.setSchema(schema);
         Set<String> seenNames = new HashSet<>();
         List<TableDdlExecutor.ColumnDefinition> ddlColumns = new ArrayList<>();
 
@@ -117,10 +132,46 @@ public class TabloService {
         }
 
         Tablo saved = tabloRepository.save(tablo);
-        ddlExecutor.createTable(saved.getName(), ddlColumns);
+        ddlExecutor.createTable(schema.getName(), saved.getName(), ddlColumns);
         tablesCreatedCounter.increment();
         columnsCreatedCounter.increment(ddlColumns.size());
         return saved;
+    }
+
+    /** {@code schemaId} null ise varsayilan "public" Schema satirini doner (bkz. SchemaBootstrapRunner), doluysa o id'yi arar, yoksa 404. */
+    private Schema resolveSchema(Long schemaId) {
+        if (schemaId == null) {
+            return schemaRepository.findByNameIgnoreCase(SchemaService.RESERVED_SCHEMA_NAME)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "bootstrap '" + SchemaService.RESERVED_SCHEMA_NAME + "' schema row is missing"));
+        }
+        return schemaRepository.findById(schemaId)
+                .orElseThrow(() -> new NotFoundException(
+                        "NOT_FOUND_SCHEMA", "schema not found: " + schemaId, Map.of("id", String.valueOf(schemaId))));
+    }
+
+    /**
+     * Var olan bir tabloyu baska bir schema'ya tasir: hem metadata (Tablo.schema) hem gercek
+     * Postgres tablosu ({@code ALTER TABLE ... SET SCHEMA}) birlikte gider. Tasima islemi icin
+     * {@code createTablo}'nun aksine schemaId zorunlu — "hangi schema'ya tasi" belirtilmeden bu
+     * islemin bir anlami yok, o yuzden burada null'u sessizce "public"e cevirmiyoruz.
+     */
+    @Transactional
+    public Tablo changeSchema(Long tabloId, Long newSchemaId) {
+        Tablo tablo = getTablo(tabloId);
+        if (newSchemaId == null) {
+            throw new ValidationException("VALIDATION_MISSING_SCHEMA", "a target schema must be specified");
+        }
+        Schema newSchema = schemaRepository.findById(newSchemaId)
+                .orElseThrow(() -> new NotFoundException(
+                        "NOT_FOUND_SCHEMA", "schema not found: " + newSchemaId, Map.of("id", String.valueOf(newSchemaId))));
+        Schema currentSchema = tablo.getSchema();
+        if (currentSchema.getId().equals(newSchema.getId())) {
+            return tablo;
+        }
+        ddlExecutor.moveTableToSchema(currentSchema.getName(), tablo.getName(), newSchema.getName());
+        tablo.setSchema(newSchema);
+        return tablo;
     }
 
     /** Hem metadata'daki (Tablo.name) hem gercek Postgres tablosunun adini degistirir. */
@@ -136,7 +187,7 @@ public class TabloService {
         }
         String oldName = tablo.getName();
         tablo.setName(newName);
-        ddlExecutor.renameTable(oldName, newName);
+        ddlExecutor.renameTable(tablo.getSchema().getName(), oldName, newName);
         return tablo;
     }
 
@@ -145,8 +196,9 @@ public class TabloService {
     public void deleteTablo(Long id) {
         Tablo tablo = getTablo(id);
         String name = tablo.getName();
+        String schemaName = tablo.getSchema().getName();
         tabloRepository.delete(tablo);
-        ddlExecutor.dropTable(name);
+        ddlExecutor.dropTable(schemaName, name);
         tablesDeletedCounter.increment();
     }
 
@@ -168,7 +220,7 @@ public class TabloService {
         tablo.addKolon(kolon);
         Kolon saved = kolonRepository.save(kolon);
 
-        ddlExecutor.addColumn(tablo.getName(), saved.getName(), type);
+        ddlExecutor.addColumn(tablo.getSchema().getName(), tablo.getName(), saved.getName(), type);
         columnsCreatedCounter.increment();
         return saved;
     }
@@ -184,7 +236,7 @@ public class TabloService {
         Kolon kolon = findKolonInTablo(tablo, kolonId);
         String columnName = kolon.getName();
         tablo.removeKolon(kolon);
-        ddlExecutor.dropColumn(tablo.getName(), columnName);
+        ddlExecutor.dropColumn(tablo.getSchema().getName(), tablo.getName(), columnName);
     }
 
     /** Kolonun sadece adini degistirir — tipi olusturulduktan sonra hic degistirilemez (bkz. Kolon.type, updatable=false). */
@@ -201,7 +253,7 @@ public class TabloService {
         }
         String oldName = kolon.getName();
         kolon.setName(newName);
-        ddlExecutor.renameColumn(tablo.getName(), oldName, newName);
+        ddlExecutor.renameColumn(tablo.getSchema().getName(), tablo.getName(), oldName, newName);
         return kolon;
     }
 

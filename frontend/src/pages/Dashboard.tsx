@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Schema, createSchema, deleteSchema, getSchemalar, renameSchema } from "../api/schemas";
 import {
   CreateKolonInput,
   Tablo,
   addKolon,
   changeKolonTag,
+  changeTabloSchema,
   createTablo,
   deleteKolon,
   deleteTablo,
@@ -13,6 +15,7 @@ import {
   renameTablo,
 } from "../api/tablolar";
 import { Tag, createTag, getTags } from "../api/tags";
+import { CreateSchemaForm } from "../components/CreateSchemaForm";
 import { CreateTabloForm } from "../components/CreateTabloForm";
 import { TabloDetail } from "../components/TabloDetail";
 import { TabloSidebar } from "../components/TabloSidebar";
@@ -37,9 +40,11 @@ import {
 export function Dashboard() {
   const [tablolar, setTablolar] = useState<Tablo[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [schemalar, setSchemalar] = useState<Schema[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateSchemaForm, setShowCreateSchemaForm] = useState(false);
   // Context API'den gelen paylasilan bildirim fonksiyonu — bkz. NotificationProvider.
   const notify = useNotify();
   const { t } = useTranslation();
@@ -56,20 +61,26 @@ export function Dashboard() {
     return data;
   }
 
+  async function refreshSchemalar() {
+    const data = await getSchemalar();
+    setSchemalar(data);
+    return data;
+  }
+
   // Bos dependency array ([]) = sadece component ilk kez ekrana geldiginde (mount) bir kez
   // calisir, "sayfa acilinca ilk veriyi cek" anlaminda. exhaustive-deps kurali normalde
-  // refreshTablolar/refreshTags/notify'i de listeye zorlar; onlar her render'da yeniden
-  // olusturuldugu icin sonsuz donguye sokmemek adina bilerek kapatilmis.
+  // refreshTablolar/refreshTags/refreshSchemalar/notify'i de listeye zorlar; onlar her
+  // render'da yeniden olusturuldugu icin sonsuz donguye sokmemek adina bilerek kapatilmis.
   useEffect(() => {
-    Promise.all([refreshTablolar(), refreshTags()])
+    Promise.all([refreshTablolar(), refreshTags(), refreshSchemalar()])
       .catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCreate(name: string, kolonlar: CreateKolonInput[]) {
+  async function handleCreate(name: string, kolonlar: CreateKolonInput[], schemaId: number) {
     try {
-      const created = await createTablo(name, kolonlar);
+      const created = await createTablo(name, kolonlar, schemaId);
       await refreshTablolar();
       setSelectedId(created.id);
       setShowCreateForm(false);
@@ -77,6 +88,63 @@ export function Dashboard() {
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.tableCreateFailed"));
     }
+  }
+
+  async function handleCreateSchema(name: string) {
+    try {
+      const created = await createSchema(name);
+      await refreshSchemalar();
+      setShowCreateSchemaForm(false);
+      notify(201, t("notifications.schemaCreated", { name: created.name }));
+    } catch (err) {
+      notifyFromError(notify, t, err, t("notifications.schemaCreateFailed"));
+    }
+  }
+
+  async function handleRenameSchema(id: number, name: string) {
+    try {
+      await renameSchema(id, name);
+      await refreshSchemalar();
+      notify(200, t("notifications.schemaRenamed"));
+    } catch (err) {
+      notifyFromError(notify, t, err, t("notifications.schemaRenameFailed"));
+    }
+  }
+
+  /**
+   * handleDeleteTablo ile ayni geri-alinabilir-silme deseni (bkz. oradaki aciklama) — ama burada
+   * silinen bir schema, icindeki TUM tablolari da beraberinde goturuyor (gercek DROP SCHEMA
+   * CASCADE). O yuzden secili tablo bu schema'nin icindeyse secimi de temizliyoruz; sidebar
+   * ekstra bir onay zaten TabloSidebar icinde (window.confirm ile, tablo sayisini gostererek)
+   * gosteriliyor, burasi sadece asil silme/geri-alma mekanigini yonetiyor.
+   */
+  function handleDeleteSchema(id: number) {
+    const tableIdsInSchema = new Set(
+      tablolar.filter((tbl) => tbl.schemaId === id).map((tbl) => tbl.id)
+    );
+    setSchemalar((prev) => prev.filter((s) => s.id !== id));
+    if (selectedId !== null && tableIdsInSchema.has(selectedId)) {
+      setSelectedId(null);
+    }
+
+    const timerId = window.setTimeout(async () => {
+      try {
+        await deleteSchema(id);
+      } catch (err) {
+        notifyFromError(notify, t, err, t("notifications.schemaDeleteFailed"));
+      } finally {
+        await refreshSchemalar();
+        await refreshTablolar();
+      }
+    }, NOTIFICATION_DURATION_MS);
+
+    notify(204, t("notifications.schemaDeleted"), {
+      label: t("common.undo"),
+      onClick: () => {
+        window.clearTimeout(timerId);
+        refreshSchemalar();
+      },
+    });
   }
 
   /**
@@ -119,6 +187,16 @@ export function Dashboard() {
       notify(200, t("notifications.tableRenamed"));
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.tableRenameFailed"));
+    }
+  }
+
+  async function handleChangeTabloSchema(id: number, schemaId: number) {
+    try {
+      await changeTabloSchema(id, schemaId);
+      await refreshTablolar();
+      notify(200, t("notifications.tableSchemaChanged"));
+    } catch (err) {
+      notifyFromError(notify, t, err, t("notifications.tableSchemaChangeFailed"));
     }
   }
 
@@ -203,18 +281,24 @@ export function Dashboard() {
   return (
     <div className="dashboard">
       <TabloSidebar
+        schemalar={schemalar}
         tablolar={tablolar}
         selectedId={selectedId}
         onSelect={setSelectedId}
         onCreateClick={() => setShowCreateForm(true)}
+        onCreateSchemaClick={() => setShowCreateSchemaForm(true)}
+        onRenameSchema={handleRenameSchema}
+        onDeleteSchema={handleDeleteSchema}
       />
 
       {selectedTablo ? (
         <TabloDetail
           tablo={selectedTablo}
           tags={tags}
+          schemalar={schemalar}
           onDeleteTablo={handleDeleteTablo}
           onRenameTablo={handleRenameTablo}
+          onChangeTabloSchema={handleChangeTabloSchema}
           onAddKolon={handleAddKolon}
           onDeleteKolon={handleDeleteKolon}
           onRenameKolon={handleRenameKolon}
@@ -226,7 +310,18 @@ export function Dashboard() {
       )}
 
       {showCreateForm && (
-        <CreateTabloForm onSubmit={handleCreate} onClose={() => setShowCreateForm(false)} />
+        <CreateTabloForm
+          schemalar={schemalar}
+          onSubmit={handleCreate}
+          onClose={() => setShowCreateForm(false)}
+        />
+      )}
+
+      {showCreateSchemaForm && (
+        <CreateSchemaForm
+          onSubmit={handleCreateSchema}
+          onClose={() => setShowCreateSchemaForm(false)}
+        />
       )}
     </div>
   );

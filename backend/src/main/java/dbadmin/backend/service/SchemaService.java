@@ -2,10 +2,12 @@ package dbadmin.backend.service;
 
 import dbadmin.backend.ddl.SchemaDdlExecutor;
 import dbadmin.backend.entity.Schema;
+import dbadmin.backend.entity.Tablo;
 import dbadmin.backend.exception.ConflictException;
 import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.SchemaRepository;
+import dbadmin.backend.repository.TabloRepository;
 import dbadmin.backend.validation.NameValidator;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -18,16 +20,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SchemaService {
 
-    /** Postgres'in kendi varsayilan schema'si — bu isimde ikinci bir schema olusturulamaz. */
-    private static final String RESERVED_SCHEMA_NAME = "public";
+    /**
+     * Postgres'in kendi varsayilan schema'si — bu isimde ikinci bir schema olusturulamaz.
+     * {@code public} tutuluyor: {@link dbadmin.backend.config.SchemaBootstrapRunner} ve
+     * {@link TabloService} de ayni sabiti kullanir (schemaId verilmeden tablo olusturulunca
+     * varsayilan olarak bu isimdeki Schema satirina baglanir).
+     */
+    public static final String RESERVED_SCHEMA_NAME = "public";
 
     private final SchemaRepository schemaRepository;
+    private final TabloRepository tabloRepository;
     private final SchemaDdlExecutor ddlExecutor;
     private final Counter schemasCreatedCounter;
     private final Counter schemasDeletedCounter;
 
-    public SchemaService(SchemaRepository schemaRepository, SchemaDdlExecutor ddlExecutor, MeterRegistry meterRegistry) {
+    public SchemaService(SchemaRepository schemaRepository, TabloRepository tabloRepository,
+            SchemaDdlExecutor ddlExecutor, MeterRegistry meterRegistry) {
         this.schemaRepository = schemaRepository;
+        this.tabloRepository = tabloRepository;
         this.ddlExecutor = ddlExecutor;
         // "creations"/"deletions" kullaniyoruz, "created" degil — bkz. TabloService'teki ayni
         // isimlendirmedeki not (Prometheus'ta "_created" rezerve bir sonek, Micrometer siliyor).
@@ -70,10 +80,58 @@ public class SchemaService {
         return saved;
     }
 
+    /**
+     * "public" hem yeniden yaratilamaz hem de yeniden adlandirilamaz — sistemin varsayilan
+     * schema'si oldugu icin (bkz. {@link dbadmin.backend.config.SchemaBootstrapRunner}), adi
+     * degisirse "schemaId verilmeden tablo olustur" akisi kirilir.
+     */
+    @Transactional
+    public Schema renameSchema(Long id, String newName) {
+        Schema schema = getSchema(id);
+        if (schema.getName().equalsIgnoreCase(RESERVED_SCHEMA_NAME)) {
+            throw new ValidationException(
+                    "VALIDATION_CANNOT_RENAME_PUBLIC_SCHEMA",
+                    "the '" + RESERVED_SCHEMA_NAME + "' schema is required by the system and cannot be renamed",
+                    Map.of("name", schema.getName()));
+        }
+        NameValidator.validate("schema name", "VALIDATION_INVALID_SCHEMA_NAME", newName);
+        if (newName.equalsIgnoreCase(RESERVED_SCHEMA_NAME)) {
+            throw new ValidationException(
+                    "VALIDATION_RESERVED_SCHEMA_NAME",
+                    "'" + RESERVED_SCHEMA_NAME + "' is a reserved schema name and cannot be used",
+                    Map.of("name", newName));
+        }
+        if (!schema.getName().equals(newName) && schemaRepository.existsByName(newName)) {
+            throw new ConflictException(
+                    "CONFLICT_DUPLICATE_SCHEMA_NAME",
+                    "a schema named '" + newName + "' already exists",
+                    Map.of("name", newName));
+        }
+        String oldName = schema.getName();
+        schema.setName(newName);
+        ddlExecutor.renameSchema(oldName, newName);
+        return schema;
+    }
+
+    /**
+     * Once bu schema'nin altindaki Tablo metadata satirlarini siliyoruz (Kolon'lar da
+     * {@link Tablo}'daki cascade+orphanRemoval sayesinde otomatik gider), sonra Schema satirini
+     * ve gercek Postgres schema'sini. Sira onemli: {@code ddlExecutor.dropSchema} zaten
+     * {@code CASCADE} ile gercek tablolari fiziksel siliyor; metadata'yi da ayni yonde
+     * temizlemezsek DBAdmin arayuzunde artik var olmayan "hayalet" tablolar gorunurdu.
+     */
     @Transactional
     public void deleteSchema(Long id) {
         Schema schema = getSchema(id);
+        if (schema.getName().equalsIgnoreCase(RESERVED_SCHEMA_NAME)) {
+            throw new ValidationException(
+                    "VALIDATION_CANNOT_DELETE_PUBLIC_SCHEMA",
+                    "the '" + RESERVED_SCHEMA_NAME + "' schema is required by the system and cannot be deleted",
+                    Map.of("name", schema.getName()));
+        }
         String name = schema.getName();
+        List<Tablo> tablolarInSchema = tabloRepository.findBySchemaId(schema.getId());
+        tabloRepository.deleteAll(tablolarInSchema);
         schemaRepository.delete(schema);
         ddlExecutor.dropSchema(name);
         schemasDeletedCounter.increment();

@@ -40,7 +40,7 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void create_returns201() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("ders1",
+        CreateTabloRequest request = new CreateTabloRequest("ders1", null,
                 List.of(new CreateKolonRequest("ad", "text", null)));
 
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
@@ -50,7 +50,7 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void create_duplicateName_returns409() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("ders2",
+        CreateTabloRequest request = new CreateTabloRequest("ders2", null,
                 List.of(new CreateKolonRequest("ad", "text", null)));
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
                 .andExpect(status().isCreated());
@@ -62,12 +62,32 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void create_invalidName_returns400() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("Buyuk",
+        CreateTabloRequest request = new CreateTabloRequest("Buyuk", null,
                 List.of(new CreateKolonRequest("ad", "text", null)));
 
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status", is(400)));
+    }
+
+    @Test
+    void create_unknownSchemaId_returns404() throws Exception {
+        CreateTabloRequest request = new CreateTabloRequest("ders4", -1L,
+                List.of(new CreateKolonRequest("ad", "text", null)));
+
+        mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)));
+    }
+
+    @Test
+    void create_noSchemaId_defaultsToPublicSchemaInResponse() throws Exception {
+        CreateTabloRequest request = new CreateTabloRequest("ders5", null,
+                List.of(new CreateKolonRequest("ad", "text", null)));
+
+        mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.schemaName", is("public")));
     }
 
     @Test
@@ -84,7 +104,7 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void fullLifecycle_rename_addColumn_changeTag_deleteColumn_deleteTable() throws Exception {
-        CreateTabloRequest createRequest = new CreateTabloRequest("ders3",
+        CreateTabloRequest createRequest = new CreateTabloRequest("ders3", null,
                 List.of(new CreateKolonRequest("ad", "text", null)));
         String createResponse = mockMvc.perform(
                         post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(createRequest)))

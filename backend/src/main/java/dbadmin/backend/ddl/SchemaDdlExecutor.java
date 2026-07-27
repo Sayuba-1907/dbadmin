@@ -31,6 +31,10 @@ public class SchemaDdlExecutor {
         jdbcTemplate.execute("DROP SCHEMA " + quote(name) + " CASCADE");
     }
 
+    public void renameSchema(String oldName, String newName) {
+        jdbcTemplate.execute("ALTER SCHEMA " + quote(oldName) + " RENAME TO " + quote(newName));
+    }
+
     private String quote(String identifier) {
         if (identifier == null || !IDENTIFIER_PATTERN.matcher(identifier).matches()) {
             throw new IllegalStateException("unsafe identifier reached the DDL layer: " + identifier);

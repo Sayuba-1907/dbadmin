@@ -30,21 +30,30 @@ test("tablo olusturunca listeye eklenir ve basari bildirimi gosterilir", async (
   mockFetchSequence([
     { ok: true, status: 200, json: async () => [] },
     { ok: true, status: 200, json: async () => [] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "public" }] },
     {
       ok: true,
       status: 201,
-      json: async () => ({ id: 1, name: "kullanicilar", kolonlar: [] }),
+      json: async () => ({
+        id: 1,
+        name: "kullanicilar",
+        schemaId: 1,
+        schemaName: "public",
+        kolonlar: [],
+      }),
     },
     {
       ok: true,
       status: 200,
-      json: async () => [{ id: 1, name: "kullanicilar", kolonlar: [] }],
+      json: async () => [
+        { id: 1, name: "kullanicilar", schemaId: 1, schemaName: "public", kolonlar: [] },
+      ],
     },
   ]);
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText(/henüz tablo yok/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
 
   fireEvent.click(screen.getByText("+ Yeni Tablo"));
   fireEvent.change(screen.getByPlaceholderText("tablo_adi"), {
@@ -60,6 +69,7 @@ test("backend conflict (409) hatasinda turuncu bildirim gosterir", async () => {
   mockFetchSequence([
     { ok: true, status: 200, json: async () => [] },
     { ok: true, status: 200, json: async () => [] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "public" }] },
     {
       ok: false,
       status: 409,
@@ -74,7 +84,7 @@ test("backend conflict (409) hatasinda turuncu bildirim gosterir", async () => {
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText(/henüz tablo yok/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
 
   fireEvent.click(screen.getByText("+ Yeni Tablo"));
   fireEvent.change(screen.getByPlaceholderText("tablo_adi"), {
@@ -90,6 +100,7 @@ test("backend'in gonderdigi hata kodu, ham Ingilizce mesaj yerine cevrilmis Turk
   mockFetchSequence([
     { ok: true, status: 200, json: async () => [] },
     { ok: true, status: 200, json: async () => [] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "public" }] },
     {
       ok: false,
       status: 409,
@@ -106,7 +117,7 @@ test("backend'in gonderdigi hata kodu, ham Ingilizce mesaj yerine cevrilmis Turk
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText(/henüz tablo yok/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
 
   fireEvent.click(screen.getByText("+ Yeni Tablo"));
   fireEvent.change(screen.getByPlaceholderText("tablo_adi"), {
@@ -123,6 +134,7 @@ test("taninmayan bir hata kodu gelirse backend'in ham mesajina dusulur", async (
   mockFetchSequence([
     { ok: true, status: 200, json: async () => [] },
     { ok: true, status: 200, json: async () => [] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "public" }] },
     {
       ok: false,
       status: 409,
@@ -139,7 +151,7 @@ test("taninmayan bir hata kodu gelirse backend'in ham mesajina dusulur", async (
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText(/henüz tablo yok/i)).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
 
   fireEvent.click(screen.getByText("+ Yeni Tablo"));
   fireEvent.change(screen.getByPlaceholderText("tablo_adi"), {

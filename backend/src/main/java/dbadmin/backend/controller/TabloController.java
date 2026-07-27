@@ -1,5 +1,6 @@
 package dbadmin.backend.controller;
 
+import dbadmin.backend.dto.ChangeTabloSchemaRequest;
 import dbadmin.backend.dto.ChangeTagRequest;
 import dbadmin.backend.dto.CreateKolonRequest;
 import dbadmin.backend.dto.CreateTabloRequest;
@@ -62,13 +63,19 @@ public class TabloController {
         List<KolonTanimi> kolonTanimlari = request.kolonlar() == null
                 ? List.of()
                 : request.kolonlar().stream().map(CreateKolonRequest::toKolonTanimi).toList();
-        return TabloResponse.from(tabloService.createTablo(request.name(), kolonTanimlari));
+        return TabloResponse.from(tabloService.createTablo(request.name(), request.schemaId(), kolonTanimlari));
     }
 
     /** PATCH /api/tablolar/{id} — sadece ismi degistirir (PATCH = kismi guncelleme, PUT gibi tum kaynagi degistirmez). */
     @PatchMapping("/{id}")
     public TabloResponse rename(@PathVariable Long id, @RequestBody RenameRequest request) {
         return TabloResponse.from(tabloService.renameTablo(id, request.name()));
+    }
+
+    /** PATCH /api/tablolar/{id}/schema — tabloyu baska bir schema'ya tasir. */
+    @PatchMapping("/{id}/schema")
+    public TabloResponse changeSchema(@PathVariable Long id, @RequestBody ChangeTabloSchemaRequest request) {
+        return TabloResponse.from(tabloService.changeSchema(id, request.schemaId()));
     }
 
     /** DELETE /api/tablolar/{id} — tablo ve kolonlarini siler. Govde donmedigi icin 204 No Content. */

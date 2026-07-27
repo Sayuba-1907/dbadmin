@@ -1,10 +1,12 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Schema } from "../api/schemas";
 import { CreateKolonInput, KOLON_TYPES, KolonType } from "../api/tablolar";
 import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation";
 
 interface CreateTabloFormProps {
-  onSubmit: (name: string, kolonlar: CreateKolonInput[]) => Promise<void>;
+  schemalar: Schema[];
+  onSubmit: (name: string, kolonlar: CreateKolonInput[], schemaId: number) => Promise<void>;
   onClose: () => void;
 }
 
@@ -15,10 +17,11 @@ interface DraftKolon {
   primaryKey: boolean;
 }
 
-/** "Yeni Tablo" modal formu: tablo adi + dinamik sayida kolon satiri (ekle/sil). */
-export function CreateTabloForm({ onSubmit, onClose }: CreateTabloFormProps) {
+/** "Yeni Tablo" modal formu: tablo adi + hangi schema'ya kurulacagi + dinamik sayida kolon satiri (ekle/sil). */
+export function CreateTabloForm({ schemalar, onSubmit, onClose }: CreateTabloFormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
+  const [schemaId, setSchemaId] = useState<number | "">(schemalar[0]?.id ?? "");
   const [kolonlar, setKolonlar] = useState<DraftKolon[]>([
     { name: "", type: KOLON_TYPES[0], primaryKey: false },
   ]);
@@ -40,12 +43,15 @@ export function CreateTabloForm({ onSubmit, onClose }: CreateTabloFormProps) {
   /** Bos birakilmis (isim girilmemis) kolon satirlarini eleyip sadece dolu olanlari backend'e gonderir. */
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (schemaId === "") {
+      return;
+    }
     setSubmitting(true);
     try {
       const validKolonlar: CreateKolonInput[] = kolonlar
         .filter((k) => k.name.trim() !== "")
         .map((k) => ({ name: k.name, type: k.type, primaryKey: k.primaryKey }));
-      await onSubmit(name, validKolonlar);
+      await onSubmit(name, validKolonlar, schemaId);
     } finally {
       setSubmitting(false);
     }
@@ -69,6 +75,17 @@ export function CreateTabloForm({ onSubmit, onClose }: CreateTabloFormProps) {
             onInvalid={onRequiredInvalid(t)}
             required
           />
+        </label>
+
+        <label>
+          {t("createTabloForm.schemaLabel")}
+          <select value={schemaId} onChange={(e) => setSchemaId(Number(e.target.value))} required>
+            {schemalar.map((schema) => (
+              <option key={schema.id} value={schema.id}>
+                {schema.name}
+              </option>
+            ))}
+          </select>
         </label>
 
         <div className="kolon-rows">

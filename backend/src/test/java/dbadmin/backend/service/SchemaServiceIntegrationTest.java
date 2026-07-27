@@ -1,14 +1,19 @@
 package dbadmin.backend.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dbadmin.backend.AbstractIntegrationTest;
 import dbadmin.backend.entity.Schema;
+import dbadmin.backend.entity.Tablo;
 import dbadmin.backend.exception.ConflictException;
 import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
+import dbadmin.backend.repository.SchemaRepository;
+import dbadmin.backend.repository.TabloRepository;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,6 +26,15 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     private SchemaService schemaService;
 
     @Autowired
+    private TabloService tabloService;
+
+    @Autowired
+    private TabloRepository tabloRepository;
+
+    @Autowired
+    private SchemaRepository schemaRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     private boolean realSchemaExists(String schemaName) {
@@ -28,6 +42,10 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
                 "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = ?",
                 Integer.class, schemaName);
         return count != null && count > 0;
+    }
+
+    private Long publicSchemaId() {
+        return schemaRepository.findByNameIgnoreCase(SchemaService.RESERVED_SCHEMA_NAME).orElseThrow().getId();
     }
 
     @Test
@@ -71,5 +89,60 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void getSchema_unknownId_isNotFound() {
         assertThrows(NotFoundException.class, () -> schemaService.getSchema(-1L));
+    }
+
+    @Test
+    void deleteSchema_cascadesTabloMetadataAlongWithRealTables() {
+        Schema schema = schemaService.createSchema("arsiv3");
+        Tablo tablo = tabloService.createTablo("arsivli1", schema.getId(),
+                List.of(new KolonTanimi("ad", "text", null)));
+
+        schemaService.deleteSchema(schema.getId());
+
+        assertFalse(realSchemaExists("arsiv3"));
+        assertTrue(tabloRepository.findById(tablo.getId()).isEmpty(),
+                "tablo metadata should be gone with its schema, not a ghost entry pointing at a dropped table");
+    }
+
+    @Test
+    void deleteSchema_publicSchema_isRejected() {
+        assertThrows(ValidationException.class, () -> schemaService.deleteSchema(publicSchemaId()));
+
+        assertTrue(realSchemaExists("public"));
+    }
+
+    @Test
+    void renameSchema_renamesMetadataAndRealSchema() {
+        Schema schema = schemaService.createSchema("eski_ad1");
+
+        Schema renamed = schemaService.renameSchema(schema.getId(), "yeni_ad1");
+
+        assertEquals("yeni_ad1", renamed.getName());
+        assertFalse(realSchemaExists("eski_ad1"));
+        assertTrue(realSchemaExists("yeni_ad1"));
+    }
+
+    @Test
+    void renameSchema_publicSchema_isRejected() {
+        assertThrows(ValidationException.class, () -> schemaService.renameSchema(publicSchemaId(), "baska_isim"));
+
+        assertTrue(realSchemaExists("public"));
+    }
+
+    @Test
+    void renameSchema_toReservedName_isRejected() {
+        Schema schema = schemaService.createSchema("eski_ad2");
+
+        assertThrows(ValidationException.class, () -> schemaService.renameSchema(schema.getId(), "public"));
+
+        assertTrue(realSchemaExists("eski_ad2"));
+    }
+
+    @Test
+    void renameSchema_duplicateName_isConflict() {
+        schemaService.createSchema("dolu_isim1");
+        Schema schema = schemaService.createSchema("eski_ad3");
+
+        assertThrows(ConflictException.class, () -> schemaService.renameSchema(schema.getId(), "dolu_isim1"));
     }
 }
