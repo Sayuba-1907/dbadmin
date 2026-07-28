@@ -123,6 +123,16 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void renameSchema_sameName_isNoopAndDoesNotError() {
+        Schema schema = schemaService.createSchema("ayni_ad1");
+
+        Schema result = schemaService.renameSchema(schema.getId(), "ayni_ad1");
+
+        assertEquals("ayni_ad1", result.getName());
+        assertTrue(realSchemaExists("ayni_ad1"));
+    }
+
+    @Test
     void renameSchema_publicSchema_isRejected() {
         assertThrows(ValidationException.class, () -> schemaService.renameSchema(publicSchemaId(), "baska_isim"));
 

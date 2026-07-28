@@ -37,6 +37,9 @@ services:
     build: ./backend
     container_name: dbadmin_backend
     environment:
+      # 'dev' profili application-dev.properties'i yukler (Hibernate SQL loglari).
+      # Prod'a cikarken bu satir kaldirilmali.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}

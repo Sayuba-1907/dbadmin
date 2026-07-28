@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,12 +59,23 @@ public class Tablo {
     @OneToMany(mappedBy = "tablo", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Kolon> kolonlar = new ArrayList<>();
 
+    // Bilerek Hibernate'in otomatik @UpdateTimestamp'ine guvenmiyoruz: o sadece Tablo'nun kendi
+    // satirindaki bir alan (ad/schema) degisince tetiklenir, kolon eklenip/silinip/yeniden
+    // adlandirilinca (ayri bir Kolon satiri degistigi icin) tetiklenmez. Bunun yerine
+    // TabloService'teki her mutasyon metodu (rename/changeSchema/addKolon/deleteKolon/
+    // renameKolon/changeKolonTag) islemin sonunda {@link #touch()} cagirir — boylece "en son
+    // ne zaman degisti" tablonun kendisi VE kolonlari icin de dogru sonucu verir. DB kolonu
+    // bilerek nullable: Hibernate ddl-auto=update var olan satirlari doldurmadan NOT NULL bir
+    // kolon acamiyor (bkz. yukaridaki schema alanindaki ayni not).
+    private Instant updatedAt;
+
     /** Parametresiz constructor JPA/Hibernate'in nesneyi reflection ile olusturabilmesi icin zorunlu; sen bunu hic cagirmazsin. */
     protected Tablo() {
     }
 
     public Tablo(String name) {
         this.name = name;
+        this.updatedAt = Instant.now();
     }
 
     public Long getId() {
@@ -84,6 +96,15 @@ public class Tablo {
 
     public void setSchema(Schema schema) {
         this.schema = schema;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    /** Tabloda ya da kolonlarindan birinde bir sey degisince TabloService bunu cagirir — bkz. {@link #updatedAt}. */
+    public void touch() {
+        this.updatedAt = Instant.now();
     }
 
     public List<Kolon> getKolonlar() {

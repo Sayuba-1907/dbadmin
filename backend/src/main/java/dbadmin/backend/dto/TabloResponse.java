@@ -2,6 +2,7 @@ package dbadmin.backend.dto;
 
 import dbadmin.backend.entity.Tablo;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -15,7 +16,13 @@ public record TabloResponse(
         @Schema(description = "Tablonun adi.", example = "ogrenciler") String name,
         @Schema(description = "Tablonun ait oldugu schema'nin id'si.", example = "1") Long schemaId,
         @Schema(description = "Tablonun ait oldugu schema'nin adi.", example = "public") String schemaName,
-        @Schema(description = "Tablonun kolonlarinin listesi.") List<KolonResponse> kolonlar) {
+        @Schema(description = "Tablonun kolonlarinin listesi.") List<KolonResponse> kolonlar,
+        @Schema(description = "Tabloda ya da kolonlarindan birinde en son ne zaman degisiklik "
+                        + "yapildigi (olusturma, yeniden adlandirma, schema tasima, kolon "
+                        + "ekleme/silme/yeniden adlandirma/etiket degistirme dahil). Eski satirlarda "
+                        + "(bu alan eklenmeden once olusturulmus) null olabilir.",
+                        example = "2026-07-28T10:15:30Z")
+                Instant updatedAt) {
 
     /** Entity'den DTO'ya cevirici — entity'yi controller'a hic sizdirmadan burada donusturuyoruz. */
     public static TabloResponse from(Tablo tablo) {
@@ -27,6 +34,7 @@ public record TabloResponse(
                 tablo.getId(), tablo.getName(),
                 schema != null ? schema.getId() : null,
                 schema != null ? schema.getName() : null,
-                kolonlar);
+                kolonlar,
+                tablo.getUpdatedAt());
     }
 }

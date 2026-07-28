@@ -162,3 +162,63 @@ test("taninmayan bir hata kodu gelirse backend'in ham mesajina dusulur", async (
   const notificationText = await screen.findByText("some future backend error not yet translated");
   expect(notificationText.closest('[role="alert"]')).toHaveClass("notification-conflict");
 });
+
+test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", async () => {
+  const fetchMock = mockFetchSequence([
+    {
+      ok: true,
+      status: 200,
+      json: async () => [
+        { id: 10, name: "kullanicilar", schemaId: 1, schemaName: "public", kolonlar: [] },
+      ],
+    },
+    { ok: true, status: 200, json: async () => [] },
+    {
+      ok: true,
+      status: 200,
+      json: async () => [
+        { id: 1, name: "public" },
+        { id: 2, name: "ogrenciler" },
+      ],
+    },
+    {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 10,
+        name: "kullanicilar",
+        schemaId: 2,
+        schemaName: "ogrenciler",
+        kolonlar: [],
+      }),
+    },
+    {
+      ok: true,
+      status: 200,
+      json: async () => [
+        { id: 10, name: "kullanicilar", schemaId: 2, schemaName: "ogrenciler", kolonlar: [] },
+      ],
+    },
+  ]);
+
+  renderDashboard();
+
+  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
+
+  // "public" varsayilan kapali baslar; icindeki tabloyu gormek icin acmak lazim.
+  fireEvent.click(screen.getByText("public"));
+  const tableItem = await screen.findByText("kullanicilar");
+  const targetLi = screen.getByText("ogrenciler").closest("li");
+  expect(targetLi).not.toBeNull();
+
+  fireEvent.dragStart(tableItem);
+  fireEvent.dragOver(targetLi as HTMLElement);
+  fireEvent.drop(targetLi as HTMLElement);
+
+  await waitFor(() =>
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/tablolar/10/schema"),
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ schemaId: 2 }) })
+    )
+  );
+});

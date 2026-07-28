@@ -53,10 +53,17 @@
   background-color: #fff;
 }
 
+.sidebar-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .sidebar-search {
   display: block;
-  width: 100%;
-  margin-top: 8px;
+  flex: 1;
+  min-width: 0;
   padding: 6px 10px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
@@ -64,23 +71,157 @@
   box-sizing: border-box;
 }
 
-.tablo-list {
+.sidebar-search:focus-visible,
+.sidebar-sort:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+/* Sitelerde alisik oldugumuz "sirala" ikonlu secim kutusu: ikonu select'in ustune bindiriyoruz
+   (position: absolute), select'in kendisinin sol padding'ini ikona yer acacak kadar genisletiyoruz. */
+.sidebar-sort-control {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sidebar-sort-icon {
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  font-size: 12px;
+  line-height: 1;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.sidebar-sort {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 104px;
+  padding: 6px 8px 6px 24px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #334155;
+  background-color: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.sidebar-sort:hover {
+  border-color: #94a3b8;
+}
+
+.schema-list {
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
 }
 
-.tablo-list-item {
+.schema-group {
+  margin-bottom: 2px;
+  border-radius: 6px;
+  transition:
+    background-color 0.15s ease,
+    outline-color 0.15s ease;
+}
+
+.schema-header-row {
   display: flex;
-  justify-content: space-between;
-  width: 100%;
-  padding: 8px 10px;
+  align-items: center;
+  gap: 2px;
+}
+
+.schema-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
   border: none;
   background: none;
-  border-radius: 4px;
+  border-radius: 6px;
   text-align: left;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.schema-header:hover {
+  background-color: #f1f5f9;
+}
+
+.schema-header span:not(.kolon-count):not(.schema-caret) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schema-caret {
+  display: inline-block;
+  font-size: 10px;
+  color: #94a3b8;
+  transition: transform 0.15s ease;
+}
+
+.schema-caret.expanded {
+  transform: rotate(90deg);
+}
+
+.schema-header-row .btn-link {
+  font-size: 12px;
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.schema-header-row .btn-link:hover {
+  color: #475569;
+  text-decoration: underline;
+}
+
+.schema-header-row .btn-danger.btn-link:hover {
+  color: #dc2626;
+}
+
+/* Bir tablo suruklenirken uzerine gelinen schema'nin tum alanini (baslik + tablo listesi)
+   vurgular — kullaniciya "burasi birakma hedefi" geri bildirimi verir. Dashed outline yerine
+   sol kenarlik + hafif zemin renginin sebebi: daha sakin/az "titrek" gorunmesi. */
+.schema-group.drag-over {
+  background-color: #eff6ff;
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+}
+
+.tablo-list {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding: 0 0 0 14px;
+  border-left: 1px solid #e2e8f0;
+  margin-left: 10px;
+}
+
+.tablo-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: 5px;
+  text-align: left;
+  cursor: grab;
+  font-size: 14px;
+  color: #475569;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .tablo-list-item:hover {
@@ -90,11 +231,19 @@
 .tablo-list-item.selected {
   background-color: #dbeafe;
   color: #1d4ed8;
+  font-weight: 500;
+}
+
+.tablo-list-item.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
 }
 
 .kolon-count {
-  color: #64748b;
+  color: #94a3b8;
   font-size: 12px;
+  font-weight: 400;
+  flex-shrink: 0;
 }
 
 .detail-panel {

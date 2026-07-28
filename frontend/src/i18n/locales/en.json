@@ -13,7 +13,12 @@
     "searchPlaceholder": "Search tables...",
     "noSearchResults": "No matching tables",
     "noTablesInSchema": "No tables in this schema yet",
-    "confirmDeleteSchema": "Delete schema \"{{name}}\"? This will also permanently delete its {{count}} table(s)."
+    "confirmDeleteSchema": "Delete schema \"{{name}}\"? This will also permanently delete its {{count}} table(s).",
+    "dragToMoveHint": "Drag to move to another schema",
+    "sortLabel": "Sort by",
+    "sortByName": "By name",
+    "sortByKolonCount": "Column count",
+    "sortByUpdatedAt": "Last updated"
   },
   "dashboard": {
     "loading": "Loading...",

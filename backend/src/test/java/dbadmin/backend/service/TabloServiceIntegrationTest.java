@@ -108,6 +108,16 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void renameTablo_sameName_isNoopAndDoesNotError() {
+        Tablo tablo = tabloService.createTablo("kurs1b", null, List.of(new KolonTanimi("ad", "text", null)));
+
+        Tablo result = tabloService.renameTablo(tablo.getId(), "kurs1b");
+
+        assertEquals("kurs1b", result.getName());
+        assertTrue(realTableExists("kurs1b"));
+    }
+
+    @Test
     void deleteTablo_dropsRealTableAndCascadesColumns() {
         Tablo tablo = tabloService.createTablo("kurs2", null,
                 List.of(new KolonTanimi("ad", "text", null), new KolonTanimi("kontenjan", "numeric", null)));
@@ -149,6 +159,17 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertFalse(realColumnExists("urun3", "ad"));
         assertTrue(realColumnExists("urun3", "isim"));
+    }
+
+    @Test
+    void renameKolon_sameName_isNoopAndDoesNotError() {
+        Tablo tablo = tabloService.createTablo("urun3b", null, List.of(new KolonTanimi("ad", "text", null)));
+        Kolon kolon = tablo.getKolonlar().get(0);
+
+        Kolon result = tabloService.renameKolon(tablo.getId(), kolon.getId(), "ad");
+
+        assertEquals("ad", result.getName());
+        assertTrue(realColumnExists("urun3b", "ad"));
     }
 
     @Test

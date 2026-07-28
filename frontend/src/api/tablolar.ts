@@ -25,6 +25,8 @@ export interface Tablo {
   schemaId: number;
   schemaName: string;
   kolonlar: Kolon[];
+  /** ISO 8601 zaman damgasi (backend'in Instant'i JSON'da boyle serialize olur). Eski satirlarda null olabilir. */
+  updatedAt: string | null;
 }
 
 /** Tablo olustururken/kolon eklerken forma girilen kolon bilgisi (henuz id/tagName yok). */

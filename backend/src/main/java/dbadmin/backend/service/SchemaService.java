@@ -101,7 +101,12 @@ public class SchemaService {
                     "'" + RESERVED_SCHEMA_NAME + "' is a reserved schema name and cannot be used",
                     Map.of("name", newName));
         }
-        if (!schema.getName().equals(newName) && schemaRepository.existsByName(newName)) {
+        if (schema.getName().equals(newName)) {
+            // Postgres "ALTER SCHEMA x RENAME TO x" ifadesini "schema already exists" diye
+            // reddediyor — yeni isim eskiyle ayniysa DDL'e hic gitmiyoruz.
+            return schema;
+        }
+        if (schemaRepository.existsByName(newName)) {
             throw new ConflictException(
                     "CONFLICT_DUPLICATE_SCHEMA_NAME",
                     "a schema named '" + newName + "' already exists",
@@ -130,7 +135,7 @@ public class SchemaService {
                     Map.of("name", schema.getName()));
         }
         String name = schema.getName();
-        List<Tablo> tablolarInSchema = tabloRepository.findBySchemaId(schema.getId());
+        List<Tablo> tablolarInSchema = tabloRepository.findBySchemaIdOrderByNameAsc(schema.getId());
         tabloRepository.deleteAll(tablolarInSchema);
         schemaRepository.delete(schema);
         ddlExecutor.dropSchema(name);

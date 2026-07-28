@@ -71,13 +71,13 @@ public class TabloService {
      */
     @Transactional(readOnly = true)
     public List<Tablo> listTablolar() {
-        return tabloRepository.findAll();
+        return tabloRepository.findAllByOrderByNameAsc();
     }
 
-    /** Sidebar'daki schema -> tablo hiyerarsisi icin: sadece bir schema'nin altindaki tablolar. */
+    /** Sidebar'daki schema -> tablo hiyerarsisi icin: sadece bir schema'nin altindaki tablolar, isme gore alfabetik sirali. */
     @Transactional(readOnly = true)
     public List<Tablo> listTablolarBySchema(Long schemaId) {
-        return tabloRepository.findBySchemaId(schemaId);
+        return tabloRepository.findBySchemaIdOrderByNameAsc(schemaId);
     }
 
     /** Id ile tek tablo bulur; yoksa 404'e cevrilecek {@link NotFoundException} firlatir (bkz. GlobalExceptionHandler). */
@@ -178,6 +178,7 @@ public class TabloService {
         }
         ddlExecutor.moveTableToSchema(currentSchema.getName(), tablo.getName(), newSchema.getName());
         tablo.setSchema(newSchema);
+        tablo.touch();
         return tablo;
     }
 
@@ -186,7 +187,13 @@ public class TabloService {
     public Tablo renameTablo(Long id, String newName) {
         Tablo tablo = getTablo(id);
         NameValidator.validate("table name", "VALIDATION_INVALID_TABLE_NAME", newName);
-        if (!tablo.getName().equals(newName) && tabloRepository.existsByName(newName)) {
+        if (tablo.getName().equals(newName)) {
+            // Postgres "ALTER TABLE x RENAME TO x" ifadesini "relation already exists" diye
+            // reddediyor — yeni isim eskiyle ayniysa DDL'e hic gitmiyoruz, zaten yapilacak bir
+            // sey yok.
+            return tablo;
+        }
+        if (tabloRepository.existsByName(newName)) {
             throw new ConflictException(
                     "CONFLICT_DUPLICATE_TABLE_NAME",
                     "a table named '" + newName + "' already exists",
@@ -194,6 +201,7 @@ public class TabloService {
         }
         String oldName = tablo.getName();
         tablo.setName(newName);
+        tablo.touch();
         ddlExecutor.renameTable(tablo.getSchema().getName(), oldName, newName);
         ddlExecutor.renamePrimaryKeyUniqueConstraintIfExists(tablo.getSchema().getName(), oldName, newName);
         return tablo;
@@ -226,6 +234,7 @@ public class TabloService {
         kolon.setTag(resolveTag(tanim.tagId()));
         kolon.setPrimaryKey(tanim.primaryKey());
         tablo.addKolon(kolon);
+        tablo.touch();
         Kolon saved = kolonRepository.save(kolon);
 
         ddlExecutor.addColumn(tablo.getSchema().getName(), tablo.getName(), saved.getName(), type);
@@ -256,6 +265,7 @@ public class TabloService {
             ddlExecutor.dropPrimaryKeyUniqueConstraintIfExists(tablo.getSchema().getName(), tablo.getName());
         }
         tablo.removeKolon(kolon);
+        tablo.touch();
         ddlExecutor.dropColumn(tablo.getSchema().getName(), tablo.getName(), columnName);
         if (wasPrimaryKey) {
             List<String> remainingPrimaryKeyColumnNames = tablo.getKolonlar().stream()
@@ -291,7 +301,12 @@ public class TabloService {
         Tablo tablo = getTablo(tabloId);
         Kolon kolon = findKolonInTablo(tablo, kolonId);
         NameValidator.validate("column name", "VALIDATION_INVALID_COLUMN_NAME", newName);
-        if (!kolon.getName().equals(newName) && kolonRepository.existsByTabloAndName(tablo, newName)) {
+        if (kolon.getName().equals(newName)) {
+            // Postgres "ALTER TABLE ... RENAME COLUMN x TO x" ifadesini "column already exists"
+            // diye reddediyor — yeni isim eskiyle ayniysa DDL'e hic gitmiyoruz.
+            return kolon;
+        }
+        if (kolonRepository.existsByTabloAndName(tablo, newName)) {
             throw new ConflictException(
                     "CONFLICT_DUPLICATE_COLUMN_NAME",
                     "a column named '" + newName + "' already exists in this table",
@@ -299,6 +314,7 @@ public class TabloService {
         }
         String oldName = kolon.getName();
         kolon.setName(newName);
+        tablo.touch();
         ddlExecutor.renameColumn(tablo.getSchema().getName(), tablo.getName(), oldName, newName);
         return kolon;
     }
@@ -309,6 +325,7 @@ public class TabloService {
         Tablo tablo = getTablo(tabloId);
         Kolon kolon = findKolonInTablo(tablo, kolonId);
         kolon.setTag(resolveTag(tagId));
+        tablo.touch();
         return kolon;
     }
 

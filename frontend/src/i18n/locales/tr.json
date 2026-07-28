@@ -13,7 +13,12 @@
     "searchPlaceholder": "Tablo ara...",
     "noSearchResults": "Eşleşen tablo yok",
     "noTablesInSchema": "Bu schema'da henüz tablo yok",
-    "confirmDeleteSchema": "\"{{name}}\" schema'sını silmek istediğinize emin misiniz? Bu, içindeki {{count}} tabloyu da kalıcı olarak silecek."
+    "confirmDeleteSchema": "\"{{name}}\" schema'sını silmek istediğinize emin misiniz? Bu, içindeki {{count}} tabloyu da kalıcı olarak silecek.",
+    "dragToMoveHint": "Başka bir schema'ya taşımak için sürükleyin",
+    "sortLabel": "Sıralama",
+    "sortByName": "İsme göre",
+    "sortByKolonCount": "Kolon sayısı",
+    "sortByUpdatedAt": "Son değişen"
   },
   "dashboard": {
     "loading": "Yükleniyor...",

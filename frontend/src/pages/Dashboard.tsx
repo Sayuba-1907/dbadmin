@@ -289,6 +289,7 @@ export function Dashboard() {
         onCreateSchemaClick={() => setShowCreateSchemaForm(true)}
         onRenameSchema={handleRenameSchema}
         onDeleteSchema={handleDeleteSchema}
+        onChangeTabloSchema={handleChangeTabloSchema}
       />
 
       {selectedTablo ? (
