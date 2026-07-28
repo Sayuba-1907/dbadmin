@@ -21,6 +21,13 @@ public class TableDdlExecutor {
     /** {@link dbadmin.backend.validation.NameValidator} ile ayni kural: SQL'e gitmeden son bir savunma katmani. */
     private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("^[a-z0-9_][A-Za-z0-9_]{1,29}$");
 
+    /**
+     * Uretilen (kullanici girdisi olmayan) identifier'lar icin daha gevsek bir desen: tablo
+     * adindan turetildigi icin {@link #IDENTIFIER_PATTERN}'in 30 karakter siniri yetmeyebilir
+     * (ör. "_pk_unique" eki), ama Postgres'in kendi identifier siniri (63 byte) hala gecerli.
+     */
+    private static final Pattern GENERATED_IDENTIFIER_PATTERN = Pattern.compile("^[a-z0-9_][A-Za-z0-9_]{0,62}$");
+
     private final JdbcTemplate jdbcTemplate;
 
     public TableDdlExecutor(JdbcTemplate jdbcTemplate) {
@@ -70,6 +77,62 @@ public class TableDdlExecutor {
                 + quote(oldColumnName) + " TO " + quote(newColumnName));
     }
 
+    /**
+     * Kullanicinin "bu kolon(lar) benim gozumde birincil anahtar" diye isaretledigi kolonlar
+     * uzerine gercek bir {@code UNIQUE} constraint kurar (gercek PRIMARY KEY hala otomatik "id"
+     * kolonunda kalir, bkz. {@link #ID_COLUMN_SQL}). Tek kolon icin normal unique, birden fazla
+     * kolon icin composite unique olur — ikisi de ayni yontemle kurulur. Cagiran taraf once
+     * {@link #dropPrimaryKeyUniqueConstraintIfExists} ile eskisini kaldirmis olmali; yoksa
+     * "constraint zaten var" hatasi alinir.
+     */
+    public void addPrimaryKeyUniqueConstraint(String schemaName, String tableName, List<String> columnNames) {
+        String columnsSql = columnNames.stream()
+                .map(this::quote)
+                .reduce((a, b) -> a + ", " + b)
+                .orElseThrow(() -> new IllegalArgumentException("a unique constraint needs at least one column"));
+        jdbcTemplate.execute("ALTER TABLE " + qualifiedName(schemaName, tableName) + " ADD CONSTRAINT "
+                + quoteGenerated(primaryKeyUniqueConstraintName(tableName)) + " UNIQUE (" + columnsSql + ")");
+    }
+
+    /** Yoksa sessizce hicbir sey yapmaz ({@code IF EXISTS}) — cagiran taraf her seferinde once bunu calistirip sonra gerekiyorsa yeniden ekler. */
+    public void dropPrimaryKeyUniqueConstraintIfExists(String schemaName, String tableName) {
+        jdbcTemplate.execute("ALTER TABLE " + qualifiedName(schemaName, tableName) + " DROP CONSTRAINT IF EXISTS "
+                + quoteGenerated(primaryKeyUniqueConstraintName(tableName)));
+    }
+
+    /**
+     * Tablo yeniden adlandirilinca (bkz. {@link #renameTable}) constraint ismi de tablo adiyla
+     * senkron kalsin diye cagrilir — yoksa bir sonraki {@code addPrimaryKeyUniqueConstraint}/
+     * {@code dropPrimaryKeyUniqueConstraintIfExists} cagrisi yeni isimden hesapladigi constraint
+     * ismini bulamaz, eski constraint sahipsiz kalir. Constraint yoksa (hic PK isaretli kolon
+     * yoktuysa) sessizce hicbir sey yapmaz — Postgres'te {@code RENAME CONSTRAINT}'in
+     * {@code IF EXISTS} varyanti olmadigi icin varligini once kendimiz kontrol ediyoruz.
+     */
+    public void renamePrimaryKeyUniqueConstraintIfExists(String schemaName, String oldTableName, String newTableName) {
+        String oldConstraintName = primaryKeyUniqueConstraintName(oldTableName);
+        Boolean exists = jdbcTemplate.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints "
+                        + "WHERE table_schema = ? AND table_name = ? AND constraint_name = ?)",
+                Boolean.class, schemaName, newTableName, oldConstraintName);
+        if (!Boolean.TRUE.equals(exists)) {
+            return;
+        }
+        jdbcTemplate.execute("ALTER TABLE " + qualifiedName(schemaName, newTableName) + " RENAME CONSTRAINT "
+                + quoteGenerated(oldConstraintName) + " TO " + quoteGenerated(primaryKeyUniqueConstraintName(newTableName)));
+    }
+
+    /**
+     * Constraint (ve arkasindaki index'in) ismini tablo adindan turetir. Bunu bilerek sabit bir
+     * isim yerine kullaniyoruz: Postgres'te UNIQUE constraint'in arkasindaki index schema
+     * genelinde benzersiz olmak zorunda (tablo bazinda degil) — sabit bir isim ayni schema'daki
+     * ikinci tabloda "relation already exists" hatasi verirdi. Tablo adlari uygulama genelinde
+     * zaten benzersiz oldugu icin (bkz. TabloService#createTablo, existsByName) bu turetilen isim
+     * de otomatik olarak benzersiz olur.
+     */
+    private String primaryKeyUniqueConstraintName(String tableName) {
+        return tableName + "_pk_unique";
+    }
+
     /** Tabloyu bir schema'dan digerine tasir; {@code currentSchemaName} tablonun su anki (eski) schema'sidir. */
     public void moveTableToSchema(String currentSchemaName, String tableName, String newSchemaName) {
         jdbcTemplate.execute(
@@ -96,6 +159,14 @@ public class TableDdlExecutor {
     private String quote(String identifier) {
         if (identifier == null || !IDENTIFIER_PATTERN.matcher(identifier).matches()) {
             throw new IllegalStateException("unsafe identifier reached the DDL layer: " + identifier);
+        }
+        return "\"" + identifier + "\"";
+    }
+
+    /** {@link #quote} ile ayni amac, ama uretilen (tablo adindan turetilen) identifier'lar icin gevsetilmis uzunluk siniriyla ({@link #GENERATED_IDENTIFIER_PATTERN}). */
+    private String quoteGenerated(String identifier) {
+        if (identifier == null || !GENERATED_IDENTIFIER_PATTERN.matcher(identifier).matches()) {
+            throw new IllegalStateException("unsafe generated identifier reached the DDL layer: " + identifier);
         }
         return "\"" + identifier + "\"";
     }

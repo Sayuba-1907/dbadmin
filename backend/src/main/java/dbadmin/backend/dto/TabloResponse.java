@@ -1,7 +1,7 @@
 package dbadmin.backend.dto;
 
-import dbadmin.backend.entity.Schema;
 import dbadmin.backend.entity.Tablo;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
@@ -10,14 +10,19 @@ import java.util.List;
  * icindeki Tablo referansi yuzunden sonsuz donguye (tablo -> kolon -> tablo -> ...) girerdi.
  * Bu record'da geriye referans olmadigi icin o sorun hic yasanmaz.
  */
-public record TabloResponse(Long id, String name, Long schemaId, String schemaName, List<KolonResponse> kolonlar) {
+public record TabloResponse(
+        @Schema(description = "Tablonun id'si.", example = "1") Long id,
+        @Schema(description = "Tablonun adi.", example = "ogrenciler") String name,
+        @Schema(description = "Tablonun ait oldugu schema'nin id'si.", example = "1") Long schemaId,
+        @Schema(description = "Tablonun ait oldugu schema'nin adi.", example = "public") String schemaName,
+        @Schema(description = "Tablonun kolonlarinin listesi.") List<KolonResponse> kolonlar) {
 
     /** Entity'den DTO'ya cevirici — entity'yi controller'a hic sizdirmadan burada donusturuyoruz. */
     public static TabloResponse from(Tablo tablo) {
         List<KolonResponse> kolonlar = tablo.getKolonlar().stream()
                 .map(KolonResponse::from)
                 .toList();
-        Schema schema = tablo.getSchema();
+        dbadmin.backend.entity.Schema schema = tablo.getSchema();
         return new TabloResponse(
                 tablo.getId(), tablo.getName(),
                 schema != null ? schema.getId() : null,

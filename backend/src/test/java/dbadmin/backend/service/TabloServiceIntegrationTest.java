@@ -168,19 +168,116 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
         assertThrows(NotFoundException.class, () -> tabloService.getTablo(-1L));
     }
 
+    /** Bir tablonun tek bir kolonu icin real UNIQUE constraint'in olup olmadigini doner. */
+    private boolean realUniqueConstraintExists(String tableName, String columnName) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.table_constraints tc "
+                        + "JOIN information_schema.key_column_usage kcu "
+                        + "  ON tc.constraint_name = kcu.constraint_name AND tc.table_name = kcu.table_name "
+                        + "WHERE tc.table_name = ? AND tc.constraint_type = 'UNIQUE' AND kcu.column_name = ?",
+                Integer.class, tableName, columnName);
+        return count != null && count > 0;
+    }
+
+    /** O tablonun gercek PRIMARY KEY constraint'inin hangi kolonlari kapsadigini doner. */
+    private List<String> realPrimaryKeyColumns(String tableName) {
+        return jdbcTemplate.queryForList(
+                "SELECT kcu.column_name FROM information_schema.table_constraints tc "
+                        + "JOIN information_schema.key_column_usage kcu "
+                        + "  ON tc.constraint_name = kcu.constraint_name AND tc.table_name = kcu.table_name "
+                        + "WHERE tc.table_name = ? AND tc.constraint_type = 'PRIMARY KEY'",
+                String.class, tableName);
+    }
+
     @Test
-    void createTablo_primaryKeyFlag_isMetadataOnlyAndDoesNotChangeRealPk() {
+    void createTablo_primaryKeyFlag_doesNotChangeRealPkButAddsRealUniqueConstraint() {
         Tablo tablo = tabloService.createTablo("urun5", null,
                 List.of(new KolonTanimi("ad", "text", null, true), new KolonTanimi("kod", "text", null, false)));
 
         assertTrue(tablo.getKolonlar().get(0).isPrimaryKey());
         assertFalse(tablo.getKolonlar().get(1).isPrimaryKey());
-        // Gercek DB'de PRIMARY KEY hala sadece otomatik "id" kolonunda - bu flag DDL'e dokunmuyor.
-        Integer realPkColumnCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.key_column_usage "
-                        + "WHERE table_name = ? AND column_name = 'ad'",
-                Integer.class, "urun5");
-        assertEquals(0, realPkColumnCount);
+        // Gercek PRIMARY KEY hala sadece otomatik "id" kolonunda.
+        assertEquals(List.of("id"), realPrimaryKeyColumns("urun5"));
+        // Ama flag artik kozmetik degil: "ad" uzerinde gercek bir UNIQUE constraint var, "kod" uzerinde yok.
+        assertTrue(realUniqueConstraintExists("urun5", "ad"));
+        assertFalse(realUniqueConstraintExists("urun5", "kod"));
+    }
+
+    @Test
+    void createTablo_compositePrimaryKeyFlags_createRealCompositeUniqueConstraint() {
+        tabloService.createTablo("urun7", null,
+                List.of(new KolonTanimi("kolona", "text", null, true), new KolonTanimi("kolonb", "text", null, true)));
+
+        assertTrue(realUniqueConstraintExists("urun7", "kolona"));
+        assertTrue(realUniqueConstraintExists("urun7", "kolonb"));
+        // Tekrar eden (kolona, kolonb) ciftine izin verilmemeli - composite unique constraint devrede.
+        jdbcTemplate.update("INSERT INTO \"urun7\" (kolona, kolonb) VALUES ('x', 'y')");
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("INSERT INTO \"urun7\" (kolona, kolonb) VALUES ('x', 'y')"));
+    }
+
+    @Test
+    void addKolon_markingSecondColumnAsPrimaryKey_widensRealUniqueConstraint() {
+        Tablo tablo = tabloService.createTablo("urun8", null, List.of(new KolonTanimi("kolona", "text", null, true)));
+
+        tabloService.addKolon(tablo.getId(), new KolonTanimi("kolonb", "text", null, true));
+
+        assertTrue(realUniqueConstraintExists("urun8", "kolona"));
+        assertTrue(realUniqueConstraintExists("urun8", "kolonb"));
+        jdbcTemplate.update("INSERT INTO \"urun8\" (kolona, kolonb) VALUES ('x', 'y')");
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("INSERT INTO \"urun8\" (kolona, kolonb) VALUES ('x', 'y')"));
+    }
+
+    @Test
+    void deleteKolon_removingPrimaryKeyColumn_shrinksConstraintToRemainingColumns() {
+        Tablo tablo = tabloService.createTablo("urun9", null,
+                List.of(new KolonTanimi("kolona", "text", null, true), new KolonTanimi("kolonb", "text", null, true)));
+        Long aId = tablo.getKolonlar().get(0).getId();
+
+        tabloService.deleteKolon(tablo.getId(), aId);
+
+        // "kolonb" tek basina artik PK-isaretli tek kolon oldugu icin kendi basina unique olmali.
+        assertTrue(realUniqueConstraintExists("urun9", "kolonb"));
+        Integer uniqueConstraintCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(DISTINCT tc.constraint_name) FROM information_schema.table_constraints tc "
+                        + "WHERE tc.table_name = ? AND tc.constraint_type = 'UNIQUE'",
+                Integer.class, "urun9");
+        assertEquals(1, uniqueConstraintCount);
+        jdbcTemplate.update("INSERT INTO \"urun9\" (kolonb) VALUES ('y')");
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("INSERT INTO \"urun9\" (kolonb) VALUES ('y')"));
+    }
+
+    @Test
+    void renameTablo_keepsPrimaryKeyUniqueConstraintEnforcedUnderNewName() {
+        Tablo tablo = tabloService.createTablo("urun11", null, List.of(new KolonTanimi("ad", "text", null, true)));
+
+        tabloService.renameTablo(tablo.getId(), "urun11_yeni");
+
+        assertTrue(realUniqueConstraintExists("urun11_yeni", "ad"));
+        jdbcTemplate.update("INSERT INTO \"urun11_yeni\" (ad) VALUES ('x')");
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("INSERT INTO \"urun11_yeni\" (ad) VALUES ('x')"));
+
+        // Rename sonrasi kolon ekleyip constraint'in genisletilebildigini de dogrula (eski isimle
+        // takilip kalmadigini gosterir).
+        tabloService.addKolon(tablo.getId(), new KolonTanimi("kod", "text", null, true));
+        assertTrue(realUniqueConstraintExists("urun11_yeni", "kod"));
+    }
+
+    @Test
+    void deleteKolon_removingOnlyPrimaryKeyColumn_dropsConstraintEntirely() {
+        Tablo tablo = tabloService.createTablo("urun10", null, List.of(new KolonTanimi("ad", "text", null, true)));
+        Long adId = tablo.getKolonlar().get(0).getId();
+
+        tabloService.deleteKolon(tablo.getId(), adId);
+
+        Integer uniqueConstraintCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.table_constraints "
+                        + "WHERE table_name = ? AND constraint_type = 'UNIQUE'",
+                Integer.class, "urun10");
+        assertEquals(0, uniqueConstraintCount);
     }
 
     @Test

@@ -113,6 +113,7 @@ public class TabloService {
         tablo.setSchema(schema);
         Set<String> seenNames = new HashSet<>();
         List<TableDdlExecutor.ColumnDefinition> ddlColumns = new ArrayList<>();
+        List<String> primaryKeyColumnNames = new ArrayList<>();
 
         for (KolonTanimi tanim : kolonTanimlari) {
             NameValidator.validate("column name", "VALIDATION_INVALID_COLUMN_NAME", tanim.name());
@@ -129,10 +130,16 @@ public class TabloService {
             kolon.setPrimaryKey(tanim.primaryKey());
             tablo.addKolon(kolon);
             ddlColumns.add(new TableDdlExecutor.ColumnDefinition(tanim.name(), type));
+            if (tanim.primaryKey()) {
+                primaryKeyColumnNames.add(tanim.name());
+            }
         }
 
         Tablo saved = tabloRepository.save(tablo);
         ddlExecutor.createTable(schema.getName(), saved.getName(), ddlColumns);
+        if (!primaryKeyColumnNames.isEmpty()) {
+            ddlExecutor.addPrimaryKeyUniqueConstraint(schema.getName(), saved.getName(), primaryKeyColumnNames);
+        }
         tablesCreatedCounter.increment();
         columnsCreatedCounter.increment(ddlColumns.size());
         return saved;
@@ -188,6 +195,7 @@ public class TabloService {
         String oldName = tablo.getName();
         tablo.setName(newName);
         ddlExecutor.renameTable(tablo.getSchema().getName(), oldName, newName);
+        ddlExecutor.renamePrimaryKeyUniqueConstraintIfExists(tablo.getSchema().getName(), oldName, newName);
         return tablo;
     }
 
@@ -222,6 +230,11 @@ public class TabloService {
 
         ddlExecutor.addColumn(tablo.getSchema().getName(), tablo.getName(), saved.getName(), type);
         columnsCreatedCounter.increment();
+        if (tanim.primaryKey()) {
+            // Yeni kolon da isarete katildigi icin tum PK-isaretli kolon seti degisti:
+            // eskisini kaldirip (varsa) genisletilmis setle yeniden kuruyoruz.
+            syncPrimaryKeyUniqueConstraint(tablo);
+        }
         return saved;
     }
 
@@ -235,8 +248,41 @@ public class TabloService {
         Tablo tablo = getTablo(tabloId);
         Kolon kolon = findKolonInTablo(tablo, kolonId);
         String columnName = kolon.getName();
+        boolean wasPrimaryKey = kolon.isPrimaryKey();
+        if (wasPrimaryKey) {
+            // Composite unique constraint dusen kolona da bagli oldugu icin, kolonu gercekten
+            // silmeden once constraint'i tamamen kaldiriyoruz (kalan PK-isaretli kolonlar varsa
+            // asagida syncPrimaryKeyUniqueConstraint onlarla yeniden kurar).
+            ddlExecutor.dropPrimaryKeyUniqueConstraintIfExists(tablo.getSchema().getName(), tablo.getName());
+        }
         tablo.removeKolon(kolon);
         ddlExecutor.dropColumn(tablo.getSchema().getName(), tablo.getName(), columnName);
+        if (wasPrimaryKey) {
+            List<String> remainingPrimaryKeyColumnNames = tablo.getKolonlar().stream()
+                    .filter(Kolon::isPrimaryKey)
+                    .map(Kolon::getName)
+                    .toList();
+            if (!remainingPrimaryKeyColumnNames.isEmpty()) {
+                ddlExecutor.addPrimaryKeyUniqueConstraint(
+                        tablo.getSchema().getName(), tablo.getName(), remainingPrimaryKeyColumnNames);
+            }
+        }
+    }
+
+    /**
+     * Tablonun su anki PK-isaretli kolonlarina gore gercek unique constraint'i yeniden kurar:
+     * her zaman once kaldirir, sonra (bos degilse) guncel kolon setiyle tekrar ekler. Cagiran
+     * taraf (addKolon/deleteKolon) sadece PK setinin degistigi anlarda cagirir.
+     */
+    private void syncPrimaryKeyUniqueConstraint(Tablo tablo) {
+        List<String> primaryKeyColumnNames = tablo.getKolonlar().stream()
+                .filter(Kolon::isPrimaryKey)
+                .map(Kolon::getName)
+                .toList();
+        ddlExecutor.dropPrimaryKeyUniqueConstraintIfExists(tablo.getSchema().getName(), tablo.getName());
+        if (!primaryKeyColumnNames.isEmpty()) {
+            ddlExecutor.addPrimaryKeyUniqueConstraint(tablo.getSchema().getName(), tablo.getName(), primaryKeyColumnNames);
+        }
     }
 
     /** Kolonun sadece adini degistirir — tipi olusturulduktan sonra hic degistirilemez (bkz. Kolon.type, updatable=false). */

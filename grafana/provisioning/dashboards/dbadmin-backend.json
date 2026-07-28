@@ -3,7 +3,10 @@
   "title": "DBAdmin Backend",
   "timezone": "browser",
   "refresh": "10s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "schemaVersion": 39,
   "version": 1,
   "panels": [
@@ -11,56 +14,122 @@
       "id": 1,
       "type": "stat",
       "title": "CPU Usage",
-      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
       "targets": [
-        { "expr": "process_cpu_usage", "legendFormat": "process", "refId": "A" }
+        {
+          "expr": "process_cpu_usage{application=\"backend\"}",
+          "legendFormat": "process",
+          "refId": "A"
+        }
       ]
     },
     {
       "id": 2,
       "type": "stat",
       "title": "JVM Heap Used",
-      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
       "targets": [
-        { "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})", "legendFormat": "heap used", "refId": "A" }
+        {
+          "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
+          "legendFormat": "heap used",
+          "refId": "A"
+        }
       ]
     },
     {
       "id": 3,
       "type": "stat",
       "title": "Active DB Connections",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "targets": [
-        { "expr": "hikaricp_connections_active", "legendFormat": "active", "refId": "A" }
+        {
+          "expr": "hikaricp_connections_active{application=\"backend\"}",
+          "legendFormat": "active",
+          "refId": "A"
+        }
       ]
     },
     {
       "id": 4,
       "type": "stat",
       "title": "Uptime",
-      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
       "targets": [
-        { "expr": "process_uptime_seconds", "legendFormat": "uptime", "refId": "A" }
+        {
+          "expr": "process_uptime_seconds{application=\"backend\"}",
+          "legendFormat": "uptime",
+          "refId": "A"
+        }
       ]
     },
     {
       "id": 5,
       "type": "timeseries",
       "title": "HTTP Request Rate (req/s by endpoint)",
-      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_seconds_count[1m])) by (uri, method)",
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"backend\"}[1m])) by (uri, method)",
           "legendFormat": "{{method}} {{uri}}",
           "refId": "A"
         }
@@ -70,12 +139,23 @@
       "id": 6,
       "type": "timeseries",
       "title": "HTTP Error Rate (%)",
-      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0 }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": []
+      },
       "targets": [
         {
-          "expr": "100 * sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))",
+          "expr": "100 * (sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count[5m]))",
           "legendFormat": "5xx error rate",
           "refId": "A"
         }
@@ -85,12 +165,22 @@
       "id": 7,
       "type": "timeseries",
       "title": "Average Request Latency (ms by endpoint)",
-      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
       "targets": [
         {
-          "expr": "1000 * sum(rate(http_server_requests_seconds_sum[5m])) by (uri) / sum(rate(http_server_requests_seconds_count[5m])) by (uri)",
+          "expr": "1000 * sum(rate(http_server_requests_seconds_sum{application=\"backend\"}[5m])) by (uri) / sum(rate(http_server_requests_seconds_count{application=\"backend\"}[5m])) by (uri)",
           "legendFormat": "{{uri}}",
           "refId": "A"
         }
@@ -100,80 +190,216 @@
       "id": 8,
       "type": "timeseries",
       "title": "JVM Heap Used vs Max",
-      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
       "targets": [
-        { "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})", "legendFormat": "used", "refId": "A" },
-        { "expr": "sum(jvm_memory_max_bytes{area=\"heap\"})", "legendFormat": "max", "refId": "B" }
+        {
+          "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
+          "legendFormat": "used",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(jvm_memory_max_bytes{area=\"heap\"})",
+          "legendFormat": "max",
+          "refId": "B"
+        }
       ]
     },
     {
       "id": 9,
       "type": "timeseries",
       "title": "HikariCP Connections",
-      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 8
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "targets": [
-        { "expr": "hikaricp_connections_active", "legendFormat": "active", "refId": "A" },
-        { "expr": "hikaricp_connections_idle", "legendFormat": "idle", "refId": "B" },
-        { "expr": "hikaricp_connections_pending", "legendFormat": "pending", "refId": "C" }
+        {
+          "expr": "hikaricp_connections_active{application=\"backend\"}",
+          "legendFormat": "active",
+          "refId": "A"
+        },
+        {
+          "expr": "hikaricp_connections_idle{application=\"backend\"}",
+          "legendFormat": "idle",
+          "refId": "B"
+        },
+        {
+          "expr": "hikaricp_connections_pending{application=\"backend\"}",
+          "legendFormat": "pending",
+          "refId": "C"
+        }
       ]
     },
     {
       "id": 10,
       "type": "stat",
       "title": "Tables Active",
-      "gridPos": { "x": 0, "y": 28, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "targets": [{ "expr": "dbadmin_tables_active", "legendFormat": "tables", "refId": "A" }]
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "dbadmin_tables_active{application=\"backend\"}",
+          "legendFormat": "tables",
+          "refId": "A"
+        }
+      ]
     },
     {
       "id": 11,
       "type": "stat",
       "title": "Schemas Active",
-      "gridPos": { "x": 4, "y": 28, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 4,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "targets": [{ "expr": "dbadmin_schemas_active", "legendFormat": "schemas", "refId": "A" }]
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "dbadmin_schemas_active{application=\"backend\"}",
+          "legendFormat": "schemas",
+          "refId": "A"
+        }
+      ]
     },
     {
       "id": 12,
       "type": "stat",
       "title": "Tables Created (total)",
-      "gridPos": { "x": 8, "y": 28, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 8,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "targets": [{ "expr": "dbadmin_tables_creations_total", "legendFormat": "created", "refId": "A" }]
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "dbadmin_tables_creations_total{application=\"backend\"}",
+          "legendFormat": "created",
+          "refId": "A"
+        }
+      ]
     },
     {
       "id": 13,
       "type": "stat",
       "title": "Tables Deleted (total)",
-      "gridPos": { "x": 12, "y": 28, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "targets": [{ "expr": "dbadmin_tables_deletions_total", "legendFormat": "deleted", "refId": "A" }]
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "dbadmin_tables_deletions_total{application=\"backend\"}",
+          "legendFormat": "deleted",
+          "refId": "A"
+        }
+      ]
     },
     {
       "id": 14,
       "type": "stat",
       "title": "Columns Created (total)",
-      "gridPos": { "x": 16, "y": 28, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 16,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "targets": [{ "expr": "dbadmin_columns_creations_total", "legendFormat": "created", "refId": "A" }]
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "dbadmin_columns_creations_total{application=\"backend\"}",
+          "legendFormat": "created",
+          "refId": "A"
+        }
+      ]
     },
     {
       "id": 15,
       "type": "stat",
       "title": "Schemas Created (total)",
-      "gridPos": { "x": 20, "y": 28, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 20,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
       "datasource": "Prometheus",
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "targets": [{ "expr": "dbadmin_schemas_creations_total", "legendFormat": "created", "refId": "A" }]
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "dbadmin_schemas_creations_total{application=\"backend\"}",
+          "legendFormat": "created",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }

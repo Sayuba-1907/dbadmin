@@ -12,6 +12,7 @@
 
 docker compose up -d db backend
 docker compose up -d --build backend
+docker compose up -d db backend prometheus grafana
 ss -ltnp | grep 3000
 npm start
 https://www.baeldung.com/java-equals-hashcode-contracts hashcode equals siteye bak.

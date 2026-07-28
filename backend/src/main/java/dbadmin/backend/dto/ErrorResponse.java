@@ -1,5 +1,6 @@
 package dbadmin.backend.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.Map;
 
@@ -10,7 +11,19 @@ import java.util.Map;
  * frontend'in i18next ile kendi diline cevirmesi icin (bkz. errors.* ceviri anahtarlari).
  */
 public record ErrorResponse(
-        Instant timestamp, int status, String error, String message, String code, Map<String, String> details) {
+        @Schema(description = "Hatanin olustugu an.", example = "2026-07-28T07:52:04.372Z") Instant timestamp,
+        @Schema(description = "HTTP status kodu.", example = "409") int status,
+        @Schema(description = "HTTP status'un okunabilir adi.", example = "Conflict") String error,
+        @Schema(description = "Insanin okuyacagi Ingilizce hata mesaji (log/Postman icin).",
+                        example = "a table named 'ogrenciler' already exists")
+                String message,
+        @Schema(description = "Frontend'in i18next ceviri sozlugunde arayacagi sabit hata kodu.",
+                        example = "CONFLICT_DUPLICATE_TABLE_NAME")
+                String code,
+        @Schema(description = "Mesajin icindeki degisken kisimlar (frontend kendi dilindeki sablonu "
+                        + "bunlarla doldurur). Hataya gore bos olabilir.",
+                        example = "{\"name\": \"ogrenciler\"}")
+                Map<String, String> details) {
 
     public static ErrorResponse of(
             int status, String error, String message, String code, Map<String, String> details) {
