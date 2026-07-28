@@ -84,16 +84,18 @@ public class TabloController {
     @Operation(summary = "Yeni tablo olustur",
             description = "Verilen isim ve kolon listesiyle hem metadata satirini hem de gercek Postgres "
                     + "tablosunu (otomatik 'id' PRIMARY KEY kolonuyla birlikte) olusturur. En az bir kolon "
-                    + "zorunlu. schemaId bos gecilirse tablo 'public' schema'ya kurulur. Kolonlardan biri "
+                    + "zorunlu. schemaId de zorunlu — tablonun kurulacagi schema acikca verilmeli. Kolonlardan biri "
                     + "veya birden fazlasi primaryKey=true isaretlenirse, o kolon(lar) uzerine gercek bir "
                     + "Postgres UNIQUE constraint de kurulur.")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Tablo olusturuldu."),
         @ApiResponse(responseCode = "400",
-                description = "Gecersiz tablo/kolon adi, gecersiz kolon tipi, ya da hic kolon verilmemis.",
+                description = "Gecersiz tablo/kolon adi, gecersiz kolon tipi, hic kolon verilmemis, "
+                        + "ya da schemaId bos birakilmis.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                         schema = @Schema(implementation = ErrorResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Belirtilen schemaId'de bir schema yok.",
+        @ApiResponse(responseCode = "404", description = "Belirtilen schemaId'de bir schema yok "
+                + "(gizli 'public' schema'sinin id'si de buraya girer).",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                         schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "409",

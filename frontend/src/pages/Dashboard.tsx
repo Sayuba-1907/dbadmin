@@ -296,10 +296,8 @@ export function Dashboard() {
         <TabloDetail
           tablo={selectedTablo}
           tags={tags}
-          schemalar={schemalar}
           onDeleteTablo={handleDeleteTablo}
           onRenameTablo={handleRenameTablo}
-          onChangeTabloSchema={handleChangeTabloSchema}
           onAddKolon={handleAddKolon}
           onDeleteKolon={handleDeleteKolon}
           onRenameKolon={handleRenameKolon}

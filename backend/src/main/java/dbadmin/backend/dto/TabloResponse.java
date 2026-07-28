@@ -15,7 +15,7 @@ public record TabloResponse(
         @Schema(description = "Tablonun id'si.", example = "1") Long id,
         @Schema(description = "Tablonun adi.", example = "ogrenciler") String name,
         @Schema(description = "Tablonun ait oldugu schema'nin id'si.", example = "1") Long schemaId,
-        @Schema(description = "Tablonun ait oldugu schema'nin adi.", example = "public") String schemaName,
+        @Schema(description = "Tablonun ait oldugu schema'nin adi.", example = "ogrenciler") String schemaName,
         @Schema(description = "Tablonun kolonlarinin listesi.") List<KolonResponse> kolonlar,
         @Schema(description = "Tabloda ya da kolonlarindan birinde en son ne zaman degisiklik "
                         + "yapildigi (olusturma, yeniden adlandirma, schema tasima, kolon "

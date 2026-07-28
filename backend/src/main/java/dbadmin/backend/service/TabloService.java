@@ -71,7 +71,9 @@ public class TabloService {
      */
     @Transactional(readOnly = true)
     public List<Tablo> listTablolar() {
-        return tabloRepository.findAllByOrderByNameAsc();
+        return tabloRepository.findAllByOrderByNameAsc().stream()
+                .filter(tablo -> !SchemaService.isHidden(tablo.getSchema()))
+                .toList();
     }
 
     /** Sidebar'daki schema -> tablo hiyerarsisi icin: sadece bir schema'nin altindaki tablolar, isme gore alfabetik sirali. */
@@ -80,10 +82,16 @@ public class TabloService {
         return tabloRepository.findBySchemaIdOrderByNameAsc(schemaId);
     }
 
-    /** Id ile tek tablo bulur; yoksa 404'e cevrilecek {@link NotFoundException} firlatir (bkz. GlobalExceptionHandler). */
+    /**
+     * Id ile tek tablo bulur; yoksa 404'e cevrilecek {@link NotFoundException} firlatir (bkz.
+     * GlobalExceptionHandler). Gizli schema'daki ("public") eski satirlar da bulunamamis sayilir
+     * (bkz. {@link SchemaService#RESERVED_SCHEMA_NAME}) — bu metodu tum yazma islemleri de
+     * kullandigi icin, oradaki bir tablo web uzerinden okunamaz da degistirilemez de.
+     */
     @Transactional(readOnly = true)
     public Tablo getTablo(Long id) {
         return tabloRepository.findById(id)
+                .filter(tablo -> !SchemaService.isHidden(tablo.getSchema()))
                 .orElseThrow(() -> new NotFoundException(
                         "NOT_FOUND_TABLE", "tablo not found: " + id, Map.of("id", String.valueOf(id))));
     }
@@ -92,8 +100,10 @@ public class TabloService {
      * Yeni tablo olusturur: once metadata (Tablo + Kolon satirlari) DB'ye yazilir, sonra ayni
      * transaction icinde gercek {@code CREATE TABLE} calistirilir. DDL patlarsa metadata insert'i
      * de otomatik geri alinir — iki katman asla birbirinden kopmaz.
-     * {@code schemaId} null gelirse tablo varsayilan olarak "public" schema'ya baglanir (bkz.
-     * {@link #resolveSchema}); dolu gelirse o id'deki Schema'ya baglanir, yoksa 404.
+     * {@code schemaId} zorunlu: tablonun hangi schema'ya kurulacagi acikca belirtilmeli. Eskiden
+     * null gelince tablo "public"e kuruluyordu; "public" artik gizli oldugu icin (bkz.
+     * {@link SchemaService#RESERVED_SCHEMA_NAME}) boyle bir tablo olusturuldugu anda arayuzde
+     * gorunmez olurdu — o yuzden sessiz varsayilan yerine hata veriyoruz.
      */
     @Transactional
     public Tablo createTablo(String name, Long schemaId, List<KolonTanimi> kolonTanimlari) {
@@ -145,33 +155,31 @@ public class TabloService {
         return saved;
     }
 
-    /** {@code schemaId} null ise varsayilan "public" Schema satirini doner (bkz. SchemaBootstrapRunner), doluysa o id'yi arar, yoksa 404. */
+    /**
+     * Verilen id'deki Schema'yi doner. {@code null} id 400, bulunamayan id 404 verir; gizli
+     * ("public") schema da bulunamamis sayilir, yani tablo ne oraya kurulabilir ne de oraya
+     * tasinabilir.
+     */
     private Schema resolveSchema(Long schemaId) {
         if (schemaId == null) {
-            return schemaRepository.findByNameIgnoreCase(SchemaService.RESERVED_SCHEMA_NAME)
-                    .orElseThrow(() -> new IllegalStateException(
-                            "bootstrap '" + SchemaService.RESERVED_SCHEMA_NAME + "' schema row is missing"));
+            throw new ValidationException("VALIDATION_MISSING_SCHEMA", "a schema must be specified");
         }
         return schemaRepository.findById(schemaId)
+                .filter(schema -> !SchemaService.isHidden(schema))
                 .orElseThrow(() -> new NotFoundException(
                         "NOT_FOUND_SCHEMA", "schema not found: " + schemaId, Map.of("id", String.valueOf(schemaId))));
     }
 
     /**
      * Var olan bir tabloyu baska bir schema'ya tasir: hem metadata (Tablo.schema) hem gercek
-     * Postgres tablosu ({@code ALTER TABLE ... SET SCHEMA}) birlikte gider. Tasima islemi icin
-     * {@code createTablo}'nun aksine schemaId zorunlu — "hangi schema'ya tasi" belirtilmeden bu
-     * islemin bir anlami yok, o yuzden burada null'u sessizce "public"e cevirmiyoruz.
+     * Postgres tablosu ({@code ALTER TABLE ... SET SCHEMA}) birlikte gider. Hedef schema zorunlu
+     * ve gercek bir schema olmali: "public" gizli oldugu icin (bkz.
+     * {@link SchemaService#RESERVED_SCHEMA_NAME}) oraya tasima 404 ile reddedilir.
      */
     @Transactional
     public Tablo changeSchema(Long tabloId, Long newSchemaId) {
         Tablo tablo = getTablo(tabloId);
-        if (newSchemaId == null) {
-            throw new ValidationException("VALIDATION_MISSING_SCHEMA", "a target schema must be specified");
-        }
-        Schema newSchema = schemaRepository.findById(newSchemaId)
-                .orElseThrow(() -> new NotFoundException(
-                        "NOT_FOUND_SCHEMA", "schema not found: " + newSchemaId, Map.of("id", String.valueOf(newSchemaId))));
+        Schema newSchema = resolveSchema(newSchemaId);
         Schema currentSchema = tablo.getSchema();
         if (currentSchema.getId().equals(newSchema.getId())) {
             return tablo;

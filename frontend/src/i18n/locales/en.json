@@ -25,7 +25,6 @@
     "selectTable": "Select a table"
   },
   "tabloDetail": {
-    "schemaLabel": "Schema",
     "deleteTable": "Delete Table",
     "confirmDeleteTable": "Are you sure you want to delete \"{{name}}\"?",
     "colName": "Column",
@@ -46,6 +45,7 @@
   "createTabloForm": {
     "title": "New Table",
     "tableNameLabel": "Table name",
+    "noSchemaHint": "Create a schema first — every table is created inside a schema.",
     "tableNamePlaceholder": "table_name",
     "schemaLabel": "Schema",
     "addColumnRow": "+ Add column",
@@ -101,11 +101,9 @@
     "NOT_FOUND_COLUMN": "Column not found in this table (id: {{id}})",
     "NOT_FOUND_TAG": "Tag not found (id: {{id}})",
     "VALIDATION_INVALID_SCHEMA_NAME": "Schema name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
-    "VALIDATION_RESERVED_SCHEMA_NAME": "\"public\" is a reserved schema name and cannot be used",
+    "VALIDATION_RESERVED_SCHEMA_NAME": "\"public\" is Postgres's infrastructure schema and cannot be used as a name",
     "CONFLICT_DUPLICATE_SCHEMA_NAME": "A schema named \"{{name}}\" already exists",
     "NOT_FOUND_SCHEMA": "Schema not found (id: {{id}})",
-    "VALIDATION_CANNOT_DELETE_PUBLIC_SCHEMA": "The \"public\" schema is required by the system and cannot be deleted",
-    "VALIDATION_CANNOT_RENAME_PUBLIC_SCHEMA": "The \"public\" schema is required by the system and cannot be renamed",
-    "VALIDATION_MISSING_SCHEMA": "A target schema must be specified"
+    "VALIDATION_MISSING_SCHEMA": "A schema must be specified"
   }
 }

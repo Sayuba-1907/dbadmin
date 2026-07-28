@@ -32,8 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/schemalar")
 @Tag(name = "Schemalar", description = "Postgres schema'larini (tablo gruplarini) yonetir; her yazma "
         + "islemi ayni anda gercek Postgres schema'sini da (CREATE/ALTER/DROP SCHEMA) degistirir. "
-        + "'public' schema'si sistem tarafindan rezerve — yeniden olusturulamaz, adi degistirilemez, "
-        + "silinemez.")
+        + "'public' schema'si bu API'de hic gorunmez: listelenmez, id'siyle sorulursa 404 doner, bu "
+        + "isimle yeni schema olusturulamaz ve oraya tablo kurulamaz/tasinamaz — altyapiya ait "
+        + "(uygulamanin kendi metadata tablolari ve extension'lar orada durur).")
 public class SchemaController {
 
     private final SchemaService schemaService;
@@ -44,9 +45,9 @@ public class SchemaController {
         this.tabloService = tabloService;
     }
 
-    @Operation(summary = "Tum schema'lari listele", description = "Sistemdeki tum schema'lari doner "
-            + "('public' dahil).")
-    @ApiResponse(responseCode = "200", description = "Schema listesi (en az 'public' icerir).")
+    @Operation(summary = "Tum schema'lari listele", description = "Kullanicinin olusturdugu tum "
+            + "schema'lari doner. Altyapiya ait 'public' schema'si listeye dahil edilmez.")
+    @ApiResponse(responseCode = "200", description = "Schema listesi (hicbir schema olusturulmamissa bos).")
     @GetMapping
     public List<SchemaResponse> list() {
         return schemaService.listSchemalar().stream()
@@ -87,7 +88,7 @@ public class SchemaController {
 
     @Operation(summary = "Yeni schema olustur",
             description = "Hem metadata satirini hem de gercek Postgres schema'sini (CREATE SCHEMA) "
-                    + "olusturur. 'public' ismiyle olusturulamaz (rezerve isim).")
+                    + "olusturur. 'public' ismiyle olusturulamaz (altyapiya ait rezerve isim).")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Schema olusturuldu."),
         @ApiResponse(responseCode = "400",
@@ -104,15 +105,15 @@ public class SchemaController {
         return SchemaResponse.from(schemaService.createSchema(request.name()));
     }
 
-    /** PATCH /api/schemalar/{id} — sadece ismi degistirir; "public" reddedilir (bkz. SchemaService.renameSchema). */
+    /** PATCH /api/schemalar/{id} — sadece ismi degistirir; yeni isim olarak "public" reddedilir (bkz. SchemaService.renameSchema). */
     @Operation(summary = "Schema'yi yeniden adlandir",
             description = "Hem metadata'daki hem gercek Postgres schema'sinin adini degistirir "
-                    + "(ALTER SCHEMA ... RENAME TO). 'public' schema'si yeniden adlandirilamaz, ve "
-                    + "hicbir schema 'public' ismine yeniden adlandirilamaz.")
+                    + "(ALTER SCHEMA ... RENAME TO). Hicbir schema 'public' ismine yeniden "
+                    + "adlandirilamaz.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Schema yeniden adlandirildi."),
-        @ApiResponse(responseCode = "400", description = "Gecersiz yeni isim, yeniden adlandirilan "
-                + "schema 'public' idi, ya da yeni isim olarak 'public' verilmeye calisildi.",
+        @ApiResponse(responseCode = "400", description = "Gecersiz yeni isim, ya da yeni isim "
+                + "olarak 'public' verilmeye calisildi.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                         schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(responseCode = "404", description = "Bu id'de bir schema yok.",
@@ -133,13 +134,11 @@ public class SchemaController {
     @Operation(summary = "Schema'yi sil",
             description = "DIKKAT: Yikici bir islem. Schema'nin altindaki TUM tablolarin metadata'sini "
                     + "siler, ardindan gercek Postgres schema'sini CASCADE ile siler — bu da icindeki "
-                    + "tum tablolari fiziksel olarak siler. 'public' schema'si silinemez.")
+                    + "tum tablolari fiziksel olarak siler.")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Schema ve icindeki tum tablolar silindi."),
-        @ApiResponse(responseCode = "400", description = "'public' schema'si silinmeye calisildi.",
-                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Bu id'de bir schema yok.",
+        @ApiResponse(responseCode = "404", description = "Bu id'de bir schema yok ('public'in id'si de "
+                + "buraya girer — gizli oldugu icin yokmus gibi davranilir).",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                         schema = @Schema(implementation = ErrorResponse.class)))
     })

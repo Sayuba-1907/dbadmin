@@ -9,6 +9,6 @@ public interface SchemaRepository extends JpaRepository<Schema, Long> {
 
     boolean existsByName(String name);
 
-    /** SchemaBootstrapRunner'in "public" satirini case-insensitive bulmasi icin. */
+    /** Testlerin "public" satiri gercekten yok mu" diye kontrol edebilmesi icin. */
     Optional<Schema> findByNameIgnoreCase(String name);
 }

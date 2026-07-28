@@ -38,7 +38,8 @@ public class Tablo {
     // DB kolonu bilerek nullable birakildi (nullable=false yazmadik): Hibernate ddl-auto=update
     // var olan satirlari doldurmadan NOT NULL bir kolon acamiyor. "Her tablo bir schema'ya
     // ait olmali" kurali burada DB constraint'iyle degil, uygulama katmaninda
-    // (SchemaBootstrapRunner + TabloService#createTablo) saglanir.
+    // (TabloService#createTablo schemaId'yi zorunlu tutar) saglanir. Yine de schema'si null
+    // kalmis eski bir satir varsa TabloService onu gizli sayip API'de hic gostermez.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schema_id")
     private Schema schema;

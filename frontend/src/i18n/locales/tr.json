@@ -25,7 +25,6 @@
     "selectTable": "Bir tablo seç"
   },
   "tabloDetail": {
-    "schemaLabel": "Schema",
     "deleteTable": "Tabloyu Sil",
     "confirmDeleteTable": "\"{{name}}\" tablosunu silmek istediğinize emin misiniz?",
     "colName": "Kolon",
@@ -46,6 +45,7 @@
   "createTabloForm": {
     "title": "Yeni Tablo",
     "tableNameLabel": "Tablo adı",
+    "noSchemaHint": "Önce bir schema oluşturmalısın — her tablo bir schema'nın içine kurulur.",
     "tableNamePlaceholder": "tablo_adi",
     "schemaLabel": "Schema",
     "addColumnRow": "+ Kolon ekle",
@@ -101,11 +101,9 @@
     "NOT_FOUND_COLUMN": "Bu tabloda böyle bir kolon bulunamadı (id: {{id}})",
     "NOT_FOUND_TAG": "Tag bulunamadı (id: {{id}})",
     "VALIDATION_INVALID_SCHEMA_NAME": "Schema adı 2-30 karakter olmalı, büyük harfle başlayamaz ve sadece harf, rakam, alt çizgi içerebilir",
-    "VALIDATION_RESERVED_SCHEMA_NAME": "\"public\" rezerve bir schema adıdır, kullanılamaz",
+    "VALIDATION_RESERVED_SCHEMA_NAME": "\"public\" Postgres'in altyapı schema'sıdır, bu isim kullanılamaz",
     "CONFLICT_DUPLICATE_SCHEMA_NAME": "\"{{name}}\" adında bir schema zaten var",
     "NOT_FOUND_SCHEMA": "Schema bulunamadı (id: {{id}})",
-    "VALIDATION_CANNOT_DELETE_PUBLIC_SCHEMA": "\"public\" schema'sı sistem tarafından gerekli, silinemez",
-    "VALIDATION_CANNOT_RENAME_PUBLIC_SCHEMA": "\"public\" schema'sı sistem tarafından gerekli, yeniden adlandırılamaz",
-    "VALIDATION_MISSING_SCHEMA": "Bir hedef schema belirtilmeli"
+    "VALIDATION_MISSING_SCHEMA": "Tablonun kurulacağı schema seçilmeli"
   }
 }

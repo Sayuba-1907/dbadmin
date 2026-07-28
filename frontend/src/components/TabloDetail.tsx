@@ -1,6 +1,5 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Schema } from "../api/schemas";
 import { CreateKolonInput, KOLON_TYPES, Tablo, KolonType } from "../api/tablolar";
 import { Tag } from "../api/tags";
 import { KolonRow } from "./KolonRow";
@@ -10,10 +9,8 @@ import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation
 interface TabloDetailProps {
   tablo: Tablo;
   tags: Tag[];
-  schemalar: Schema[];
   onDeleteTablo: (id: number) => void;
   onRenameTablo: (id: number, name: string) => Promise<void>;
-  onChangeTabloSchema: (id: number, schemaId: number) => Promise<void>;
   onAddKolon: (tabloId: number, input: CreateKolonInput) => Promise<void>;
   onDeleteKolon: (tabloId: number, kolonId: number) => void;
   onRenameKolon: (tabloId: number, kolonId: number, name: string) => Promise<void>;
@@ -30,10 +27,8 @@ interface TabloDetailProps {
 export function TabloDetail({
   tablo,
   tags,
-  schemalar,
   onDeleteTablo,
   onRenameTablo,
-  onChangeTabloSchema,
   onAddKolon,
   onDeleteKolon,
   onRenameKolon,
@@ -110,19 +105,11 @@ export function TabloDetail({
             </button>
           </h2>
         )}
-        <label className="schema-select-label">
-          {t("tabloDetail.schemaLabel")}
-          <select
-            value={tablo.schemaId}
-            onChange={(e) => onChangeTabloSchema(tablo.id, Number(e.target.value))}
-          >
-            {schemalar.map((schema) => (
-              <option key={schema.id} value={schema.id}>
-                {schema.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/*
+          Buradaki "Schema" dropdown'i kaldirildi: hangi tablonun hangi schema'da oldugu zaten
+          sol menudeki hiyerarside gorunuyor, tasima da orada surukle-birakla yapiliyor. Ayni
+          isi iki yerden yapmak, ikisinin farkli davranmasi riskini getiriyordu.
+        */}
         <button
           className="btn btn-danger"
           onClick={() => {

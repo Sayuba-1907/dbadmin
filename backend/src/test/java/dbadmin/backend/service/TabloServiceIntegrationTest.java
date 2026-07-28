@@ -14,8 +14,10 @@ import dbadmin.backend.exception.ConflictException;
 import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.KolonRepository;
+import dbadmin.backend.repository.SchemaRepository;
 import dbadmin.backend.repository.TagRepository;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,6 +28,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 // (information_schema), so a test only passes if the real table actually
 // matches what the metadata claims.
 class TabloServiceIntegrationTest extends AbstractIntegrationTest {
+
+    /**
+     * Testlerin tablo kurdugu schema. Eskiden tablolar schemaId=null ile "public"e kuruluyordu;
+     * "public" artik gizli ve gecerli bir hedef degil (bkz.
+     * {@link SchemaService#RESERVED_SCHEMA_NAME}), o yuzden testler kendi schema'sini kullaniyor.
+     */
+    private static final String TEST_SCHEMA = "test_sema";
 
     @Autowired
     private TabloService tabloService;
@@ -40,10 +49,23 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     private SchemaService schemaService;
 
     @Autowired
+    private SchemaRepository schemaRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** Testler ayni Postgres'i paylasiyor: schema ilk testte olusur, sonrakiler var olani bulur. */
+    private Long testSchemaId;
+
+    @BeforeEach
+    void ensureTestSchema() {
+        testSchemaId = schemaRepository.findByNameIgnoreCase(TEST_SCHEMA)
+                .map(Schema::getId)
+                .orElseGet(() -> schemaService.createSchema(TEST_SCHEMA).getId());
+    }
+
     private boolean realTableExists(String tableName) {
-        return realTableExists("public", tableName);
+        return realTableExists(TEST_SCHEMA, tableName);
     }
 
     private boolean realTableExists(String schemaName, String tableName) {
@@ -56,14 +78,14 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     private boolean realColumnExists(String tableName, String columnName) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.columns "
-                        + "WHERE table_schema = 'public' AND table_name = ? AND column_name = ?",
-                Integer.class, tableName, columnName);
+                        + "WHERE table_schema = ? AND table_name = ? AND column_name = ?",
+                Integer.class, TEST_SCHEMA, tableName, columnName);
         return count != null && count > 0;
     }
 
     @Test
     void createTablo_createsMetadataAndRealTable() {
-        Tablo tablo = tabloService.createTablo("ogrenci1", null,
+        Tablo tablo = tabloService.createTablo("ogrenci1", testSchemaId,
                 List.of(new KolonTanimi("ad", "text", null), new KolonTanimi("yas", "numeric", null)));
 
         assertTrue(realTableExists("ogrenci1"));
@@ -74,16 +96,16 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createTablo_duplicateName_isConflict() {
-        tabloService.createTablo("ogrenci2", null, List.of(new KolonTanimi("ad", "text", null)));
+        tabloService.createTablo("ogrenci2", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
 
         assertThrows(ConflictException.class,
-                () -> tabloService.createTablo("ogrenci2", null, List.of(new KolonTanimi("baska", "text", null))));
+                () -> tabloService.createTablo("ogrenci2", testSchemaId, List.of(new KolonTanimi("baska", "text", null))));
     }
 
     @Test
     void createTablo_invalidTableName_isRejectedBeforeAnyDdl() {
         assertThrows(ValidationException.class,
-                () -> tabloService.createTablo("Buyuk", null, List.of(new KolonTanimi("ad", "text", null))));
+                () -> tabloService.createTablo("Buyuk", testSchemaId, List.of(new KolonTanimi("ad", "text", null))));
 
         assertFalse(realTableExists("Buyuk"));
         assertFalse(realTableExists("buyuk"));
@@ -92,14 +114,14 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createTablo_invalidColumnType_isRejected() {
         assertThrows(ValidationException.class,
-                () -> tabloService.createTablo("ogrenci3", null, List.of(new KolonTanimi("ad", "varchar", null))));
+                () -> tabloService.createTablo("ogrenci3", testSchemaId, List.of(new KolonTanimi("ad", "varchar", null))));
 
         assertFalse(realTableExists("ogrenci3"));
     }
 
     @Test
     void renameTablo_renamesRealTable() {
-        Tablo tablo = tabloService.createTablo("kurs1", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("kurs1", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
 
         tabloService.renameTablo(tablo.getId(), "kurs1_yeni");
 
@@ -109,7 +131,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void renameTablo_sameName_isNoopAndDoesNotError() {
-        Tablo tablo = tabloService.createTablo("kurs1b", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("kurs1b", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
 
         Tablo result = tabloService.renameTablo(tablo.getId(), "kurs1b");
 
@@ -119,7 +141,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void deleteTablo_dropsRealTableAndCascadesColumns() {
-        Tablo tablo = tabloService.createTablo("kurs2", null,
+        Tablo tablo = tabloService.createTablo("kurs2", testSchemaId,
                 List.of(new KolonTanimi("ad", "text", null), new KolonTanimi("kontenjan", "numeric", null)));
         Long kolonId = tablo.getKolonlar().get(0).getId();
 
@@ -131,7 +153,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void addKolon_addsRealColumn() {
-        Tablo tablo = tabloService.createTablo("urun1", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("urun1", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
 
         tabloService.addKolon(tablo.getId(), new KolonTanimi("fiyat", "numeric", null));
 
@@ -141,7 +163,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void deleteKolon_dropsRealColumnButKeepsTag() {
         Tag tag = tagRepository.save(new Tag("onemli"));
-        Tablo tablo = tabloService.createTablo("urun2", null, List.of(new KolonTanimi("ad", "text", tag.getId())));
+        Tablo tablo = tabloService.createTablo("urun2", testSchemaId, List.of(new KolonTanimi("ad", "text", tag.getId())));
         Kolon kolon = tablo.getKolonlar().get(0);
 
         tabloService.deleteKolon(tablo.getId(), kolon.getId());
@@ -152,7 +174,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void renameKolon_renamesRealColumn() {
-        Tablo tablo = tabloService.createTablo("urun3", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("urun3", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
         Kolon kolon = tablo.getKolonlar().get(0);
 
         tabloService.renameKolon(tablo.getId(), kolon.getId(), "isim");
@@ -163,7 +185,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void renameKolon_sameName_isNoopAndDoesNotError() {
-        Tablo tablo = tabloService.createTablo("urun3b", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("urun3b", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
         Kolon kolon = tablo.getKolonlar().get(0);
 
         Kolon result = tabloService.renameKolon(tablo.getId(), kolon.getId(), "ad");
@@ -175,7 +197,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void changeKolonTag_updatesReferenceWithoutTouchingRealTable() {
         Tag tag = tagRepository.save(new Tag("etiket1"));
-        Tablo tablo = tabloService.createTablo("urun4", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("urun4", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
         Kolon kolon = tablo.getKolonlar().get(0);
 
         Kolon updated = tabloService.changeKolonTag(tablo.getId(), kolon.getId(), tag.getId());
@@ -212,7 +234,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createTablo_primaryKeyFlag_doesNotChangeRealPkButAddsRealUniqueConstraint() {
-        Tablo tablo = tabloService.createTablo("urun5", null,
+        Tablo tablo = tabloService.createTablo("urun5", testSchemaId,
                 List.of(new KolonTanimi("ad", "text", null, true), new KolonTanimi("kod", "text", null, false)));
 
         assertTrue(tablo.getKolonlar().get(0).isPrimaryKey());
@@ -226,33 +248,33 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createTablo_compositePrimaryKeyFlags_createRealCompositeUniqueConstraint() {
-        tabloService.createTablo("urun7", null,
+        tabloService.createTablo("urun7", testSchemaId,
                 List.of(new KolonTanimi("kolona", "text", null, true), new KolonTanimi("kolonb", "text", null, true)));
 
         assertTrue(realUniqueConstraintExists("urun7", "kolona"));
         assertTrue(realUniqueConstraintExists("urun7", "kolonb"));
         // Tekrar eden (kolona, kolonb) ciftine izin verilmemeli - composite unique constraint devrede.
-        jdbcTemplate.update("INSERT INTO \"urun7\" (kolona, kolonb) VALUES ('x', 'y')");
+        jdbcTemplate.update("INSERT INTO \"" + TEST_SCHEMA + "\".\"urun7\" (kolona, kolonb) VALUES ('x', 'y')");
         assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
-                () -> jdbcTemplate.update("INSERT INTO \"urun7\" (kolona, kolonb) VALUES ('x', 'y')"));
+                () -> jdbcTemplate.update("INSERT INTO \"" + TEST_SCHEMA + "\".\"urun7\" (kolona, kolonb) VALUES ('x', 'y')"));
     }
 
     @Test
     void addKolon_markingSecondColumnAsPrimaryKey_widensRealUniqueConstraint() {
-        Tablo tablo = tabloService.createTablo("urun8", null, List.of(new KolonTanimi("kolona", "text", null, true)));
+        Tablo tablo = tabloService.createTablo("urun8", testSchemaId, List.of(new KolonTanimi("kolona", "text", null, true)));
 
         tabloService.addKolon(tablo.getId(), new KolonTanimi("kolonb", "text", null, true));
 
         assertTrue(realUniqueConstraintExists("urun8", "kolona"));
         assertTrue(realUniqueConstraintExists("urun8", "kolonb"));
-        jdbcTemplate.update("INSERT INTO \"urun8\" (kolona, kolonb) VALUES ('x', 'y')");
+        jdbcTemplate.update("INSERT INTO \"" + TEST_SCHEMA + "\".\"urun8\" (kolona, kolonb) VALUES ('x', 'y')");
         assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
-                () -> jdbcTemplate.update("INSERT INTO \"urun8\" (kolona, kolonb) VALUES ('x', 'y')"));
+                () -> jdbcTemplate.update("INSERT INTO \"" + TEST_SCHEMA + "\".\"urun8\" (kolona, kolonb) VALUES ('x', 'y')"));
     }
 
     @Test
     void deleteKolon_removingPrimaryKeyColumn_shrinksConstraintToRemainingColumns() {
-        Tablo tablo = tabloService.createTablo("urun9", null,
+        Tablo tablo = tabloService.createTablo("urun9", testSchemaId,
                 List.of(new KolonTanimi("kolona", "text", null, true), new KolonTanimi("kolonb", "text", null, true)));
         Long aId = tablo.getKolonlar().get(0).getId();
 
@@ -265,21 +287,21 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
                         + "WHERE tc.table_name = ? AND tc.constraint_type = 'UNIQUE'",
                 Integer.class, "urun9");
         assertEquals(1, uniqueConstraintCount);
-        jdbcTemplate.update("INSERT INTO \"urun9\" (kolonb) VALUES ('y')");
+        jdbcTemplate.update("INSERT INTO \"" + TEST_SCHEMA + "\".\"urun9\" (kolonb) VALUES ('y')");
         assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
-                () -> jdbcTemplate.update("INSERT INTO \"urun9\" (kolonb) VALUES ('y')"));
+                () -> jdbcTemplate.update("INSERT INTO \"" + TEST_SCHEMA + "\".\"urun9\" (kolonb) VALUES ('y')"));
     }
 
     @Test
     void renameTablo_keepsPrimaryKeyUniqueConstraintEnforcedUnderNewName() {
-        Tablo tablo = tabloService.createTablo("urun11", null, List.of(new KolonTanimi("ad", "text", null, true)));
+        Tablo tablo = tabloService.createTablo("urun11", testSchemaId, List.of(new KolonTanimi("ad", "text", null, true)));
 
         tabloService.renameTablo(tablo.getId(), "urun11_yeni");
 
         assertTrue(realUniqueConstraintExists("urun11_yeni", "ad"));
-        jdbcTemplate.update("INSERT INTO \"urun11_yeni\" (ad) VALUES ('x')");
+        jdbcTemplate.update("INSERT INTO \"" + TEST_SCHEMA + "\".\"urun11_yeni\" (ad) VALUES ('x')");
         assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
-                () -> jdbcTemplate.update("INSERT INTO \"urun11_yeni\" (ad) VALUES ('x')"));
+                () -> jdbcTemplate.update("INSERT INTO \"" + TEST_SCHEMA + "\".\"urun11_yeni\" (ad) VALUES ('x')"));
 
         // Rename sonrasi kolon ekleyip constraint'in genisletilebildigini de dogrula (eski isimle
         // takilip kalmadigini gosterir).
@@ -289,7 +311,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void deleteKolon_removingOnlyPrimaryKeyColumn_dropsConstraintEntirely() {
-        Tablo tablo = tabloService.createTablo("urun10", null, List.of(new KolonTanimi("ad", "text", null, true)));
+        Tablo tablo = tabloService.createTablo("urun10", testSchemaId, List.of(new KolonTanimi("ad", "text", null, true)));
         Long adId = tablo.getKolonlar().get(0).getId();
 
         tabloService.deleteKolon(tablo.getId(), adId);
@@ -302,11 +324,26 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void createTablo_noSchemaId_defaultsToPublicSchema() {
-        Tablo tablo = tabloService.createTablo("urun6", null, List.of(new KolonTanimi("ad", "text", null)));
+    void createTablo_noSchemaId_isRejected() {
+        // Eskiden bu durumda tablo sessizce "public"e kuruluyordu. "public" gizlendigi icin boyle
+        // bir tablo olusturuldugu anda arayuzde gorunmez olurdu — o yuzden artik hata veriyoruz.
+        assertThrows(ValidationException.class,
+                () -> tabloService.createTablo("urun6", null, List.of(new KolonTanimi("ad", "text", null))));
 
-        assertEquals("public", tablo.getSchema().getName());
-        assertTrue(realTableExists("public", "urun6"));
+        assertFalse(realTableExists("public", "urun6"));
+    }
+
+    @Test
+    void createTablo_intoPublicSchema_isNotFound() {
+        Schema legacyPublic = schemaRepository.save(new Schema(SchemaService.RESERVED_SCHEMA_NAME));
+        try {
+            assertThrows(NotFoundException.class, () -> tabloService.createTablo(
+                    "urun6b", legacyPublic.getId(), List.of(new KolonTanimi("ad", "text", null))));
+
+            assertFalse(realTableExists("public", "urun6b"));
+        } finally {
+            schemaRepository.delete(legacyPublic);
+        }
     }
 
     @Test
@@ -318,7 +355,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertEquals(schema.getId(), tablo.getSchema().getId());
         assertTrue(realTableExists("raporlama1", "rapor1"));
-        assertFalse(realTableExists("public", "rapor1"));
+        assertFalse(realTableExists(TEST_SCHEMA, "rapor1"));
     }
 
     @Test
@@ -334,7 +371,7 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
         Schema schema = schemaService.createSchema("raporlama2");
         Tablo inSchema = tabloService.createTablo("rapor3", schema.getId(),
                 List.of(new KolonTanimi("ad", "text", null)));
-        tabloService.createTablo("rapor4", null, List.of(new KolonTanimi("ad", "text", null)));
+        tabloService.createTablo("rapor4", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
 
         List<Tablo> result = tabloService.listTablolarBySchema(schema.getId());
 
@@ -345,41 +382,41 @@ class TabloServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void changeSchema_movesRealTableToNewSchema() {
         Schema hedefSchema = schemaService.createSchema("hedef1");
-        Tablo tablo = tabloService.createTablo("tasinan1", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("tasinan1", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
 
         Tablo moved = tabloService.changeSchema(tablo.getId(), hedefSchema.getId());
 
         assertEquals(hedefSchema.getId(), moved.getSchema().getId());
         assertTrue(realTableExists("hedef1", "tasinan1"));
-        assertFalse(realTableExists("public", "tasinan1"));
+        assertFalse(realTableExists(TEST_SCHEMA, "tasinan1"));
     }
 
     @Test
     void changeSchema_missingSchemaId_isRejected() {
-        Tablo tablo = tabloService.createTablo("tasinan2", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("tasinan2", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
 
         assertThrows(ValidationException.class, () -> tabloService.changeSchema(tablo.getId(), null));
 
-        assertTrue(realTableExists("public", "tasinan2"));
+        assertTrue(realTableExists(TEST_SCHEMA, "tasinan2"));
     }
 
     @Test
     void changeSchema_unknownSchemaId_isNotFound() {
-        Tablo tablo = tabloService.createTablo("tasinan3", null, List.of(new KolonTanimi("ad", "text", null)));
+        Tablo tablo = tabloService.createTablo("tasinan3", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
 
         assertThrows(NotFoundException.class, () -> tabloService.changeSchema(tablo.getId(), -1L));
 
-        assertTrue(realTableExists("public", "tasinan3"));
+        assertTrue(realTableExists(TEST_SCHEMA, "tasinan3"));
     }
 
     @Test
     void changeSchema_sameSchema_isNoopAndDoesNotError() {
-        Tablo tablo = tabloService.createTablo("tasinan4", null, List.of(new KolonTanimi("ad", "text", null)));
-        Long publicSchemaId = tablo.getSchema().getId();
+        Tablo tablo = tabloService.createTablo("tasinan4", testSchemaId, List.of(new KolonTanimi("ad", "text", null)));
+        Long ayniSchemaId = tablo.getSchema().getId();
 
-        Tablo result = tabloService.changeSchema(tablo.getId(), publicSchemaId);
+        Tablo result = tabloService.changeSchema(tablo.getId(), ayniSchemaId);
 
-        assertEquals(publicSchemaId, result.getSchema().getId());
-        assertTrue(realTableExists("public", "tasinan4"));
+        assertEquals(ayniSchemaId, result.getSchema().getId());
+        assertTrue(realTableExists(TEST_SCHEMA, "tasinan4"));
     }
 }

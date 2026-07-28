@@ -44,8 +44,14 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
         return count != null && count > 0;
     }
 
-    private Long publicSchemaId() {
-        return schemaRepository.findByNameIgnoreCase(SchemaService.RESERVED_SCHEMA_NAME).orElseThrow().getId();
+    /**
+     * Uygulama artik "public" adinda bir Schema satiri olusturmuyor. Gizleme mantiginin savunma
+     * katmanini test edebilmek icin boyle bir satiri repository uzerinden (service'i, dolayisiyla
+     * validasyonu atlayarak) elle yaziyoruz — eski bir kurulumdan kalmis satiri taklit ediyor.
+     * Testler ayni Postgres'i paylastigi icin cagiran test satiri sonunda silmeli.
+     */
+    private Schema insertLegacyPublicRow() {
+        return schemaRepository.save(new Schema(SchemaService.RESERVED_SCHEMA_NAME));
     }
 
     @Test
@@ -105,10 +111,34 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void deleteSchema_publicSchema_isRejected() {
-        assertThrows(ValidationException.class, () -> schemaService.deleteSchema(publicSchemaId()));
+    void bootstrap_doesNotCreateAPublicSchemaRow() {
+        assertTrue(schemaRepository.findByNameIgnoreCase(SchemaService.RESERVED_SCHEMA_NAME).isEmpty(),
+                "'public' altyapiya ait; metadata'da onu temsil eden bir satir hic olmamali");
+    }
 
-        assertTrue(realSchemaExists("public"));
+    @Test
+    void listSchemalar_omitsPublic() {
+        Schema legacy = insertLegacyPublicRow();
+        try {
+            assertTrue(schemaService.listSchemalar().stream().noneMatch(s -> s.getName().equals("public")),
+                    "'public' listede gorunmemeli");
+        } finally {
+            schemaRepository.delete(legacy);
+        }
+    }
+
+    @Test
+    void deleteSchema_publicSchema_isNotFoundAndDoesNotDropTheRealSchema() {
+        Schema legacy = insertLegacyPublicRow();
+        try {
+            // Gizli oldugu icin "yasak" degil "yok" muamelesi goruyor; onemli olan DROP SCHEMA
+            // public CASCADE'in calismamasi — o, uygulamanin kendi metadata tablolarini silerdi.
+            assertThrows(NotFoundException.class, () -> schemaService.deleteSchema(legacy.getId()));
+
+            assertTrue(realSchemaExists("public"));
+        } finally {
+            schemaRepository.delete(legacy);
+        }
     }
 
     @Test
@@ -133,10 +163,15 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void renameSchema_publicSchema_isRejected() {
-        assertThrows(ValidationException.class, () -> schemaService.renameSchema(publicSchemaId(), "baska_isim"));
+    void renameSchema_publicSchema_isNotFound() {
+        Schema legacy = insertLegacyPublicRow();
+        try {
+            assertThrows(NotFoundException.class, () -> schemaService.renameSchema(legacy.getId(), "baska_isim"));
 
-        assertTrue(realSchemaExists("public"));
+            assertTrue(realSchemaExists("public"));
+        } finally {
+            schemaRepository.delete(legacy);
+        }
     }
 
     @Test

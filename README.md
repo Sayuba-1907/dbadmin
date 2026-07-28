@@ -43,6 +43,14 @@ metadata and the actual database schema always stay in sync.
    ```bash
    docker compose up -d --build
    ```
+   This is the only command needed — it brings up all six services, **including the frontend**
+   (built by `frontend/Dockerfile` and served by nginx). `npm start` is not part of running the
+   app; see "Running without Docker" below for when it is still useful.
+
+   Naming services (`docker compose up -d db backend`) starts *only* those — a frequent reason
+   for "the frontend didn't come up". After changing any source file, `--build` is required:
+   both images bake their build output in (the backend's jar, the frontend's static files), so a
+   plain restart silently serves the old build.
 
 4. Open the app:
    - Frontend: http://localhost:3000
@@ -57,11 +65,21 @@ metadata and the actual database schema always stay in sync.
 
 ## Running without Docker (local development)
 
+These are development conveniences, not how the app is meant to be run — the deliverable is
+`docker compose up -d --build` above.
+
 - **Backend**: needs a Postgres instance reachable at the URL/credentials in
   `backend/src/main/resources/application.properties` (or via `SPRING_DATASOURCE_*` env vars),
   then from `backend/`: `./mvnw spring-boot:run`
-- **Frontend**: from `frontend/`: `npm install && npm start` (dev server on http://localhost:3000,
-  proxies API calls to the backend)
+- **Frontend**: from `frontend/`: `npm install && npm start` — CRA's dev server, worth using while
+  writing UI code because of hot reload. It listens on the same port 3000 as the frontend
+  container, so **stop one before starting the other** (`docker compose stop frontend`), otherwise
+  the port is taken and the container fails to publish it.
+
+  Note there is no dev-server proxy: `frontend/src/api/client.ts` calls `http://localhost:8080`
+  directly and the backend allows that origin via CORS (`config/WebConfig.java`). Both the dev
+  server and the nginx container reach the backend the same way — through the port published on
+  the host, not over the compose network. Changing the backend port means changing both files.
 
 ## Running tests
 

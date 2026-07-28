@@ -57,6 +57,25 @@ export function CreateTabloForm({ schemalar, onSubmit, onClose }: CreateTabloFor
     }
   }
 
+  // Her tablo bir schema'nin icine kurulur ve "public" artik secilebilir bir hedef degil
+  // (altyapiya ait, backend onu listelemiyor). Dolayisiyla hic schema yokken gosterilecek bir
+  // secenek de yok: bos bir dropdown'la calismayan form yerine ne yapmasi gerektigini soyluyoruz.
+  if (schemalar.length === 0) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal create-tablo-form">
+          <h2>{t("createTabloForm.title")}</h2>
+          <p>{t("createTabloForm.noSchemaHint")}</p>
+          <div className="modal-actions">
+            <button type="button" className="btn" onClick={onClose}>
+              {t("common.cancel")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="modal-overlay">
       <form className="modal create-tablo-form" onSubmit={handleSubmit}>

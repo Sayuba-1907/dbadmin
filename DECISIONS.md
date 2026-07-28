@@ -155,3 +155,21 @@ One line per notable decision: what was chosen, what was ruled out, why.
 - **Native `required` field validation messages**: overridden per-input via `input.setCustomValidity(t('validation.required'))` on `onInvalid`, cleared on `onChange`.
   Ruled out: dropping the `required` attribute and re-implementing "field is empty" validation by hand (state + conditional error text).
   Why: discovered that Chrome's native validation bubble text follows the *browser's* own UI language setting, not the page's `lang` attribute or the app's selected language - so even with `document.documentElement.lang` set correctly, the bubble stayed in whatever language Chrome itself was in. `setCustomValidity` keeps the native behaviour (focus, submit-blocking) while making the displayed text follow the app's language instead.
+
+## "public" schema'sinin gizlenmesi (2026-07-28)
+
+- **`public` DBAdmin'in API yuzeyinde hic yok**: listelenmez, id'siyle sorulursa 404 doner, bu isimle schema olusturulamaz, oraya tablo kurulamaz/tasinamaz. Metadata'daki (`sema`) `public` satiri da tamamen kaldirildi — `SchemaBootstrapRunner` silindi, artik boyle bir satir hic olusturulmuyor.
+  Ruled out: satiri tutup sadece "silinemez/yeniden adlandirilamaz" diye isaretlemek (onceki hal), ya da `public`'i normal bir schema gibi gostermeye devam etmek.
+  Why: `public` altyapiya ait — uygulamanin kendi metadata tablolari (`tablo`, `kolon`, `sema`, `tag`) ve ileride kurulacak extension'lar orada duruyor. Arayuzde gorunur olmasi bir yana, `DROP SCHEMA public CASCADE` uygulamanin kendisini silerdi. Sadece "silinemez" demek yetmiyordu: gorunur oldugu surece kullanici oraya tablo kurabiliyor, DBAdmin de kendi metadata tablolarini kullaniciya normal tablo gibi gosterebiliyordu.
+
+- **Savunma katmani**: satir kaldirilmis olsa bile `SchemaService.isHidden` kontrolu duruyor; eski bir kurulumda `sema` icinde `public` satiri kalmissa API onu yine yokmus gibi gosterir.
+  Ruled out: "satir zaten yok" varsayip kontrolleri tamamen silmek.
+  Why: kontrolun maliyeti bir string karsilastirmasi; kacirildiginda bedeli `DROP SCHEMA public CASCADE`.
+
+- **`createTablo`'da `schemaId` artik zorunlu** (eskiden null gelirse tablo sessizce `public`'e kuruluyordu).
+  Ruled out: null gelince ilk schema'yi secmek gibi bir varsayilan.
+  Why: `public` gizlendigi icin oraya kurulan bir tablo olusturuldugu anda arayuzde gorunmez olurdu — sessizce yanlis yere kurmaktansa 400 donmek daha durust. Hangi schema'ya kuruldugu zaten kullanicinin bilmesi gereken bir bilgi.
+
+- **`public` icinde kalmis eski kullanici tablolari** (7 adet, cogu test artigi) hem metadata'dan hem gercek DB'den silindi; uygulamanin kendi metadata tablolarina dokunulmadi.
+  Ruled out: gizleyip birakmak (metadata'da hayalet satirlar kalirdi), ya da gercek bir schema'ya tasimak.
+  Why: hepsi atilabilir test verisiydi; tasimak da gizlemek de `public`'i "arka plan" haline getirme amacini yarim birakirdi.

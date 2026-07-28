@@ -5,8 +5,8 @@ import java.util.List;
 
 /**
  * POST /api/tablolar icin request govdesi: "bu isimde tablo kur, icine bu kolonlari koy".
- * {@code schemaId} opsiyonel: null gelirse tablo varsayilan olarak "public" schema'ya kurulur
- * (bkz. {@link dbadmin.backend.service.TabloService#createTablo}).
+ * {@code schemaId} zorunlu — tablonun hangi schema'ya kurulacagi acikca belirtilmeli (bkz.
+ * {@link dbadmin.backend.service.TabloService#createTablo}).
  */
 public record CreateTabloRequest(
         @Schema(
@@ -17,10 +17,10 @@ public record CreateTabloRequest(
                         requiredMode = Schema.RequiredMode.REQUIRED)
                 String name,
         @Schema(
-                        description = "Tablonun kurulacagi schema'nin id'si. Bos birakilirsa tablo "
-                                + "varsayilan olarak 'public' schema'ya kurulur.",
+                        description = "Tablonun kurulacagi schema'nin id'si. Zorunlu; GET "
+                                + "/api/schemalar ile listelenen schema'lardan biri olmali.",
                         example = "1",
-                        requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+                        requiredMode = Schema.RequiredMode.REQUIRED)
                 Long schemaId,
         @Schema(description = "Tabloya baslangicta eklenecek kolonlarin listesi. En az bir kolon zorunlu "
                         + "— bos/null listeyle tablo olusturulamaz.",

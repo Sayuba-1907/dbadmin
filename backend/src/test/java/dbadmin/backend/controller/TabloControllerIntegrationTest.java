@@ -1,6 +1,7 @@
 package dbadmin.backend.controller;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -11,14 +12,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import dbadmin.backend.AbstractIntegrationTest;
 import dbadmin.backend.dto.ChangeTagRequest;
 import dbadmin.backend.dto.CreateKolonRequest;
+import dbadmin.backend.dto.CreateSchemaRequest;
 import dbadmin.backend.dto.CreateTabloRequest;
 import dbadmin.backend.dto.RenameRequest;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 // Automates the same manual curl checks run earlier: every use case must
@@ -34,13 +38,42 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /** Testlerin tablo kurdugu schema — "public" gecerli bir hedef degil, bkz. SchemaService.RESERVED_SCHEMA_NAME. */
+    private static final String TEST_SCHEMA = "ders_sema";
+
+    private Long testSchemaId;
+
     private String json(Object body) throws Exception {
         return objectMapper.writeValueAsString(body);
     }
 
+    /**
+     * Tablo olusturmak icin schemaId zorunlu oldugundan testler once kendi schema'sini kurar —
+     * bilerek API uzerinden, bu da GET/POST /api/schemalar'i her testte bir kez dogrulamis olur.
+     * Postgres tum testler arasinda paylasildigi icin schema zaten varsa yeniden kurulmaz.
+     */
+    @BeforeEach
+    void ensureTestSchema() throws Exception {
+        String listResponse = mockMvc.perform(get("/api/schemalar"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        for (JsonNode schema : objectMapper.readTree(listResponse)) {
+            if (TEST_SCHEMA.equals(schema.get("name").asString())) {
+                testSchemaId = schema.get("id").asLong();
+                return;
+            }
+        }
+        String createResponse = mockMvc.perform(post("/api/schemalar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new CreateSchemaRequest(TEST_SCHEMA))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        testSchemaId = objectMapper.readTree(createResponse).get("id").asLong();
+    }
+
     @Test
     void create_returns201() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("ders1", null,
+        CreateTabloRequest request = new CreateTabloRequest("ders1", testSchemaId,
                 List.of(new CreateKolonRequest("ad", "text", null)));
 
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
@@ -50,7 +83,7 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void create_duplicateName_returns409() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("ders2", null,
+        CreateTabloRequest request = new CreateTabloRequest("ders2", testSchemaId,
                 List.of(new CreateKolonRequest("ad", "text", null)));
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
                 .andExpect(status().isCreated());
@@ -62,7 +95,7 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void create_invalidName_returns400() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("Buyuk", null,
+        CreateTabloRequest request = new CreateTabloRequest("Buyuk", testSchemaId,
                 List.of(new CreateKolonRequest("ad", "text", null)));
 
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
@@ -81,13 +114,24 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void create_noSchemaId_defaultsToPublicSchemaInResponse() throws Exception {
+    void create_noSchemaId_returns400() throws Exception {
         CreateTabloRequest request = new CreateTabloRequest("ders5", null,
                 List.of(new CreateKolonRequest("ad", "text", null)));
 
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.schemaName", is("public")));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)));
+    }
+
+    @Test
+    void listSchemalar_doesNotContainPublic() throws Exception {
+        String response = mockMvc.perform(get("/api/schemalar"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        for (JsonNode schema : objectMapper.readTree(response)) {
+            assertNotEquals("public", schema.get("name").asString());
+        }
     }
 
     @Test
@@ -104,7 +148,7 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void fullLifecycle_rename_addColumn_changeTag_deleteColumn_deleteTable() throws Exception {
-        CreateTabloRequest createRequest = new CreateTabloRequest("ders3", null,
+        CreateTabloRequest createRequest = new CreateTabloRequest("ders3", testSchemaId,
                 List.of(new CreateKolonRequest("ad", "text", null)));
         String createResponse = mockMvc.perform(
                         post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(createRequest)))

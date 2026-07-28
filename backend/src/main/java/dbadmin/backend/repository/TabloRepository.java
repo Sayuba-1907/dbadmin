@@ -49,7 +49,4 @@ public interface TabloRepository extends JpaRepository<Tablo, Long> {
     /** Bir schema'nin altindaki tablolari isme gore alfabetik siralar (sidebar'da schema -> tablo hiyerarsisi icin). */
     @EntityGraph(attributePaths = {"kolonlar", "kolonlar.tag", "schema"})
     List<Tablo> findBySchemaIdOrderByNameAsc(Long schemaId);
-
-    /** SchemaBootstrapRunner'in "public"'e baglanmamis eski tablolari bulup baglamasi icin. */
-    List<Tablo> findBySchemaIsNull();
 }

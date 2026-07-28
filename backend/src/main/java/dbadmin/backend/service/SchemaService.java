@@ -21,10 +21,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class SchemaService {
 
     /**
-     * Postgres'in kendi varsayilan schema'si — bu isimde ikinci bir schema olusturulamaz.
-     * {@code public} tutuluyor: {@link dbadmin.backend.config.SchemaBootstrapRunner} ve
-     * {@link TabloService} de ayni sabiti kullanir (schemaId verilmeden tablo olusturulunca
-     * varsayilan olarak bu isimdeki Schema satirina baglanir).
+     * Postgres'in kendi varsayilan schema'si. DBAdmin acisindan tamamen gorunmez: listelenmez,
+     * id'siyle sorulursa 404 doner, bu isimle yeni schema olusturulamaz ve hicbir tablo buraya
+     * kurulamaz/tasinamaz. Sebep: {@code public} altyapiya ait — uygulamanin kendi metadata
+     * tablolari ({@code tablo}, {@code kolon}, {@code sema}, {@code tag}) ve ileride kurulacak
+     * extension/paketler orada duruyor; web arayuzunden degistirilebilir olmasi (ozellikle
+     * {@code DROP SCHEMA public CASCADE}) uygulamanin kendisini silerdi.
+     * <p>
+     * Normalde {@code sema} tablosunda bu isimde bir satir hic bulunmaz. Buradaki kontroller
+     * eski kurulumlar icin savunma katmani: bir sekilde boyle bir satir kalmissa da API onu
+     * yokmus gibi gosterir.
      */
     public static final String RESERVED_SCHEMA_NAME = "public";
 
@@ -46,14 +52,27 @@ public class SchemaService {
         meterRegistry.gauge("dbadmin.schemas.active", schemaRepository, SchemaRepository::count);
     }
 
-    @Transactional(readOnly = true)
-    public List<Schema> listSchemalar() {
-        return schemaRepository.findAll();
+    /** {@link #RESERVED_SCHEMA_NAME} ("public") disari hic sizmaz — bkz. o sabitteki aciklama. */
+    public static boolean isHidden(Schema schema) {
+        return schema == null || RESERVED_SCHEMA_NAME.equalsIgnoreCase(schema.getName());
     }
 
     @Transactional(readOnly = true)
+    public List<Schema> listSchemalar() {
+        return schemaRepository.findAll().stream()
+                .filter(schema -> !isHidden(schema))
+                .toList();
+    }
+
+    /**
+     * Gizli schema'lar icin bilerek {@link NotFoundException} firlatiyoruz, "yasak" anlaminda bir
+     * hata degil: API yuzeyinde "public" diye bir schema yok, dolayisiyla onun id'siyle yapilan
+     * GET/PATCH/DELETE de tanimsiz bir id'ye yapilmis sayilir.
+     */
+    @Transactional(readOnly = true)
     public Schema getSchema(Long id) {
         return schemaRepository.findById(id)
+                .filter(schema -> !isHidden(schema))
                 .orElseThrow(() -> new NotFoundException(
                         "NOT_FOUND_SCHEMA", "schema not found: " + id, Map.of("id", String.valueOf(id))));
     }
@@ -81,19 +100,13 @@ public class SchemaService {
     }
 
     /**
-     * "public" hem yeniden yaratilamaz hem de yeniden adlandirilamaz — sistemin varsayilan
-     * schema'si oldugu icin (bkz. {@link dbadmin.backend.config.SchemaBootstrapRunner}), adi
-     * degisirse "schemaId verilmeden tablo olustur" akisi kirilir.
+     * "public" burada iki yerde reddedilir: kaynak olarak {@link #getSchema} zaten 404 verir
+     * (gizli), hedef isim olarak da asagidaki kontrol engeller — yoksa var olan bir schema
+     * "public" adini alarak gizli hale gelir ve icindeki tablolar erisilemez olurdu.
      */
     @Transactional
     public Schema renameSchema(Long id, String newName) {
         Schema schema = getSchema(id);
-        if (schema.getName().equalsIgnoreCase(RESERVED_SCHEMA_NAME)) {
-            throw new ValidationException(
-                    "VALIDATION_CANNOT_RENAME_PUBLIC_SCHEMA",
-                    "the '" + RESERVED_SCHEMA_NAME + "' schema is required by the system and cannot be renamed",
-                    Map.of("name", schema.getName()));
-        }
         NameValidator.validate("schema name", "VALIDATION_INVALID_SCHEMA_NAME", newName);
         if (newName.equalsIgnoreCase(RESERVED_SCHEMA_NAME)) {
             throw new ValidationException(
@@ -127,13 +140,8 @@ public class SchemaService {
      */
     @Transactional
     public void deleteSchema(Long id) {
+        // getSchema "public" icin 404 verir; buraya asla "DROP SCHEMA public CASCADE" gelemez.
         Schema schema = getSchema(id);
-        if (schema.getName().equalsIgnoreCase(RESERVED_SCHEMA_NAME)) {
-            throw new ValidationException(
-                    "VALIDATION_CANNOT_DELETE_PUBLIC_SCHEMA",
-                    "the '" + RESERVED_SCHEMA_NAME + "' schema is required by the system and cannot be deleted",
-                    Map.of("name", schema.getName()));
-        }
         String name = schema.getName();
         List<Tablo> tablolarInSchema = tabloRepository.findBySchemaIdOrderByNameAsc(schema.getId());
         tabloRepository.deleteAll(tablolarInSchema);

@@ -30,7 +30,7 @@ test("tablo olusturunca listeye eklenir ve basari bildirimi gosterilir", async (
   mockFetchSequence([
     { ok: true, status: 200, json: async () => [] },
     { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "public" }] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
     {
       ok: true,
       status: 201,
@@ -38,7 +38,7 @@ test("tablo olusturunca listeye eklenir ve basari bildirimi gosterilir", async (
         id: 1,
         name: "kullanicilar",
         schemaId: 1,
-        schemaName: "public",
+        schemaName: "kayitlar",
         kolonlar: [],
       }),
     },
@@ -46,14 +46,14 @@ test("tablo olusturunca listeye eklenir ve basari bildirimi gosterilir", async (
       ok: true,
       status: 200,
       json: async () => [
-        { id: 1, name: "kullanicilar", schemaId: 1, schemaName: "public", kolonlar: [] },
+        { id: 1, name: "kullanicilar", schemaId: 1, schemaName: "kayitlar", kolonlar: [] },
       ],
     },
   ]);
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
   fireEvent.click(screen.getByText("+ Yeni Tablo"));
   fireEvent.change(screen.getByPlaceholderText("tablo_adi"), {
@@ -69,7 +69,7 @@ test("backend conflict (409) hatasinda turuncu bildirim gosterir", async () => {
   mockFetchSequence([
     { ok: true, status: 200, json: async () => [] },
     { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "public" }] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
     {
       ok: false,
       status: 409,
@@ -84,7 +84,7 @@ test("backend conflict (409) hatasinda turuncu bildirim gosterir", async () => {
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
   fireEvent.click(screen.getByText("+ Yeni Tablo"));
   fireEvent.change(screen.getByPlaceholderText("tablo_adi"), {
@@ -100,7 +100,7 @@ test("backend'in gonderdigi hata kodu, ham Ingilizce mesaj yerine cevrilmis Turk
   mockFetchSequence([
     { ok: true, status: 200, json: async () => [] },
     { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "public" }] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
     {
       ok: false,
       status: 409,
@@ -117,7 +117,7 @@ test("backend'in gonderdigi hata kodu, ham Ingilizce mesaj yerine cevrilmis Turk
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
   fireEvent.click(screen.getByText("+ Yeni Tablo"));
   fireEvent.change(screen.getByPlaceholderText("tablo_adi"), {
@@ -134,7 +134,7 @@ test("taninmayan bir hata kodu gelirse backend'in ham mesajina dusulur", async (
   mockFetchSequence([
     { ok: true, status: 200, json: async () => [] },
     { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "public" }] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
     {
       ok: false,
       status: 409,
@@ -151,7 +151,7 @@ test("taninmayan bir hata kodu gelirse backend'in ham mesajina dusulur", async (
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
   fireEvent.click(screen.getByText("+ Yeni Tablo"));
   fireEvent.change(screen.getByPlaceholderText("tablo_adi"), {
@@ -169,7 +169,7 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
       ok: true,
       status: 200,
       json: async () => [
-        { id: 10, name: "kullanicilar", schemaId: 1, schemaName: "public", kolonlar: [] },
+        { id: 10, name: "kullanicilar", schemaId: 1, schemaName: "kayitlar", kolonlar: [] },
       ],
     },
     { ok: true, status: 200, json: async () => [] },
@@ -177,7 +177,7 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
       ok: true,
       status: 200,
       json: async () => [
-        { id: 1, name: "public" },
+        { id: 1, name: "kayitlar" },
         { id: 2, name: "ogrenciler" },
       ],
     },
@@ -203,10 +203,10 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
 
   renderDashboard();
 
-  await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
-  // "public" varsayilan kapali baslar; icindeki tabloyu gormek icin acmak lazim.
-  fireEvent.click(screen.getByText("public"));
+  // Schema varsayilan kapali baslar; icindeki tabloyu gormek icin acmak lazim.
+  fireEvent.click(screen.getByText("kayitlar"));
   const tableItem = await screen.findByText("kullanicilar");
   const targetLi = screen.getByText("ogrenciler").closest("li");
   expect(targetLi).not.toBeNull();

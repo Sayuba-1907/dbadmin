@@ -3,8 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Schema } from "../api/schemas";
 import { Tablo } from "../api/tablolar";
 
-const PUBLIC_SCHEMA_NAME = "public";
-
 /**
  * Props: gercek veri (schemalar, tablolar, selectedId) ve "bir seye tikladiginda ne olsun"
  * callback'leri hep Dashboard'dan gelir. Bu component'in kendi tuttugu state, arama kutusunun
@@ -162,10 +160,9 @@ export function TabloSidebar({
         {visibleSchemalar.map((schema) => {
           const schemaTablolar = tablolarBySchemaId.get(schema.id) ?? [];
           const expanded = isSearching || expandedSchemaIds.has(schema.id);
-          // "public" sistemin varsayilan schema'si (bkz. backend SchemaBootstrapRunner) — silinemez/yeniden
-          // adlandirilamaz, o yuzden bu butonlari onun icin hic gostermiyoruz (backend zaten reddediyor,
-          // burada sadece kullaniciya bosuna basarisiz olacak bir buton sunmuyoruz).
-          const isProtected = schema.name.toLowerCase() === PUBLIC_SCHEMA_NAME;
+          // Burada listelenen her schema kullanicinin kendi olusturdugu bir schema; hepsi
+          // yeniden adlandirilabilir ve silinebilir. Altyapiya ait "public" backend tarafindan
+          // ayiklandigi icin (bkz. SchemaService.RESERVED_SCHEMA_NAME) buraya hic gelmez.
           const isEditing = editingSchemaId === schema.id;
 
           return (
@@ -213,36 +210,32 @@ export function TabloSidebar({
                       {schema.name}
                       <span className="kolon-count">{schemaTablolar.length}</span>
                     </button>
-                    {!isProtected && (
-                      <button
-                        className="btn btn-link"
-                        onClick={() => {
-                          setRenameDraft(schema.name);
-                          setEditingSchemaId(schema.id);
-                        }}
-                      >
-                        {t("common.edit")}
-                      </button>
-                    )}
-                    {!isProtected && (
-                      <button
-                        className="btn btn-link btn-danger"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              t("sidebar.confirmDeleteSchema", {
-                                name: schema.name,
-                                count: schemaTablolar.length,
-                              })
-                            )
-                          ) {
-                            onDeleteSchema(schema.id);
-                          }
-                        }}
-                      >
-                        {t("common.delete")}
-                      </button>
-                    )}
+                    <button
+                      className="btn btn-link"
+                      onClick={() => {
+                        setRenameDraft(schema.name);
+                        setEditingSchemaId(schema.id);
+                      }}
+                    >
+                      {t("common.edit")}
+                    </button>
+                    <button
+                      className="btn btn-link btn-danger"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            t("sidebar.confirmDeleteSchema", {
+                              name: schema.name,
+                              count: schemaTablolar.length,
+                            })
+                          )
+                        ) {
+                          onDeleteSchema(schema.id);
+                        }
+                      }}
+                    >
+                      {t("common.delete")}
+                    </button>
                   </>
                 )}
               </div>
