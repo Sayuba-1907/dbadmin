@@ -1,7 +1,10 @@
 package dbadmin.backend.service;
 
+import dbadmin.backend.entity.Kolon;
 import dbadmin.backend.entity.Tag;
 import dbadmin.backend.exception.ConflictException;
+import dbadmin.backend.exception.NotFoundException;
+import dbadmin.backend.repository.KolonRepository;
 import dbadmin.backend.repository.TagRepository;
 import dbadmin.backend.validation.NameValidator;
 import java.util.List;
@@ -14,14 +17,35 @@ import org.springframework.transaction.annotation.Transactional;
 public class TagService {
 
     private final TagRepository tagRepository;
+    private final KolonRepository kolonRepository;
 
-    public TagService(TagRepository tagRepository) {
+    public TagService(TagRepository tagRepository, KolonRepository kolonRepository) {
         this.tagRepository = tagRepository;
+        this.kolonRepository = kolonRepository;
     }
 
     @Transactional(readOnly = true)
     public List<Tag> listTags() {
         return tagRepository.findAll();
+    }
+
+    /** Id ile tek tag bulur; yoksa 404'e cevrilecek {@link NotFoundException} firlatir. */
+    @Transactional(readOnly = true)
+    public Tag getTag(Long id) {
+        return tagRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(
+                        "NOT_FOUND_TAG", "tag not found: " + id, Map.of("id", String.valueOf(id))));
+    }
+
+    /**
+     * Bu tag'i tasiyan tum kolonlari (ve onlarin tablo/schema bilgisini) doner — sol menudeki
+     * "Tagler" gorunumunde bir tag'in ayrinti butonuna basildiginda "hangi tablonun hangi
+     * kolonunda kullaniliyor" sorusunu cevaplamak icin. Tag id'si gecersizse 404.
+     */
+    @Transactional(readOnly = true)
+    public List<Kolon> getTagUsage(Long tagId) {
+        getTag(tagId);
+        return kolonRepository.findByTagId(tagId);
     }
 
     @Transactional

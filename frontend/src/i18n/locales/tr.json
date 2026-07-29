@@ -6,6 +6,29 @@
     "delete": "Sil",
     "undo": "Geri Al"
   },
+  "nav": {
+    "schemalar": "Şemalar",
+    "tagler": "Etiketler",
+    "kullanicilar": "Kullanıcılar"
+  },
+  "auth": {
+    "username": "Kullanıcı adı",
+    "password": "Parola",
+    "login": "Giriş Yap",
+    "loggingIn": "Giriş yapılıyor...",
+    "logout": "Çıkış Yap",
+    "loginFailed": "Giriş yapılamadı",
+    "sessionExpired": "Oturumunuzun süresi doldu, lütfen tekrar giriş yapın"
+  },
+  "tagler": {
+    "title": "Etiketler",
+    "empty": "Henüz hiç etiket yok",
+    "showDetail": "Ayrıntı",
+    "hideDetail": "Gizle",
+    "loadingUsage": "Yükleniyor...",
+    "noUsage": "Bu etiket hiçbir kolonda kullanılmıyor",
+    "usageItem": "{{schema}}.{{table}}.{{column}}"
+  },
   "sidebar": {
     "newTable": "+ Yeni Tablo",
     "newSchema": "+ Yeni Schema",
@@ -27,6 +50,9 @@
   "tabloDetail": {
     "deleteTable": "Tabloyu Sil",
     "confirmDeleteTable": "\"{{name}}\" tablosunu silmek istediğinize emin misiniz?",
+    "confirmDiscardChanges": "Kaydedilmemiş değişiklikleriniz var. Yine de devam etmek istiyor musunuz?",
+    "pendingSchemaMove": "Kaydedilince \"{{schema}}\" şemasına taşınacak",
+    "newColumnBadge": "yeni",
     "colName": "Kolon",
     "colType": "Tip",
     "colTag": "Tag",
@@ -57,6 +83,17 @@
     "schemaNamePlaceholder": "schema_adi",
     "submit": "Oluştur"
   },
+  "kullanicilar": {
+    "title": "Kullanıcılar",
+    "colUsername": "Kullanıcı Adı",
+    "colRole": "Rol",
+    "you": "sen",
+    "empty": "Henüz kullanıcı yok",
+    "confirmDelete": "\"{{name}}\" kullanıcısını silmek istediğinize emin misiniz?",
+    "usernamePlaceholder": "kullanici_adi",
+    "passwordPlaceholder": "parola",
+    "create": "Kullanıcı Oluştur"
+  },
   "notifications": {
     "loadFailed": "Veriler yüklenemedi",
     "tableCreated": "\"{{name}}\" tablosu oluşturuldu",
@@ -73,6 +110,11 @@
     "columnRenameFailed": "Kolon yeniden adlandırılamadı",
     "tagOnColumnUpdated": "Kolonun tag'i güncellendi",
     "tagUpdateFailed": "Tag güncellenemedi",
+    "tagUsageLoadFailed": "Etiketin kullanıldığı kolonlar yüklenemedi",
+    "tableChangesSaved": "Değişiklikler kaydedildi",
+    "tableChangesSaveFailed": "Değişiklikler kaydedilemedi",
+    "primaryKeyUpdated": "Birincil anahtar güncellendi",
+    "primaryKeyUpdateFailed": "Birincil anahtar güncellenemedi",
     "tagCreated": "\"{{name}}\" tag'i oluşturuldu",
     "tagCreateFailed": "Tag oluşturulamadı",
     "schemaCreated": "\"{{name}}\" schema'sı oluşturuldu",
@@ -82,7 +124,13 @@
     "schemaDeleted": "Schema silindi",
     "schemaDeleteFailed": "Schema silinemedi",
     "tableSchemaChanged": "Tablo yeni schema'ya taşındı",
-    "tableSchemaChangeFailed": "Tablo yeni schema'ya taşınamadı"
+    "tableSchemaChangeFailed": "Tablo yeni schema'ya taşınamadı",
+    "kullaniciCreated": "\"{{name}}\" kullanıcısı oluşturuldu",
+    "kullaniciCreateFailed": "Kullanıcı oluşturulamadı",
+    "kullaniciRolChanged": "Rol güncellendi",
+    "kullaniciRolChangeFailed": "Rol güncellenemedi",
+    "kullaniciDeleted": "Kullanıcı silindi",
+    "kullaniciDeleteFailed": "Kullanıcı silinemedi"
   },
   "validation": {
     "required": "Lütfen bu alanı doldurun"
@@ -104,6 +152,15 @@
     "VALIDATION_RESERVED_SCHEMA_NAME": "\"public\" Postgres'in altyapı schema'sıdır, bu isim kullanılamaz",
     "CONFLICT_DUPLICATE_SCHEMA_NAME": "\"{{name}}\" adında bir schema zaten var",
     "NOT_FOUND_SCHEMA": "Schema bulunamadı (id: {{id}})",
-    "VALIDATION_MISSING_SCHEMA": "Tablonun kurulacağı schema seçilmeli"
+    "VALIDATION_MISSING_SCHEMA": "Tablonun kurulacağı schema seçilmeli",
+    "AUTH_INVALID_CREDENTIALS": "Kullanıcı adı ya da parola hatalı",
+    "AUTH_REQUIRED": "Bu işlem için giriş yapmalısınız",
+    "AUTH_FORBIDDEN": "Rolünüz bu işlem için yetkili değil",
+    "VALIDATION_INVALID_USERNAME": "Kullanıcı adı 2-30 karakter olmalı, büyük harfle başlayamaz ve sadece harf, rakam, alt çizgi içerebilir",
+    "VALIDATION_WEAK_PASSWORD": "Parola en az {{min}} karakter olmalı",
+    "VALIDATION_MISSING_ROLE": "Bir rol belirtilmeli",
+    "NOT_FOUND_USER": "Kullanıcı bulunamadı (id: {{id}})",
+    "CONFLICT_DUPLICATE_USERNAME": "\"{{name}}\" adında bir kullanıcı zaten var",
+    "CONFLICT_LAST_ADMIN": "Sistemdeki son yönetici silinemez ya da yetkisi düşürülemez"
   }
 }

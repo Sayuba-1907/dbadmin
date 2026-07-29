@@ -20,9 +20,76 @@
   font-size: 18px;
 }
 
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.current-user {
+  font-size: 13px;
+  color: #64748b;
+}
+
 .language-switcher {
   display: flex;
   gap: 4px;
+}
+
+/* fieldset'in tarayici varsayilanlarini (kenarlik, ic bosluk, min-width: min-content) sifirlar
+   — burada tek amac VIEWER rolunde tum ic form elemanlarini (input/select/button, DOM
+   derinligi fark etmeksizin) tek bir "disabled" ile kapatmak, gorsel olarak bir cerceve
+   eklemek degil. min-width: 0 ozellikle onemli: fieldset'in varsayilani flex/grid
+   layout'lari beklenmedik sekilde tasirabiliyor. */
+.unstyled-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 100vh;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 280px;
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.login-form h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  text-align: center;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.login-field input {
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.login-submit {
+  margin-top: 8px;
 }
 
 .language-switcher-btn {
@@ -44,6 +111,36 @@
 .dashboard {
   display: flex;
   flex: 1;
+}
+
+.workspace-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 96px;
+  padding: 12px 8px;
+  border-right: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.workspace-nav-btn {
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.workspace-nav-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.workspace-nav-btn.active {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
 }
 
 .sidebar {
@@ -253,9 +350,45 @@
 
 .detail-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
+}
+
+.detail-header-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tablo-name-input {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.tablo-name-input:hover,
+.tablo-name-input:focus {
+  border-color: #cbd5e1;
+}
+
+.pending-move-hint {
+  font-size: 13px;
+  color: #92400e;
+  font-style: italic;
+}
+
+.kolon-row-silinecek {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.new-badge {
+  font-size: 11px;
+  color: #15803d;
+  margin-left: 6px;
 }
 
 .kolon-table {
@@ -319,6 +452,11 @@
   outline-offset: 2px;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-primary {
   background-color: #2563eb;
   border-color: #2563eb;
@@ -342,6 +480,76 @@
 
 .loading-hint {
   padding: 20px;
+}
+
+.tagler-panel,
+.kullanicilar-panel {
+  flex: 1;
+  padding: 20px;
+}
+
+.kullanici-table {
+  width: 100%;
+  max-width: 480px;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.kullanici-table th,
+.kullanici-table td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.you-badge {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.create-kullanici-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tagler-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tagler-item {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 0;
+}
+
+.tagler-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tagler-name {
+  font-weight: 500;
+}
+
+.tagler-usage {
+  margin-top: 8px;
+  padding-left: 12px;
+}
+
+.tagler-usage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.tagler-usage-list li {
+  padding: 2px 0;
 }
 
 .modal-overlay {

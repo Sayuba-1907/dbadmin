@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import dbadmin.backend.dto.SchemaResponse;
 
 /** {@link TabloService} ile ayni mantik: her metod metadata + gercek Postgres semasini birlikte degistirir. */
 @Service
@@ -58,10 +59,22 @@ public class SchemaService {
     }
 
     @Transactional(readOnly = true)
-    public List<Schema> listSchemalar() {
+    public List<SchemaResponse> listSchemalar() {
         return schemaRepository.findAll().stream()
                 .filter(schema -> !isHidden(schema))
+                .map(this::toResponse)
                 .toList();
+    }
+
+    /**
+     * {@link Schema} entity'sini disari donen DTO'ya cevirir, tablo sayisini da hesaplayip ekler.
+     * Tek yerde toplanmasinin sebebi: bu cevirme islemi listSchemalar/getSchema/createSchema/
+     * renameSchema'nin hepsinde gerekiyor — hepsi ayni sorguyu (countBySchemaId) tekrar tekrar
+     * yazmak yerine buraya geliyor.
+     */
+    public SchemaResponse toResponse(Schema schema) {
+        long tabloSayisi = tabloRepository.countBySchemaId(schema.getId());
+        return SchemaResponse.from(schema, tabloSayisi);
     }
 
     /**

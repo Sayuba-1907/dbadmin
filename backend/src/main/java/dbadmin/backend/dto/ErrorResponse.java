@@ -17,7 +17,47 @@ public record ErrorResponse(
         @Schema(description = "Insanin okuyacagi Ingilizce hata mesaji (log/Postman icin).",
                         example = "a table named 'ogrenciler' already exists")
                 String message,
-        @Schema(description = "Frontend'in i18next ceviri sozlugunde arayacagi sabit hata kodu.",
+        @Schema(
+                        description = "Uygulamanin kendi hata kodu — HTTP status'tan ayri ve ondan daha "
+                                + "ayrintilidir. Ayni HTTP status'un altinda birden fazla durum olabilir "
+                                + "(ör. 404 hem NOT_FOUND_TABLE hem NOT_FOUND_COLUMN olabilir), o yuzden "
+                                + "frontend karari status'a degil bu koda bakarak verir ve i18next ceviri "
+                                + "sozlugunde bu anahtari arar. Her ucun hangi kodlari dondurebilecegi o "
+                                + "ucun cevap orneklerinde ayri ayri listelenmistir.",
+                        allowableValues = {
+                            "VALIDATION_INVALID_TABLE_NAME",
+                            "VALIDATION_INVALID_COLUMN_NAME",
+                            "VALIDATION_INVALID_SCHEMA_NAME",
+                            "VALIDATION_INVALID_TAG_NAME",
+                            "VALIDATION_INVALID_COLUMN_TYPE",
+                            "VALIDATION_TABLE_NEEDS_COLUMN",
+                            "VALIDATION_MISSING_SCHEMA",
+                            "VALIDATION_RESERVED_SCHEMA_NAME",
+                            "NOT_FOUND_TABLE",
+                            "NOT_FOUND_COLUMN",
+                            "NOT_FOUND_SCHEMA",
+                            "NOT_FOUND_TAG",
+                            "CONFLICT_DUPLICATE_TABLE_NAME",
+                            "CONFLICT_DUPLICATE_COLUMN_NAME",
+                            "CONFLICT_DUPLICATE_COLUMN_IN_REQUEST",
+                            "CONFLICT_DUPLICATE_SCHEMA_NAME",
+                            "CONFLICT_DUPLICATE_TAG_NAME",
+                            "CONFLICT_COLUMN_NOT_UNIQUE",
+                            "VALIDATION_INVALID_PATH_PARAM",
+                            "VALIDATION_MALFORMED_BODY",
+                            "VALIDATION_METHOD_NOT_ALLOWED",
+                            "NOT_FOUND_ENDPOINT",
+                            "INTERNAL_ERROR",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_REQUIRED",
+                            "AUTH_FORBIDDEN",
+                            "VALIDATION_INVALID_USERNAME",
+                            "VALIDATION_WEAK_PASSWORD",
+                            "VALIDATION_MISSING_ROLE",
+                            "NOT_FOUND_USER",
+                            "CONFLICT_DUPLICATE_USERNAME",
+                            "CONFLICT_LAST_ADMIN"
+                        },
                         example = "CONFLICT_DUPLICATE_TABLE_NAME")
                 String code,
         @Schema(description = "Mesajin icindeki degisken kisimlar (frontend kendi dilindeki sablonu "

@@ -252,12 +252,85 @@
       ]
     },
     {
+      "id": 16,
+      "type": "timeseries",
+      "title": "JVM Threads (live / daemon / peak)",
+      "description": "Kac thread var. Trafikle orantisiz, surekli tirmanan bir live cizgisi thread leak isaretidir; peak ile arasindaki fark da o ana kadar gorulen en yuksek noktayi gosterir.",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads{application=\"backend\"}",
+          "legendFormat": "live",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_threads_daemon_threads{application=\"backend\"}",
+          "legendFormat": "daemon",
+          "refId": "B"
+        },
+        {
+          "expr": "jvm_threads_peak_threads{application=\"backend\"}",
+          "legendFormat": "peak",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "JVM Threads by State",
+      "description": "Thread'ler ne yapiyor. Toplam ayni kalirken blocked/waiting katmaninin buyumesi darbogaz demektir (lock beklemesi ya da tukenen bir havuz); ustteki panelde bu tek cizgi olarak gorunmez.",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 40,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "jvm_threads_states_threads{application=\"backend\"}",
+          "legendFormat": "{{state}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 10,
       "type": "stat",
       "title": "Tables Active",
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 36,
         "w": 4,
         "h": 4
       },
@@ -282,7 +355,7 @@
       "title": "Schemas Active",
       "gridPos": {
         "x": 4,
-        "y": 28,
+        "y": 36,
         "w": 4,
         "h": 4
       },
@@ -307,7 +380,7 @@
       "title": "Tables Created (total)",
       "gridPos": {
         "x": 8,
-        "y": 28,
+        "y": 36,
         "w": 4,
         "h": 4
       },
@@ -332,7 +405,7 @@
       "title": "Tables Deleted (total)",
       "gridPos": {
         "x": 12,
-        "y": 28,
+        "y": 36,
         "w": 4,
         "h": 4
       },
@@ -357,7 +430,7 @@
       "title": "Columns Created (total)",
       "gridPos": {
         "x": 16,
-        "y": 28,
+        "y": 36,
         "w": 4,
         "h": 4
       },
@@ -382,7 +455,7 @@
       "title": "Schemas Created (total)",
       "gridPos": {
         "x": 20,
-        "y": 28,
+        "y": 36,
         "w": 4,
         "h": 4
       },

@@ -120,7 +120,7 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     void listSchemalar_omitsPublic() {
         Schema legacy = insertLegacyPublicRow();
         try {
-            assertTrue(schemaService.listSchemalar().stream().noneMatch(s -> s.getName().equals("public")),
+            assertTrue(schemaService.listSchemalar().stream().noneMatch(s -> s.name().equals("public")),
                     "'public' listede gorunmemeli");
         } finally {
             schemaRepository.delete(legacy);

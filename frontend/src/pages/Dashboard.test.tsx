@@ -6,6 +6,7 @@ import "../i18n";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Dashboard } from "./Dashboard";
 import { NotificationProvider } from "../notifications/NotificationProvider";
+import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -18,10 +19,29 @@ function mockFetchSequence(responses: Partial<Response>[]) {
   return fn;
 }
 
-function renderDashboard() {
+/**
+ * Bu dosyadaki testler yazma islemlerini (tablo olusturma, surukle-birak) sinadigi icin sabit
+ * bir EDITOR baglami veriyoruz — gercek AuthProvider'in localStorage okuyup `/api/auth/ben`'e
+ * gitmesini beklemek gereksiz bir asenkron adim (ve mockFetchSequence'teki cagri sirasini
+ * kaydirirdi). Rol bazli gizlemeyi (VIEWER'in yazma butonlarini gormemesi) test etmek
+ * istenirse ayri bir testte rol: "VIEWER" ile ayni yardimci kullanilabilir.
+ */
+const EDITOR_AUTH: AuthContextValue = {
+  status: "authenticated",
+  kullaniciAdi: "test_kullanici",
+  rol: "EDITOR",
+  canWrite: true,
+  isAdmin: false,
+  login: jest.fn(),
+  logout: jest.fn(),
+};
+
+function renderDashboard(auth: AuthContextValue = EDITOR_AUTH) {
   return render(
     <NotificationProvider>
-      <Dashboard />
+      <AuthContext.Provider value={auth}>
+        <Dashboard />
+      </AuthContext.Provider>
     </NotificationProvider>
   );
 }
@@ -62,7 +82,9 @@ test("tablo olusturunca listeye eklenir ve basari bildirimi gosterilir", async (
   fireEvent.click(screen.getByText("Oluştur"));
 
   await waitFor(() => expect(screen.getByText(/oluşturuldu/i)).toBeInTheDocument());
-  expect(screen.getAllByText("kullanicilar").length).toBeGreaterThan(0);
+  // Tablo adi artik TabloDetail'de duzenlenebilir bir input (text node degil, "value" attribute'u)
+  // — getByText bunu bulamaz, getByDisplayValue input/textarea degerine gore arar.
+  await waitFor(() => expect(screen.getByDisplayValue("kullanicilar")).toBeInTheDocument());
 });
 
 test("backend conflict (409) hatasinda turuncu bildirim gosterir", async () => {
@@ -221,4 +243,46 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
       expect.objectContaining({ method: "PATCH", body: JSON.stringify({ schemaId: 2 }) })
     )
   );
+});
+
+test("VIEWER rolunde yazma butonlari devre disi kalir", async () => {
+  mockFetchSequence([
+    { ok: true, status: 200, json: async () => [] },
+    { ok: true, status: 200, json: async () => [] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
+  ]);
+
+  renderDashboard({ ...EDITOR_AUTH, rol: "VIEWER", canWrite: false });
+
+  await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
+
+  // Butonlar hala GORUNUYOR (VIEWER ne yapabilecegini gorebilsin) ama tiklanamaz durumda —
+  // backend zaten 403 doner (SecurityConfig), bu sadece bosuna bir istek atilmasini onluyor.
+  expect(screen.getByText("+ Yeni Tablo")).toBeDisabled();
+  expect(screen.getByText("+ Yeni Schema")).toBeDisabled();
+});
+
+test("ADMIN icin acilista kullanici listesi de cekilir ve Kullanicilar sekmesinde gosterilir", async () => {
+  mockFetchSequence([
+    { ok: true, status: 200, json: async () => [] },
+    { ok: true, status: 200, json: async () => [] },
+    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
+    {
+      ok: true,
+      status: 200,
+      json: async () => [
+        { id: 1, kullaniciAdi: "admin", rol: "ADMIN" },
+        { id: 2, kullaniciAdi: "ayse", rol: "VIEWER" },
+      ],
+    },
+  ]);
+
+  renderDashboard({ ...EDITOR_AUTH, rol: "ADMIN", isAdmin: true });
+
+  await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
+
+  fireEvent.click(screen.getByText("Kullanıcılar"));
+
+  expect(await screen.findByText("ayse")).toBeInTheDocument();
+  expect(screen.getByText("admin")).toBeInTheDocument();
 });

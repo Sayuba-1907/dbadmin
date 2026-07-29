@@ -1,6 +1,7 @@
 package dbadmin.backend.controller;
 
 import dbadmin.backend.dto.CreateSchemaRequest;
+import dbadmin.backend.dto.ErrorExamples;
 import dbadmin.backend.dto.ErrorResponse;
 import dbadmin.backend.dto.RenameRequest;
 import dbadmin.backend.dto.SchemaResponse;
@@ -10,6 +11,7 @@ import dbadmin.backend.service.TabloService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import dbadmin.backend.dto.TabloSummaryResponse;
 
 /** Schema icin HTTP endpoint'leri — {@link TabloController} ile ayni mantik, bkz. oradaki aciklama. */
 @RestController
@@ -50,9 +53,7 @@ public class SchemaController {
     @ApiResponse(responseCode = "200", description = "Schema listesi (hicbir schema olusturulmamissa bos).")
     @GetMapping
     public List<SchemaResponse> list() {
-        return schemaService.listSchemalar().stream()
-                .map(SchemaResponse::from)
-                .toList();
+        return schemaService.listSchemalar();
     }
 
     @Operation(summary = "Tek bir schema'yi getir", description = "Id'si verilen schema'nin bilgilerini doner.")
@@ -60,11 +61,14 @@ public class SchemaController {
         @ApiResponse(responseCode = "200", description = "Schema bulundu."),
         @ApiResponse(responseCode = "404", description = "Bu id'de bir schema yok.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class)))
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_SCHEMA",
+                                summary = "Schema bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_SCHEMA)))
     })
     @GetMapping("/{id}")
     public SchemaResponse get(@Parameter(description = "Schema'nin id'si.", example = "1") @PathVariable Long id) {
-        return SchemaResponse.from(schemaService.getSchema(id));
+        return schemaService.toResponse(schemaService.getSchema(id));
     }
 
     /** GET /api/schemalar/{id}/tablolar — sidebar'daki schema -> tablo hiyerarsisi icin, bir schema'nin altindaki tablolar. Schema yoksa 404. */
@@ -75,14 +79,17 @@ public class SchemaController {
         @ApiResponse(responseCode = "200", description = "O schema'nin tablo listesi (bos olabilir)."),
         @ApiResponse(responseCode = "404", description = "Bu id'de bir schema yok.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class)))
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_SCHEMA",
+                                summary = "Schema bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_SCHEMA)))
     })
     @GetMapping("/{id}/tablolar")
-    public List<TabloResponse> listTablolar(
+    public List<TabloSummaryResponse> listTablolar(
             @Parameter(description = "Schema'nin id'si.", example = "1") @PathVariable Long id) {
         schemaService.getSchema(id);
         return tabloService.listTablolarBySchema(id).stream()
-                .map(TabloResponse::from)
+                .map(TabloSummaryResponse::from)
                 .toList();
     }
 
@@ -94,15 +101,26 @@ public class SchemaController {
         @ApiResponse(responseCode = "400",
                 description = "Gecersiz schema adi, ya da 'public' rezerve ismi kullanilmaya calisildi.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class))),
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = {
+                            @ExampleObject(name = "VALIDATION_INVALID_SCHEMA_NAME",
+                                    summary = "Schema adi kurallara uymuyor",
+                                    value = ErrorExamples.VALIDATION_INVALID_SCHEMA_NAME),
+                            @ExampleObject(name = "VALIDATION_RESERVED_SCHEMA_NAME",
+                                    summary = "'public' rezerve isim",
+                                    value = ErrorExamples.VALIDATION_RESERVED_SCHEMA_NAME)
+                        })),
         @ApiResponse(responseCode = "409", description = "Bu isimde bir schema zaten var.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class)))
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "CONFLICT_DUPLICATE_SCHEMA_NAME",
+                                summary = "Ayni isimde schema var",
+                                value = ErrorExamples.CONFLICT_DUPLICATE_SCHEMA_NAME)))
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public SchemaResponse create(@RequestBody CreateSchemaRequest request) {
-        return SchemaResponse.from(schemaService.createSchema(request.name()));
+        return schemaService.toResponse(schemaService.createSchema(request.name()));
     }
 
     /** PATCH /api/schemalar/{id} — sadece ismi degistirir; yeni isim olarak "public" reddedilir (bkz. SchemaService.renameSchema). */
@@ -115,20 +133,34 @@ public class SchemaController {
         @ApiResponse(responseCode = "400", description = "Gecersiz yeni isim, ya da yeni isim "
                 + "olarak 'public' verilmeye calisildi.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class))),
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = {
+                            @ExampleObject(name = "VALIDATION_INVALID_SCHEMA_NAME",
+                                    summary = "Schema adi kurallara uymuyor",
+                                    value = ErrorExamples.VALIDATION_INVALID_SCHEMA_NAME),
+                            @ExampleObject(name = "VALIDATION_RESERVED_SCHEMA_NAME",
+                                    summary = "'public' rezerve isim",
+                                    value = ErrorExamples.VALIDATION_RESERVED_SCHEMA_NAME)
+                        })),
         @ApiResponse(responseCode = "404", description = "Bu id'de bir schema yok.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class))),
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_SCHEMA",
+                                summary = "Schema bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_SCHEMA))),
         @ApiResponse(responseCode = "409", description = "Bu isimde baska bir schema zaten var.",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class)))
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "CONFLICT_DUPLICATE_SCHEMA_NAME",
+                                summary = "Ayni isimde schema var",
+                                value = ErrorExamples.CONFLICT_DUPLICATE_SCHEMA_NAME)))
     })
     @PatchMapping("/{id}")
     public SchemaResponse rename(
             @Parameter(description = "Yeniden adlandirilacak schema'nin id'si.", example = "2") @PathVariable
                     Long id,
             @RequestBody RenameRequest request) {
-        return SchemaResponse.from(schemaService.renameSchema(id, request.name()));
+        return schemaService.toResponse(schemaService.renameSchema(id, request.name()));
     }
 
     @Operation(summary = "Schema'yi sil",
@@ -140,7 +172,10 @@ public class SchemaController {
         @ApiResponse(responseCode = "404", description = "Bu id'de bir schema yok ('public'in id'si de "
                 + "buraya girer — gizli oldugu icin yokmus gibi davranilir).",
                 content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = @Schema(implementation = ErrorResponse.class)))
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_SCHEMA",
+                                summary = "Schema bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_SCHEMA)))
     })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

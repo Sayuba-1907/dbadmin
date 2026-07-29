@@ -1,7 +1,11 @@
-import { apiDelete, apiGet, apiPost, ApiError } from "./client";
+import { apiDelete, apiGet, apiPost, ApiError, setAuthToken, setOnUnauthorized } from "./client";
 
 afterEach(() => {
   jest.restoreAllMocks();
+  // authToken modul-seviyesinde bir degisken (testler arasinda sifirlanmaz) — bir testte
+  // set edilen token bir sonrakine sizmasin diye her testten sonra temizliyoruz.
+  setAuthToken(null);
+  setOnUnauthorized(null);
 });
 
 function mockFetchOnce(response: Partial<Response>) {
@@ -39,4 +43,74 @@ test("apiDelete 204 yanitinda body okumaya calismaz", async () => {
   mockFetchOnce({ ok: true, status: 204 });
 
   await expect(apiDelete("/api/tablolar/1")).resolves.toBeUndefined();
+});
+
+test("setAuthToken ile bir token verilmisse istek Authorization basligi tasir", async () => {
+  const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+  global.fetch = fetchMock as unknown as typeof fetch;
+  setAuthToken("ornek-jwt");
+
+  await apiGet("/api/tablolar");
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: "Bearer ornek-jwt" }),
+    })
+  );
+});
+
+test("token yoksa Authorization basligi hic eklenmez", async () => {
+  const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+  global.fetch = fetchMock as unknown as typeof fetch;
+
+  await apiGet("/api/tablolar");
+
+  const headers = fetchMock.mock.calls[0][1].headers as Record<string, string>;
+  expect(headers.Authorization).toBeUndefined();
+});
+
+test("AUTH_REQUIRED kodlu 401'de onUnauthorized kancasi tetiklenir", async () => {
+  mockFetchOnce({
+    ok: false,
+    status: 401,
+    json: async () => ({
+      timestamp: "2026-01-01T00:00:00Z",
+      status: 401,
+      error: "Unauthorized",
+      message: "authentication is required, send a valid Bearer token",
+      code: "AUTH_REQUIRED",
+    }),
+  });
+  const onUnauthorized = jest.fn();
+  setOnUnauthorized(onUnauthorized);
+
+  await expect(apiGet("/api/tablolar")).rejects.toBeInstanceOf(ApiError);
+
+  expect(onUnauthorized).toHaveBeenCalledTimes(1);
+});
+
+test("AUTH_INVALID_CREDENTIALS kodlu 401'de (yanlis parola) onUnauthorized TETIKLENMEZ", async () => {
+  // Bu ayrim onemli: login formunda yanlis parola girmek "oturumdan atilmak" degildir —
+  // henuz bir oturum yok ki sonlansin. onUnauthorized burada da tetiklenseydi, zaten
+  // "anonymous" durumundaki AuthProvider'i gereksiz yere logout() cagirmaya iterdi.
+  mockFetchOnce({
+    ok: false,
+    status: 401,
+    json: async () => ({
+      timestamp: "2026-01-01T00:00:00Z",
+      status: 401,
+      error: "Unauthorized",
+      message: "invalid username or password",
+      code: "AUTH_INVALID_CREDENTIALS",
+    }),
+  });
+  const onUnauthorized = jest.fn();
+  setOnUnauthorized(onUnauthorized);
+
+  await expect(
+    apiPost("/api/auth/login", { kullaniciAdi: "x", parola: "y" })
+  ).rejects.toBeInstanceOf(ApiError);
+
+  expect(onUnauthorized).not.toHaveBeenCalled();
 });

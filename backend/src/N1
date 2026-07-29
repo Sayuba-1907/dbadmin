@@ -29,3 +29,30 @@ https://www.baeldung.com/java-equals-hashcode-contracts hashcode equals siteye b
     8)Agentic Development -> Claude, gemini, ChatGPT gibi llm modelleri günümüzde kodlama için de kullanılıyor. Agentic development ile temel düzeyde requirementları belli olan bir projenin implementationı nasıl yapılır.
     9)Maven repo ile library, dependency yönetimi ve docker hub ile docker image yönetimi
     10)Authentication kısmı.
+
+
+    29Temmuz Notlar
+    +-i18n backend -> Accept-Language basligi + messages.properties/messages_tr.properties.
+          Frontend cevirisi olduğu gibi kaldı (code -> i18next); backend'inki Swagger/Postman/log
+          ve ileride bağlanacak başka istemciler için.
+    +-8080'i 8081'e çek.
+    1-aplication.proerties
+    2-docker-compose.yml
+    3-prometheus.yml
+    4-frontend_>client.ts
+    5-readme.md
+
+    admin admin123         admin girişi    her şey
+    mehmet editorParola1   editor girişi   viewer+api altında yazma işlemleri
+    ayse gizliParola1      viewer girişi   sadece listeleme ve okuma
+    salih salih123
+
+
+     1)Backendi dockerdan değil normal kaldıracağız.
+    docker compose stop backend
+    application propertys e sunları ekle
+    spring.datasource.url=jdbc:postgresql://localhost:5433/dbadmin_db
+    spring.datasource.username=postgres
+    spring.datasource.password=guvenlisifre
+    Terminalde backend klasörüne girip ./mvnw spring-boot:run komutunu çalıştırarak Spring Boot'u 8081 portunda sorunsuz başlattık.
+

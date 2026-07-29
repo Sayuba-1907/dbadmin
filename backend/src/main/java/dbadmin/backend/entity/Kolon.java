@@ -58,11 +58,11 @@ public class Kolon {
     @JoinColumn(name = "tag_id")
     private Tag tag;
 
-    // Gercek tablonun PRIMARY KEY'i her zaman otomatik eklenen "id" kolonudur (bkz.
-    // TableDdlExecutor.ID_COLUMN_SQL) — bu alan o gercek PK'i degistirmez. Ama tamamen
-    // kozmetik de degil: bu true olan kolon(lar) uzerine TabloService gercek bir Postgres
-    // UNIQUE constraint kurar (tek kolon -> normal unique, birden fazla -> composite unique),
-    // boylece "bu kolon(lar) birincil anahtar" etiketinin DB'de de bir karsiligi olur.
+    // Bu alan gercek tablonun PRIMARY KEY'ini belirler: true olan kolonlarin tamami tek bir
+    // Postgres PRIMARY KEY constraint'ini olusturur (tek kolon -> basit PK, birden fazla ->
+    // composite PK: PRIMARY KEY (col1, col2)). Hicbiri true degilse tablo PK'siz kurulur.
+    // Otomatik eklenen bir "id" kolonu yoktur — tabloda sadece kullanicinin tanimladigi
+    // kolonlar bulunur.
     @Column(nullable = false)
     private boolean primaryKey;
 

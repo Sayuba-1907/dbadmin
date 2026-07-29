@@ -146,10 +146,10 @@ public class TabloService {
         }
 
         Tablo saved = tabloRepository.save(tablo);
-        ddlExecutor.createTable(schema.getName(), saved.getName(), ddlColumns);
-        if (!primaryKeyColumnNames.isEmpty()) {
-            ddlExecutor.addPrimaryKeyUniqueConstraint(schema.getName(), saved.getName(), primaryKeyColumnNames);
-        }
+        // PK isaretli kolonlar CREATE TABLE'in kendi icinde veriliyor (ayri bir ALTER TABLE ile
+        // degil): boylece gercek tablo tek ifadede, elle yazilmis bir
+        // "CREATE TABLE ... PRIMARY KEY (col1, col2)" ile birebir ayni sekilde olusuyor.
+        ddlExecutor.createTable(schema.getName(), saved.getName(), ddlColumns, primaryKeyColumnNames);
         tablesCreatedCounter.increment();
         columnsCreatedCounter.increment(ddlColumns.size());
         return saved;
@@ -211,7 +211,7 @@ public class TabloService {
         tablo.setName(newName);
         tablo.touch();
         ddlExecutor.renameTable(tablo.getSchema().getName(), oldName, newName);
-        ddlExecutor.renamePrimaryKeyUniqueConstraintIfExists(tablo.getSchema().getName(), oldName, newName);
+        ddlExecutor.renamePrimaryKeyConstraintIfExists(tablo.getSchema().getName(), oldName, newName);
         return tablo;
     }
 
@@ -248,9 +248,10 @@ public class TabloService {
         ddlExecutor.addColumn(tablo.getSchema().getName(), tablo.getName(), saved.getName(), type);
         columnsCreatedCounter.increment();
         if (tanim.primaryKey()) {
-            // Yeni kolon da isarete katildigi icin tum PK-isaretli kolon seti degisti:
-            // eskisini kaldirip (varsa) genisletilmis setle yeniden kuruyoruz.
-            syncPrimaryKeyUniqueConstraint(tablo);
+            // Yeni kolon da isarete katildigi icin tum PK-isaretli kolon seti degisti: bir
+            // tablonun tek bir primary key'i olabildigi icin eskisini kaldirip genisletilmis
+            // setle (composite olarak) yeniden kuruyoruz.
+            syncPrimaryKeyConstraint(tablo);
         }
         return saved;
     }
@@ -267,10 +268,10 @@ public class TabloService {
         String columnName = kolon.getName();
         boolean wasPrimaryKey = kolon.isPrimaryKey();
         if (wasPrimaryKey) {
-            // Composite unique constraint dusen kolona da bagli oldugu icin, kolonu gercekten
-            // silmeden once constraint'i tamamen kaldiriyoruz (kalan PK-isaretli kolonlar varsa
-            // asagida syncPrimaryKeyUniqueConstraint onlarla yeniden kurar).
-            ddlExecutor.dropPrimaryKeyUniqueConstraintIfExists(tablo.getSchema().getName(), tablo.getName());
+            // Composite primary key dusen kolona da bagli oldugu icin, kolonu gercekten silmeden
+            // once constraint'i tamamen kaldiriyoruz (kalan PK-isaretli kolonlar varsa asagida
+            // yeniden kuruluyor).
+            ddlExecutor.dropPrimaryKeyConstraintIfExists(tablo.getSchema().getName(), tablo.getName());
         }
         tablo.removeKolon(kolon);
         tablo.touch();
@@ -281,25 +282,27 @@ public class TabloService {
                     .map(Kolon::getName)
                     .toList();
             if (!remainingPrimaryKeyColumnNames.isEmpty()) {
-                ddlExecutor.addPrimaryKeyUniqueConstraint(
+                ddlExecutor.addPrimaryKeyConstraint(
                         tablo.getSchema().getName(), tablo.getName(), remainingPrimaryKeyColumnNames);
             }
         }
     }
 
     /**
-     * Tablonun su anki PK-isaretli kolonlarina gore gercek unique constraint'i yeniden kurar:
-     * her zaman once kaldirir, sonra (bos degilse) guncel kolon setiyle tekrar ekler. Cagiran
-     * taraf (addKolon/deleteKolon) sadece PK setinin degistigi anlarda cagirir.
+     * Tablonun su anki PK-isaretli kolonlarina gore gercek {@code PRIMARY KEY} constraint'ini
+     * yeniden kurar: her zaman once kaldirir, sonra (bos degilse) guncel kolon setiyle tekrar
+     * ekler. Bir tablonun birden fazla primary key'i olamadigi icin "genislet" diye bir islem
+     * yok — dogru yol hep drop + yeniden add. Cagiran taraf (addKolon/deleteKolon) sadece PK
+     * setinin degistigi anlarda cagirir.
      */
-    private void syncPrimaryKeyUniqueConstraint(Tablo tablo) {
+    private void syncPrimaryKeyConstraint(Tablo tablo) {
         List<String> primaryKeyColumnNames = tablo.getKolonlar().stream()
                 .filter(Kolon::isPrimaryKey)
                 .map(Kolon::getName)
                 .toList();
-        ddlExecutor.dropPrimaryKeyUniqueConstraintIfExists(tablo.getSchema().getName(), tablo.getName());
+        ddlExecutor.dropPrimaryKeyConstraintIfExists(tablo.getSchema().getName(), tablo.getName());
         if (!primaryKeyColumnNames.isEmpty()) {
-            ddlExecutor.addPrimaryKeyUniqueConstraint(tablo.getSchema().getName(), tablo.getName(), primaryKeyColumnNames);
+            ddlExecutor.addPrimaryKeyConstraint(tablo.getSchema().getName(), tablo.getName(), primaryKeyColumnNames);
         }
     }
 
@@ -327,6 +330,34 @@ public class TabloService {
         return kolon;
     }
 
+    /**
+     * Var olan bir kolonun birincil anahtar isaretini degistirir ve tablonun gercek
+     * {@code PRIMARY KEY} constraint'ini yeni isaretli kolon setiyle yeniden kurar.
+     * <p>
+     * Bu uc, {@code primaryKey}'in gercek bir PRIMARY KEY'e donusmesiyle birlikte gerekli hale
+     * geldi: bayrak eskiden sadece kozmetikti ve yalnizca kolon olusturulurken (createTablo /
+     * addKolon) set edilebiliyordu, dolayisiyla var olan bir kolonu PK yapmanin tek yolu onu
+     * silip yeniden eklemekti — yani icindeki veriyi kaybetmekti.
+     * <p>
+     * Bilinen sinir: tabloda satir varken NULL iceren bir kolonu PK yapmak Postgres tarafindan
+     * reddedilir (PK kolonlari otomatik {@code NOT NULL} olur); ayni sekilde tekrar eden degerler
+     * varsa da reddedilir. Her iki durumda da transaction geri alindigi icin metadata'daki isaret
+     * de degismez, iki katman ayrisamaz.
+     */
+    @Transactional
+    public Kolon changeKolonPrimaryKey(Long tabloId, Long kolonId, boolean primaryKey) {
+        Tablo tablo = getTablo(tabloId);
+        Kolon kolon = findKolonInTablo(tablo, kolonId);
+        if (kolon.isPrimaryKey() == primaryKey) {
+            // Isaret zaten istenen durumda: gereksiz yere DROP + ADD CONSTRAINT calistirmiyoruz.
+            return kolon;
+        }
+        kolon.setPrimaryKey(primaryKey);
+        tablo.touch();
+        syncPrimaryKeyConstraint(tablo);
+        return kolon;
+    }
+
     /** Tag'in gercek DB semasinda hic karsiligi yok (sadece metadata) — o yuzden burada ddlExecutor cagrisi yok, sade bir entity guncellemesi. */
     @Transactional
     public Kolon changeKolonTag(Long tabloId, Long kolonId, Long tagId) {
@@ -335,6 +366,50 @@ public class TabloService {
         kolon.setTag(resolveTag(tagId));
         tablo.touch();
         return kolon;
+    }
+
+    /**
+     * "Kaydet'e basinca hepsi birden gitsin" akisinin karsiligi: bir tablo uzerinde biriktirilmis
+     * TUM degisiklikleri (isim, schema, silinen/eklenen/guncellenen kolonlar) tek seferde uygular.
+     * <p>
+     * Dikkat cekici implementasyon detayi: burada DDL'i yeniden yazmiyoruz, sadece yukaridaki
+     * (zaten test edilmis) {@code renameTablo}/{@code changeSchema}/{@code deleteKolon}/
+     * {@code renameKolon}/{@code changeKolonTag}/{@code changeKolonPrimaryKey}/{@code addKolon}
+     * metodlarini sirayla {@code this.} uzerinden cagiriyoruz. Bu metodlar da {@code @Transactional}
+     * ama Spring'in proxy-tabanli AOP'si self-invocation'da (ayni sinifin kendi icinden {@code
+     * this.metod()} cagirmak) devreye girmez — yani bu cagrilar kendi ayri transaction'larini
+     * ACMAZ, hepsi bu metodun disaridan (controller'dan) tetiklenirken acilmis TEK transaction'a
+     * katilir. Sonuc: N alt-islemden biri patlarsa (ör. bir kolonu PK yapmak NULL degerler yuzunden
+     * reddedilirse), o ana kadar uygulanmis olan hicbir sey (rename, silinen kolonlar, eklenen
+     * kolonlar) da kalici olmaz — hepsi ya da hicbiri.
+     * <p>
+     * Sira: rename -> schema tasi -> sil -> guncelle -> ekle. Sirayla PK degisen her kolon kendi
+     * {@code syncPrimaryKeyConstraint} cagrisini tetikler (N kolon degisirse constraint N kez
+     * yeniden kurulur) — dogru sonucu verir ama en verimli yol degildir; tek bir Kaydet'te
+     * beklenen kolon sayisi kucuk oldugu icin simdilik bu kabul edilebilir bir maliyet.
+     */
+    @Transactional
+    public Tablo applyChanges(Long tabloId, String yeniIsim, Long yeniSchemaId,
+            List<Long> silinecekKolonIdler, List<KolonTanimi> eklenecekKolonlar,
+            List<KolonGuncelleme> guncellenecekKolonlar) {
+        if (yeniIsim != null) {
+            renameTablo(tabloId, yeniIsim);
+        }
+        if (yeniSchemaId != null) {
+            changeSchema(tabloId, yeniSchemaId);
+        }
+        for (Long kolonId : silinecekKolonIdler) {
+            deleteKolon(tabloId, kolonId);
+        }
+        for (KolonGuncelleme guncelleme : guncellenecekKolonlar) {
+            renameKolon(tabloId, guncelleme.kolonId(), guncelleme.yeniIsim());
+            changeKolonTag(tabloId, guncelleme.kolonId(), guncelleme.yeniTagId());
+            changeKolonPrimaryKey(tabloId, guncelleme.kolonId(), guncelleme.yeniPrimaryKey());
+        }
+        for (KolonTanimi yeni : eklenecekKolonlar) {
+            addKolon(tabloId, yeni);
+        }
+        return getTablo(tabloId);
     }
 
     /** Kolonu, tablonun zaten yuklu {@code kolonlar} listesi icinde arar (ekstra sorgu atmadan) — kolon bu tabloya ait degilse 404 doner. */

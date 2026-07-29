@@ -1,73 +1,66 @@
-import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Kolon } from "../api/tablolar";
+import { DraftKolon } from "../api/tablolar";
 import { Tag } from "../api/tags";
 
 interface KolonRowProps {
-  kolon: Kolon;
+  kolon: DraftKolon;
   tags: Tag[];
-  onRename: (kolonId: number, name: string) => Promise<void>;
-  onChangeTag: (kolonId: number, tagId: number | null) => Promise<void>;
-  onDelete: (kolonId: number) => void;
+  onRename: (kolonId: number, name: string) => void;
+  onChangeTag: (kolonId: number, tagId: number | null) => void;
+  onChangePrimaryKey: (kolonId: number, primaryKey: boolean) => void;
+  onToggleDelete: (kolonId: number) => void;
 }
 
 /**
- * Kolon tablosunda tek bir satir: isim (duzenlenebilir), tip (sabit — duzenlenemez, cunku
- * backend'de {@code updatable = false}), tag secici (dropdown) ve sil butonu.
+ * Kolon tablosunda tek bir satir: isim (her zaman duzenlenebilir input — TabloDetail'in genel
+ * Kaydet/Vazgeç'i oldugu icin bu satirin kendi mini kaydet/iptal'ine gerek yok), tip (sabit —
+ * duzenlenemez, backend'de {@code updatable = false}), birincil anahtar kutusu, tag secici
+ * (dropdown) ve sil/geri-al butonu.
+ * <p>
+ * Butun onChange* callback'leri SENKRON: hicbiri API'ye gitmez, hepsi Dashboard'daki taslagi
+ * gunceller. Bu yuzden eskiden PK kutusunu istek surerken kilitleyen {@code saving} state'i
+ * artik gerekmiyor (kaldirildi) — degisiklik aninda yerel, network round-trip yok.
  */
-export function KolonRow({ kolon, tags, onRename, onChangeTag, onDelete }: KolonRowProps) {
+export function KolonRow({
+  kolon,
+  tags,
+  onRename,
+  onChangeTag,
+  onChangePrimaryKey,
+  onToggleDelete,
+}: KolonRowProps) {
   const { t } = useTranslation();
-  // editing: bu satir su an "isim duzenleme" modunda mi. draftName: input'taki henuz kaydedilmemis metin.
-  const [editing, setEditing] = useState(false);
-  const [draftName, setDraftName] = useState(kolon.name);
-
-  async function handleRenameSubmit(event: FormEvent) {
-    event.preventDefault();
-    await onRename(kolon.id, draftName);
-    setEditing(false);
-  }
 
   return (
-    <tr>
+    <tr className={kolon.silinecek ? "kolon-row-silinecek" : undefined}>
       <td>
-        {editing ? (
-          <form className="inline-edit-form" onSubmit={handleRenameSubmit}>
-            <input
-              type="text"
-              value={draftName}
-              onChange={(e) => setDraftName(e.target.value)}
-              autoFocus
-            />
-            <button type="submit" className="btn btn-link">
-              {t("common.save")}
-            </button>
-            <button
-              type="button"
-              className="btn btn-link"
-              onClick={() => {
-                setDraftName(kolon.name);
-                setEditing(false);
-              }}
-            >
-              {t("common.cancel")}
-            </button>
-          </form>
-        ) : (
-          <>
-            {kolon.name}{" "}
-            <button className="btn btn-link" onClick={() => setEditing(true)}>
-              {t("common.edit")}
-            </button>
-          </>
-        )}
+        <input
+          type="text"
+          value={kolon.name}
+          onChange={(e) => onRename(kolon.id, e.target.value)}
+          disabled={kolon.silinecek}
+        />
+        {kolon.isNew && <span className="new-badge">{t("tabloDetail.newColumnBadge")}</span>}
       </td>
       <td>
         <span className="type-badge">{kolon.type}</span>
       </td>
-      <td>{kolon.primaryKey && <span className="pk-badge">PK</span>}</td>
+      <td>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={kolon.primaryKey}
+            disabled={kolon.silinecek}
+            onChange={(e) => onChangePrimaryKey(kolon.id, e.target.checked)}
+            aria-label={t("tabloDetail.primaryKeyLabel")}
+          />
+          {kolon.primaryKey && <span className="pk-badge">PK</span>}
+        </label>
+      </td>
       <td>
         <select
           value={kolon.tagId ?? ""}
+          disabled={kolon.silinecek}
           onChange={(e) => onChangeTag(kolon.id, e.target.value ? Number(e.target.value) : null)}
         >
           <option value="">{t("kolonRow.noTag")}</option>
@@ -79,15 +72,8 @@ export function KolonRow({ kolon, tags, onRename, onChangeTag, onDelete }: Kolon
         </select>
       </td>
       <td>
-        <button
-          className="btn btn-link btn-danger"
-          onClick={() => {
-            if (window.confirm(t("kolonRow.confirmDelete", { name: kolon.name }))) {
-              onDelete(kolon.id);
-            }
-          }}
-        >
-          {t("common.delete")}
+        <button className="btn btn-link btn-danger" onClick={() => onToggleDelete(kolon.id)}>
+          {kolon.silinecek ? t("common.undo") : t("common.delete")}
         </button>
       </td>
     </tr>

@@ -13,7 +13,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * gibi temel CRUD'u hazir getirir.
  */
 public interface TabloRepository extends JpaRepository<Tablo, Long> {
-
+    long countBySchemaId(Long schemaId);
     /**
      * {@code TabloResponse.from()} her tablo icin kolonlarina, her kolonun tag'ine ve tablonun
      * schema'sina dokunuyor. Bu iliskiler LAZY oldugu icin, listeyi cektikten sonra her tabloya

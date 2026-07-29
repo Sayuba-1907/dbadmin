@@ -54,7 +54,7 @@ metadata and the actual database schema always stay in sync.
 
 4. Open the app:
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8080/api
+   - Backend API: http://localhost:8081/api
    - Postgres: `localhost:${DB_PORT}` (default `5433`, mapped so it doesn't collide with a local Postgres install on 5432)
 
 5. Stop everything:
@@ -76,7 +76,7 @@ These are development conveniences, not how the app is meant to be run — the d
   container, so **stop one before starting the other** (`docker compose stop frontend`), otherwise
   the port is taken and the container fails to publish it.
 
-  Note there is no dev-server proxy: `frontend/src/api/client.ts` calls `http://localhost:8080`
+  Note there is no dev-server proxy: `frontend/src/api/client.ts` calls `http://localhost:8081`
   directly and the backend allows that origin via CORS (`config/WebConfig.java`). Both the dev
   server and the nginx container reach the backend the same way — through the port published on
   the host, not over the compose network. Changing the backend port means changing both files.

@@ -173,3 +173,112 @@ One line per notable decision: what was chosen, what was ruled out, why.
 - **`public` icinde kalmis eski kullanici tablolari** (7 adet, cogu test artigi) hem metadata'dan hem gercek DB'den silindi; uygulamanin kendi metadata tablolarina dokunulmadi.
   Ruled out: gizleyip birakmak (metadata'da hayalet satirlar kalirdi), ya da gercek bir schema'ya tasimak.
   Why: hepsi atilabilir test verisiydi; tasimak da gizlemek de `public`'i "arka plan" haline getirme amacini yarim birakirdi.
+
+## Gercek composite PRIMARY KEY (2026-07-29)
+
+- **`primaryKey` isaretli kolonlar artik gercek `PRIMARY KEY`**: birden fazla kolon isaretlenirse tek bir bilesik constraint kuruluyor — `CONSTRAINT "tablo_pkey" PRIMARY KEY ("col1", "col2")`.
+  Ruled out: onceki hal — gercek PK'yi otomatik `id` kolonunda birakip isaretli kolonlara sadece bir `UNIQUE` constraint kurmak.
+  Why: UNIQUE ile PRIMARY KEY ayni sey degil: UNIQUE kolonlar NULL kabul eder (ve Postgres'te birden fazla NULL satiri birbirinden farkli sayilir), PK ise kolonlari otomatik `NOT NULL` yapar. Istenen cikti DBeaver'da elle yazilmis bir `CREATE TABLE ... PRIMARY KEY (col1, col2)` ile ayni gorunmeliydi; "kozmetik PK + gizli gercek PK" ikilisi bunu saglamiyordu.
+
+- **Otomatik `id` kolonu kaldirildi**: gercek tabloda yalnizca kullanicinin tanimladigi kolonlar var.
+  Ruled out: `id` kolonunu tutup PK'sini kaldirmak (sadece surrogate key olarak birakmak).
+  Why: iki gerekce birlesti — (1) bir tablonun tek bir PK'si olabilir, `id` PK oldugu surece `PRIMARY KEY (col1, col2)` kurulamaz; (2) `notlar`'daki "kolon olarak eklemedigin ekstra kolon olmayacak -> id kolonu" maddesi zaten bunu istiyordu. Sonucu: hicbir kolon isaretlenmezse tablo PK'siz kuruluyor (Postgres buna izin verir), cunku uydurma bir PK eklemek tam da kaldirilan davranisin ta kendisi olurdu.
+
+- **Constraint adi `<tablo>_pkey`** (eski `<tablo>_pk_unique` yerine).
+  Ruled out: constraint'i isimsiz birakip Postgres'in kendi adlandirmasina birakmak.
+  Why: `_pkey` zaten Postgres'in varsayilan sonekiyle ayni, yani DBeaver ciktisi elle yazilmis DDL'den ayirt edilemiyor; ama ismi kendimiz uretince `renameTablo` sirasinda constraint'i tabloyla birlikte yeniden adlandirabiliyoruz (`ALTER TABLE ... RENAME CONSTRAINT`) ve PK setini degistirirken hangi constraint'i drop edecegimizi bilebiliyoruz.
+
+- **PK seti degisince drop + yeniden add** (`syncPrimaryKeyConstraint`), "genislet" diye bir islem yok.
+  Ruled out: mevcut constraint'e kolon eklemeye calismak.
+  Why: Postgres'te bir tablonun birden fazla PK'si olamaz ve bir PK'ye sonradan kolon eklenemez; tek yol eskisini dusurup yenisini kurmak. Bilinen sinir: tabloda zaten satir varken yeni bir kolonu PK yapmak, o satirlarda kolon NULL olacagi icin hata verir — transaction geri alindigi icin metadata da yazilmaz.
+
+- **Var olan tablolar da yeni yapiya tasindi** (`backend/migration/2026-07-29-composite-pk.sql`).
+  Ruled out: degisikligi sadece yeni olusturulan tablolara uygulayip eskileri oldugu gibi birakmak.
+  Why: ayni uygulamada iki farkli tablo yapisi (eskiler `id` PK + `_pk_unique`, yeniler composite PK) tutarsizlik demek — DBeaver'da bakan biri hangi tablonun hangi kurala uydugunu bilemez, ve `renameTablo` gibi kod yollari artik tek bir constraint adlandirmasi (`<tablo>_pkey`) varsayiyor. Script hangi tablolara dokunacagini uygulamanin kendi metadata'sindan (`tablo`/`kolon`/`sema`) okur, PK kolonlarini `kolon.primary_key`'den alir; `public`'teki metadata tablolarina (Hibernate'in yonettigi `tablo`, `kolon`, `sema`, `tag`) dokunmaz — onlarin `id`'si kendi PK'leri olarak kalmali.
+  Not: PK constraint'inin eski adi varsayilmadan pg_catalog'dan bulunuyor, cunku yeniden adlandirilmis tablolarda eski isim kalmisti (ör. `ogr34` tablosunun PK'si `ogr2_pkey` adiyla duruyordu).
+
+- **Var olan kolonun PK isareti degistirilebilir**: `PATCH /api/tablolar/{id}/kolonlar/{kolonId}/primary-key`, UI'da salt okunur "PK" rozeti yerine checkbox.
+  Ruled out: isareti yalnizca kolon olusturulurken (createTablo/addKolon) verilebilir birakmak — onceki hal.
+  Why: bayrak kozmetikken (sadece bir UNIQUE constraint kuruyorken) eksikligi hissedilmiyordu; tablonun gercek PRIMARY KEY'ini belirlemeye baslayinca var olan bir kolonu PK yapmanin tek yolu onu silip yeniden eklemek, yani icindeki veriyi kaybetmek oldu. Uc, zaten yazili olan `syncPrimaryKeyConstraint`'i cagirir (drop + guncel setle yeniden add), yani PK mantigi tek yerde kalir.
+  Not: ayni degeri tekrar gondermek no-op — gereksiz DROP/ADD CONSTRAINT calistirmiyoruz. Tabloda satir varken NULL iceren bir kolonu PK yapmak Postgres tarafindan reddedilir; transaction geri alindigi icin metadata'daki isaret de degismez (test: `changeKolonPrimaryKey_columnWithNullValues_isRejectedAndLeavesMetadataUnchanged`).
+
+## Backend i18n (2026-07-29)
+
+- **Hata mesajlarinin dili `Accept-Language` basligindan secilir**; metinler `messages.properties` (Ingilizce, varsayilan) ve `messages_tr.properties` dosyalarinda, anahtarlar hata kodlarinin ta kendisi.
+  Ruled out: `?lang=tr` query parametresi ya da cookie tabanli dil secimi.
+  Why: HTTP'nin bu is icin zaten standart bir mekanizmasi var ve her istemci (tarayici, Postman, curl) onu kendiliginden gonderiyor — ozel bir parametre uydurmak API'yi cagiran her tarafa ekstra is cikarirdi.
+
+- **Frontend'in kendi cevirisi kaldi**; backend i18n'i onun yerine gecmiyor.
+  Ruled out: frontend'in `errors.*` sozlugunu silip backend'den gelen `message`'i dogrudan gostermek (tek kaynak).
+  Why: kullanici arayuzde dil degistirdiginde ekranda duran hata mesajinin da aninda degismesi gerekiyor; backend'e baglarsak her dil degisiminde sunucuya yeniden gitmek gerekir ve zaten gosterilmis mesaj eski dilde kalir. Backend i18n'i farkli bir kitle icin: Swagger/Postman/curl, loglar, ileride baglanacak baska istemciler.
+
+- **Sablon sozdizimi `{{name}}`/`{{id}}`**, MessageFormat'in `{0}`'i degil; yer tutucular `GlobalExceptionHandler`'da exception'in `details` map'inden isme gore doldurulur (`MessageSource.getMessage(code, null, locale)` — args null verilince Spring MessageFormat'i hic calistirmaz).
+  Ruled out: `{0}` + `details.values().toArray()`.
+  Why: `details` bir Map; degerleri diziye cevirmek dogru sonucu ancak tek elemanliyken garanti eder, ikinci bir detay eklendigi gun sessizce yanlis yere yazardi. Isimli yer tutucu sirayla degil anahtarla eslesiyor. Yan fayda: frontend'in `tr.json`'i da ayni sozdizimini kullaniyor, iki dosyadaki metinler birebir karsilastirilabiliyor.
+
+- **Ceviri bulunamazsa exception'in kendi Ingilizce mesajina duser** (`NoSuchMessageException` yakalanir), `spring.messages.fallback-to-system-locale=false`.
+  Ruled out: ceviri eksikse hata firlatmak; ya da Spring'in varsayilani olan "sunucunun yerel diline dus".
+  Why: yeni bir hata kodu eklenip properties'e yazilmasi unutulursa istek patlamamali, sadece mesaj cevrilmemis kalmali. Sistem diline dusmek ise ayni istegin uygulamanin calistigi makineye gore farkli cevap dondurmesi demekti.
+
+## Spring'in kendi hatalari da uygulamanin sekline cevrildi (2026-07-29)
+
+- **`GlobalExceptionHandler`'a 6 yeni handler eklendi**: `MethodArgumentTypeMismatchException`, `HttpMessageNotReadableException`, `HttpRequestMethodNotSupportedException`, `NoResourceFoundException`, `DataIntegrityViolationException`, ve son care olarak genel `Exception`.
+  Ruled out: bunlari yakalamadan birakmak (onceki hal).
+  Why: bu 3 exception'in disinda kalan her sey (gecersiz path param, bozuk JSON, olmayan yol, yanlis HTTP metodu, DB constraint ihlali, beklenmeyen hatalar) Spring'in kendi varsayilan govdesine ({@code {"status":..,"error":..,"path":..}}) dusuyordu — `code`/`message` olmadigi icin frontend'in `err.code`'a bakan cevirisi bu durumlarda bos kaliyordu. Uygulamanin "her hata ayni sekilde doner" sozu bu 3 exception'in disinda tutulmuyordu.
+
+- **Ham exception mesajlari istemciye hic gitmiyor**, sadece sunucu loguna (`DataIntegrityViolationException` -> WARN, genel `Exception` -> ERROR).
+  Ruled out: `ex.getMessage()`'i oldugu gibi `message` alanina koymak.
+  Why: Postgres'in ham hata mesaji tablo/kolon/constraint adlarini icerir, Jackson'in parser hatasi ise dahili sinif adlarini; ikisi de istemciye faydali degil, bazen bilgi sizdirir. Jenerik + kendi dilimizdeki mesaj + kod istemciye, ayrinti (stack trace dahil) sunucu loguna.
+
+- **`CONFLICT_COLUMN_NOT_UNIQUE`**, dunku `PATCH .../primary-key`'in belgelenmis-ama-cozulmemis 500'unu kapattı: artik 409 + kendi kodu doner. Ayni senaryo hem servis seviyesinde (`TabloServiceIntegrationTest`) hem HTTP seviyesinde (`ErrorMessageI18nIntegrationTest`) test edilmis durumda.
+
+## Thread panelleri: iki panel birden (2026-07-29)
+
+- **`dbadmin-backend.json`'a iki thread paneli eklendi**, biri degil: "JVM Threads (live / daemon / peak)" ve "JVM Threads by State" (state'e gore stacked).
+  Ruled out: sadece `jvm_threads_live_threads` cizen tek bir panel.
+  Why: iki panel farkli arizaya bakiyor. Tek cizgi "kac thread var" der ve trafikle orantisiz tirmanan bir egri thread leak'i ele verir; ama o thread'lerin ne yaptigini gizler — 24 thread'in hepsi calisiyor da olabilir, hepsi bir lock'ta bloklanmis da. State kirilimi ise toplam sabitken `blocked`/`waiting` katmaninin buyudugu ani gosterir, yani yavaslamanin *nedenini* (DB bekliyor / lock bekliyor / CPU yetmiyor) ayirt ettirir. Ikisi de ayni metrik ailesinden geldigi icin ekstra maliyeti yok.
+  Not: panolarda zaten heap (`JVM Heap Used` + `Used vs Max`) ve connection (`Active DB Connections` + `HikariCP Connections`) icin ayni "ozet stat + ayrintili grafik" ikilisi vardi; thread tarafi bu simetriyi tamamladi. `notlar`'daki 28 Temmuz maddesinin ucundan eksik olan tek parca thread'lerdi.
+
+- **Panel sorgularinda `state` etiketi elle sayilmiyor**, tek bir `jvm_threads_states_threads{application="backend"}` sorgusu + `{{state}}` legend'i kullaniliyor.
+  Ruled out: her state icin ayri bir target yazmak (6 sorgu).
+  Why: Micrometer state listesini JVM'den aliyor; elle yazilan liste yeni bir state ciktiginda sessizce eksik kalirdi.
+
+## Authentication: Spring Security + JWT + roller (2026-07-29)
+
+- **Kullanicilar veritabaninda** (`kullanici` tablosu, `public` semasinda, diger metadata tablolarinin yaninda), `application.properties`'te sabit kullanici listesi degil.
+  Ruled out: `InMemoryUserDetailsManager` ile properties'ten okunan iki-uc kullanici.
+  Why: rol atamak, kullanici eklemek/silmek calisma zamaninda yapilabilmeli; properties'teki liste her degisiklikte yeniden derleme + yeniden baslatma isterdi ve parolalar depoya commit'lenirdi. Uygulama zaten veritabani yonetiyor, kullanicinin da orada yasamasi tutarli.
+
+- **Uc rol: VIEWER / EDITOR / ADMIN.** VIEWER sadece GET, EDITOR tum yazma islemleri, ADMIN ek olarak kullanici yonetimi (`/api/kullanicilar`).
+  Ruled out: sadece VIEWER + EDITOR (`notlar`'daki maddenin birebir karsiligi).
+  Why: iki rolle kullanicilarin nasil yaratilacagi cevapsiz kaliyordu — birinin kullanici yonetebilmesi gerekiyor. ADMIN o bosluğu dolduruyor ve "farkli kullanicilara roller" maddesini gercekci hale getiriyor.
+
+- **JWT icin jjwt (0.13.0)**, Spring'in `oauth2-resource-server`'i degil.
+  Ruled out: `spring-boot-starter-oauth2-resource-server` (cok daha az kod, filtre yazmaya gerek yok).
+  Why: token'in nasil imzalandigi ve dogrulandigi acikca gorunur olsun istedik — `JwtService` ve `JwtAuthenticationFilter` okunabilir 100 satir; resource-server'da ayni is bir kara kutuda olurdu. Ogrenme amacli bir projede mekanizmanin gorunur olmasi tercih edildi.
+  Not: jjwt'nin JSON serilestiricisi (`jjwt-jackson`) Jackson 2'yi kullanir, proje ise Jackson 3'te (`tools.jackson`). Paket adlari farkli oldugu icin ikisi cakismadan yan yana durur.
+
+- **`/actuator/prometheus` ve `/actuator/health` kimlik dogrulamasiz acik birakildi.**
+  Ruled out: her seyi korumak (Spring Security'nin varsayilani).
+  Why: Prometheus bu ucu 15 saniyede bir kimliksiz kaziyor; kapatilsaydi Grafana panolari **sessizce** boslardi — hata vermeden, sadece veri gelmeyerek. Bu uclar olcum verisi doner, is verisi degil. `SecurityRulesIntegrationTest` bu iki ucun acik kaldigini ayrica test eder, cunku sessiz bozulmayi gurultulu hale getirmek gerekiyordu.
+
+- **401/403 govdeleri `RestSecurityErrorHandler` ile elle uretiliyor.**
+  Ruled out: `GlobalExceptionHandler`'a birakmak.
+  Why: Spring Security istegi **servlet filtre zincirinde**, DispatcherServlet'e ulasmadan reddeder; `@RestControllerAdvice` ise DispatcherServlet'in icinde calisir, yani bu iki durumu hic gormez. Boyle birakilsaydi "her hata ayni sekilde doner" sozu tam da giris/yetki hatalarinda bozulur, frontend'in `err.code`'a bakan cevirisi bos kalirdi. Dil de elle cozuluyor (`LocaleResolver`'a dogrudan soruluyor), cunku `LocaleContextHolder`'i dolduran DispatcherServlet henuz calismamis oluyor.
+
+- **CORS `WebMvcConfigurer.addCorsMappings` yerine `CorsConfigurationSource` bean'i olarak veriliyor.**
+  Ruled out: eski hali birakip guvenlik tarafina ayrica CORS yazmak (iki ayri dogruluk kaynagi).
+  Why: guvenlik filtre zinciri MVC'nin CORS ayarini gormuyor; tek bean her iki tarafin da okudugu ortak kaynak oluyor. `Authorization` basligi da acikca izinli hale getirildi — olmasaydi tarayici preflight'ta asil istegi hic gondermezdi.
+
+- **Ilk ADMIN acilista kod tarafindan uretiliyor** (`KullaniciSeeder`), migration SQL'i ile degil.
+  Ruled out: `backend/migration/` altina sabit bir INSERT.
+  Why: BCrypt her seferinde farkli (rastgele salt'li) hash uretir; SQL'e sabit hash yazmak, o hash'i ureten parolayi da depoya commit'lemek demekti. Seeder yalnizca tabloda **hic kullanici yokken** calisir, yani mevcut bir kurulumda parola sifirlamaz.
+
+- **Son ADMIN silinemez / rolu dusurulemez** (`CONFLICT_LAST_ADMIN`).
+  Ruled out: kontrolu atlamak.
+  Why: tek admin kendi rolunu dusurup ya da kendini silip kullanici yonetimine bir daha girilemez hale getirebilirdi — geri donusu sadece veritabanina elle mudahaleyle olan bir kilitlenme.
+
+- **Testlerde `@WithMockUser` icin `springSecurity()` koprusu elle kuruldu** (`MockMvcSecurityTestConfig`).
+  Ruled out: sadece `@WithMockUser` eklemek (calismadi), ya da her testte gercek token uretmek.
+  Why: MockMvc'ye guvenlik filtreleri kendiliginden ekleniyor (kimliksiz istek 401 doner, gercek Bearer token calisir) ama testin koydugu kimlik zincire ulasmiyordu — zincirdeki `SecurityContextHolderFilter` baglami kendi deposundan yukleyip ezdigi icin `@WithMockUser` sessizce etkisizdi ve her sey 401 donuyordu. Not: Spring Boot 4'te bu sinif `org.springframework.boot.webmvc.test.autoconfigure` altina tasindi (eskiden `...test.autoconfigure.web.servlet`).
+  Ayrica: `AuthIntegrationTest` bilerek **gercek token** kullanir (mock kimlik yok) — giristen token almaya, token'la korunan uca girmeye kadar tum akis uretimdeki yoluyla test edilir.

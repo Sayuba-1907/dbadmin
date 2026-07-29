@@ -28,11 +28,11 @@ public record CreateKolonRequest(
                         requiredMode = Schema.RequiredMode.NOT_REQUIRED)
                 Long tagId,
         @Schema(
-                        description = "Bu kolonun (kullanicinin gozunde) birincil anahtar oldugunu isaretler. "
-                                + "Gercek tablonun PRIMARY KEY'i her zaman otomatik eklenen 'id' kolonudur, bu "
-                                + "alan onu degistirmez — ama true olan kolon(lar) uzerine gercek bir Postgres "
-                                + "UNIQUE constraint kurulur (composite: birden fazla kolon true ise hepsi "
-                                + "birlikte unique olur). Bos birakilirsa false sayilir.",
+                        description = "Bu kolonun birincil anahtar oldugunu isaretler. true isaretlenen "
+                                + "kolonlarin tamami gercek tablonun PRIMARY KEY'ini olusturur; birden fazla "
+                                + "kolon isaretlenirse composite (bilesik) primary key kurulur: "
+                                + "PRIMARY KEY (kolon1, kolon2). Hicbir kolon isaretlenmezse tablo primary "
+                                + "key'siz olusturulur. Bos birakilirsa false sayilir.",
                         example = "false",
                         requiredMode = Schema.RequiredMode.NOT_REQUIRED)
                 Boolean primaryKey) {

@@ -6,6 +6,29 @@
     "delete": "Delete",
     "undo": "Undo"
   },
+  "nav": {
+    "schemalar": "Schemas",
+    "tagler": "Tags",
+    "kullanicilar": "Users"
+  },
+  "auth": {
+    "username": "Username",
+    "password": "Password",
+    "login": "Log In",
+    "loggingIn": "Logging in...",
+    "logout": "Log Out",
+    "loginFailed": "Login failed",
+    "sessionExpired": "Your session has expired, please log in again"
+  },
+  "tagler": {
+    "title": "Tags",
+    "empty": "No tags yet",
+    "showDetail": "Detail",
+    "hideDetail": "Hide",
+    "loadingUsage": "Loading...",
+    "noUsage": "This tag is not used in any column",
+    "usageItem": "{{schema}}.{{table}}.{{column}}"
+  },
   "sidebar": {
     "newTable": "+ New Table",
     "newSchema": "+ New Schema",
@@ -27,6 +50,9 @@
   "tabloDetail": {
     "deleteTable": "Delete Table",
     "confirmDeleteTable": "Are you sure you want to delete \"{{name}}\"?",
+    "confirmDiscardChanges": "You have unsaved changes. Continue anyway?",
+    "pendingSchemaMove": "Will move to schema \"{{schema}}\" when saved",
+    "newColumnBadge": "new",
     "colName": "Column",
     "colType": "Type",
     "colTag": "Tag",
@@ -57,6 +83,17 @@
     "schemaNamePlaceholder": "schema_name",
     "submit": "Create"
   },
+  "kullanicilar": {
+    "title": "Users",
+    "colUsername": "Username",
+    "colRole": "Role",
+    "you": "you",
+    "empty": "No users yet",
+    "confirmDelete": "Are you sure you want to delete \"{{name}}\"?",
+    "usernamePlaceholder": "username",
+    "passwordPlaceholder": "password",
+    "create": "Create User"
+  },
   "notifications": {
     "loadFailed": "Failed to load data",
     "tableCreated": "\"{{name}}\" table created",
@@ -73,6 +110,11 @@
     "columnRenameFailed": "Failed to rename column",
     "tagOnColumnUpdated": "Column's tag updated",
     "tagUpdateFailed": "Failed to update tag",
+    "tagUsageLoadFailed": "Failed to load the tag's usage",
+    "tableChangesSaved": "Changes saved",
+    "tableChangesSaveFailed": "Failed to save changes",
+    "primaryKeyUpdated": "Primary key updated",
+    "primaryKeyUpdateFailed": "Failed to update primary key",
     "tagCreated": "\"{{name}}\" tag created",
     "tagCreateFailed": "Failed to create tag",
     "schemaCreated": "\"{{name}}\" schema created",
@@ -82,7 +124,13 @@
     "schemaDeleted": "Schema deleted",
     "schemaDeleteFailed": "Failed to delete schema",
     "tableSchemaChanged": "Table moved to new schema",
-    "tableSchemaChangeFailed": "Failed to move table to new schema"
+    "tableSchemaChangeFailed": "Failed to move table to new schema",
+    "kullaniciCreated": "\"{{name}}\" user created",
+    "kullaniciCreateFailed": "Failed to create user",
+    "kullaniciRolChanged": "Role updated",
+    "kullaniciRolChangeFailed": "Failed to update role",
+    "kullaniciDeleted": "User deleted",
+    "kullaniciDeleteFailed": "Failed to delete user"
   },
   "validation": {
     "required": "Please fill out this field"
@@ -104,6 +152,15 @@
     "VALIDATION_RESERVED_SCHEMA_NAME": "\"public\" is Postgres's infrastructure schema and cannot be used as a name",
     "CONFLICT_DUPLICATE_SCHEMA_NAME": "A schema named \"{{name}}\" already exists",
     "NOT_FOUND_SCHEMA": "Schema not found (id: {{id}})",
-    "VALIDATION_MISSING_SCHEMA": "A schema must be specified"
+    "VALIDATION_MISSING_SCHEMA": "A schema must be specified",
+    "AUTH_INVALID_CREDENTIALS": "Invalid username or password",
+    "AUTH_REQUIRED": "You must be logged in for this action",
+    "AUTH_FORBIDDEN": "Your role is not allowed to perform this operation",
+    "VALIDATION_INVALID_USERNAME": "Username must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
+    "VALIDATION_WEAK_PASSWORD": "Password must be at least {{min}} characters",
+    "VALIDATION_MISSING_ROLE": "A role must be specified",
+    "NOT_FOUND_USER": "User not found (id: {{id}})",
+    "CONFLICT_DUPLICATE_USERNAME": "A user named \"{{name}}\" already exists",
+    "CONFLICT_LAST_ADMIN": "The last remaining admin cannot be removed or demoted"
   }
 }

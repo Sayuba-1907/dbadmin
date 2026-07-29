@@ -39,7 +39,7 @@ npm run test:e2e     # playwright, frontend/e2e/
 npm run format       # prettier (also runs on commit via husky + lint-staged)
 ```
 
-Ports: frontend 3000, backend 8080, grafana 3001, prometheus 9090, postgres `${DB_PORT}` (5433).
+Ports: frontend 3000, backend 8081, grafana 3001, prometheus 9090, postgres `${DB_PORT}` (5433).
 `.env` at the repo root feeds `docker-compose.yml` and is gitignored.
 
 **The jar is built inside the Docker image** (`backend/Dockerfile` runs `mvnw package`), so

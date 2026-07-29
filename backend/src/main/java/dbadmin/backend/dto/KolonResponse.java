@@ -17,7 +17,7 @@ public record KolonResponse(
                 String type,
         @Schema(description = "Bagli etiketin id'si, etiketsizse null.", example = "1") Long tagId,
         @Schema(description = "Bagli etiketin adi, etiketsizse null.", example = "onemli") String tagName,
-        @Schema(description = "Bu kolonun birincil anahtar olarak isaretlenip isaretlenmedigi (bkz. "
+        @Schema(description = "Bu kolonun gercek tablonun PRIMARY KEY'ine dahil olup olmadigi (bkz. "
                         + "CreateKolonRequest.primaryKey aciklamasi).", example = "false")
                 boolean primaryKey) {
 

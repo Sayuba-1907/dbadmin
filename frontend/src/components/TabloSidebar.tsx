@@ -2,6 +2,7 @@ import { DragEvent, FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Schema } from "../api/schemas";
 import { Tablo } from "../api/tablolar";
+import { useAuth } from "../auth/AuthProvider";
 
 /**
  * Props: gercek veri (schemalar, tablolar, selectedId) ve "bir seye tikladiginda ne olsun"
@@ -35,6 +36,7 @@ export function TabloSidebar({
   onChangeTabloSchema,
 }: TabloSidebarProps) {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const [query, setQuery] = useState("");
   const [expandedSchemaIds, setExpandedSchemaIds] = useState<Set<number>>(new Set());
   const [editingSchemaId, setEditingSchemaId] = useState<number | null>(null);
@@ -123,10 +125,10 @@ export function TabloSidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar-actions">
-        <button className="btn btn-primary" onClick={onCreateClick}>
+        <button className="btn btn-primary" onClick={onCreateClick} disabled={!canWrite}>
           {t("sidebar.newTable")}
         </button>
-        <button className="btn" onClick={onCreateSchemaClick}>
+        <button className="btn" onClick={onCreateSchemaClick} disabled={!canWrite}>
           {t("sidebar.newSchema")}
         </button>
       </div>
@@ -212,6 +214,7 @@ export function TabloSidebar({
                     </button>
                     <button
                       className="btn btn-link"
+                      disabled={!canWrite}
                       onClick={() => {
                         setRenameDraft(schema.name);
                         setEditingSchemaId(schema.id);
@@ -221,6 +224,7 @@ export function TabloSidebar({
                     </button>
                     <button
                       className="btn btn-link btn-danger"
+                      disabled={!canWrite}
                       onClick={() => {
                         if (
                           window.confirm(
@@ -248,7 +252,7 @@ export function TabloSidebar({
                           draggedTabloId === tablo.id ? " dragging" : ""
                         }`}
                         onClick={() => onSelect(tablo.id)}
-                        draggable
+                        draggable={canWrite}
                         onDragStart={(e) => {
                           setDraggedTabloId(tablo.id);
                           // Bazi ortamlarda (ör. jsdom testleri) dataTransfer tanimsiz olabiliyor —

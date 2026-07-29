@@ -14,6 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 // practice on this project, caused a fresh container per subclass instead of
 // one shared instance - the static block sidesteps that entirely.)
 @SpringBootTest
+@org.springframework.context.annotation.Import(MockMvcSecurityTestConfig.class)
 public abstract class AbstractIntegrationTest {
 
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine");

@@ -1,4 +1,28 @@
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "http://localhost:8081";
+
+/**
+ * Su anki JWT — AuthProvider'in disardan set ettigi bir modul-seviyesi degisken. client.ts
+ * bilerek AuthProvider'i import etmez (auth/AuthProvider zaten login/ben icin bu dosyadaki
+ * apiPost/apiGet'i cagirir; tersten bir import döngüye yol acardi). Bunun yerine AuthProvider
+ * {@link setAuthToken}'i cagirarak token'i buraya bildirir — akis tek yonlu kalir.
+ */
+let authToken: string | null = null;
+
+/** AuthProvider login/logout olduğunda ya da sayfa acilista localStorage'dan okudugunda cagirir. */
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+/**
+ * 401 aldigimizda (token suresi dolmus/gecersiz) AuthProvider'in kendi state'ini de temizlemesi
+ * icin bir kanca. Burada dogrudan AuthProvider'i cagiramayiz (yine dongu), o yuzden AuthProvider
+ * kendini bu degiskene kaydeder.
+ */
+let onUnauthorized: (() => void) | null = null;
+
+export function setOnUnauthorized(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
 
 /** Backend'in {@code ErrorResponse} DTO'suyla birebir ayni sekil — hata govdesinin JSON karsiligi. */
 export interface ApiErrorBody {
@@ -38,13 +62,25 @@ export class ApiError extends Error {
  * 204 No Content ise (govde yok) undefined doner, aksi halde govdeyi JSON olarak parse eder.
  */
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers,
     ...options,
   });
 
   if (!response.ok) {
     const body: ApiErrorBody = await response.json();
+    // AUTH_REQUIRED: elimizdeki token gecersiz/suresi dolmus (login denemesinin kendi 401'i
+    // AUTH_INVALID_CREDENTIALS doner, o farkli bir durum — kullanicinin parolayi yanlis
+    // yazmasi "oturumdan atilma" degildir). Sadece bu durumda AuthProvider'i uyarip
+    // kullaniciyi giris ekranina geri dondururuz.
+    if (response.status === 401 && body.code === "AUTH_REQUIRED") {
+      onUnauthorized?.();
+    }
     throw new ApiError(response.status, body.message, body.code, body.details);
   }
 

@@ -43,11 +43,17 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # JWT imza anahtari. Bu anahtari bilen herkes istedigi kullanici adina gecerli token
+      # uretebilir — .env'den gelmeli, koda/compose'a yazilmamali. En az 32 bayt olmali.
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-yerel-gelistirme-icin-varsayilan-jwt-anahtari-degistirin}
+      # Veritabani bossa acilista olusturulacak ilk ADMIN (bkz. config/KullaniciSeeder).
+      APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-admin123}
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8081:8081"
     networks:
       - dbadmin-net
 
