@@ -12,9 +12,177 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-function mockFetchSequence(responses: Partial<Response>[]) {
-  const fn = jest.fn();
-  responses.forEach((response) => fn.mockResolvedValueOnce(response));
+interface FakeKolon {
+  id: number;
+  name: string;
+  type: string;
+  tagId: number | null;
+  tagName: string | null;
+  primaryKey: boolean;
+}
+
+interface FakeSchema {
+  id: number;
+  name: string;
+}
+
+interface FakeTablo {
+  id: number;
+  name: string;
+  schemaId: number;
+  schemaName: string;
+  kolonlar: FakeKolon[];
+}
+
+interface MockResponse {
+  ok: boolean;
+  status: number;
+  json: () => Promise<unknown>;
+}
+
+interface MockOverride {
+  method: string;
+  path: string | RegExp;
+  response: MockResponse;
+}
+
+/**
+ * Dashboard, schema/tablo agacini mount'ta TEK istekte (GET /api/schemalar/schemaList) cekiyor;
+ * tiklanan tablonun tam detayi ayrica id'siyle, tags/kullanicilar ise sadece o sekmeye girilince
+ * cekiliyor. Sabit index'li bir mockFetchSequence bu yuzden kirilgan; onun yerine URL/method'a
+ * gore yanit ureten, gercek backend gibi davranan (create/PATCH ile kendi state'ini guncelleyen)
+ * kucuk bir sahte backend kullaniyoruz. Boylece testler "hangi istek kacinci sirada" gibi
+ * uygulama detaylarina degil, sadece davranisa bagli kaliyor.
+ */
+function createFakeBackend(seed: {
+  schemalar?: FakeSchema[];
+  tablolar?: FakeTablo[];
+  kullanicilar?: unknown[];
+  overrides?: MockOverride[];
+}) {
+  const schemalar = seed.schemalar ? [...seed.schemalar] : [];
+  const tablolar = seed.tablolar ? [...seed.tablolar] : [];
+  const kullanicilar = seed.kullanicilar ? [...seed.kullanicilar] : [];
+  const overrides = seed.overrides ? [...seed.overrides] : [];
+  let nextTabloId = tablolar.reduce((max, t) => Math.max(max, t.id), 0) + 1;
+  let nextKolonId =
+    tablolar.flatMap((t) => t.kolonlar).reduce((max, k) => Math.max(max, k.id), 0) + 1;
+
+  const schemaResponse = (s: FakeSchema) => ({
+    id: s.id,
+    name: s.name,
+    tabloSayisi: tablolar.filter((t) => t.schemaId === s.id).length,
+  });
+  const tabloSummary = (t: FakeTablo) => ({
+    id: t.id,
+    name: t.name,
+    kolonSayisi: t.kolonlar.length,
+  });
+  /** GET /api/schemalar/schemaList — backend'in SchemaResponseDTO/TableSummaryDTO sekli. */
+  const workspaceResponse = () =>
+    schemalar.map((s) => ({
+      schemaId: s.id,
+      schemaName: s.name,
+      tableResponseList: tablolar
+        .filter((t) => t.schemaId === s.id)
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          columnCount: t.kolonlar.length,
+          schemaId: t.schemaId,
+        })),
+    }));
+  const tabloResponse = (t: FakeTablo) => ({
+    id: t.id,
+    name: t.name,
+    schemaId: t.schemaId,
+    schemaName: t.schemaName,
+    kolonlar: t.kolonlar,
+    updatedAt: null,
+  });
+
+  const fn = jest.fn((rawUrl: string, options?: RequestInit): Promise<MockResponse> => {
+    const method = (options?.method ?? "GET") as string;
+    const path = rawUrl.replace("http://localhost:8081", "");
+
+    const overrideIndex = overrides.findIndex(
+      (o) =>
+        o.method === method && (typeof o.path === "string" ? o.path === path : o.path.test(path))
+    );
+    if (overrideIndex !== -1) {
+      const [override] = overrides.splice(overrideIndex, 1);
+      return Promise.resolve(override.response);
+    }
+
+    if (method === "GET" && path === "/api/schemalar") {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => schemalar.map(schemaResponse),
+      });
+    }
+    if (method === "GET" && path === "/api/schemalar/schemaList") {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => workspaceResponse(),
+      });
+    }
+    let match = path.match(/^\/api\/schemalar\/(\d+)\/tablolar$/);
+    if (method === "GET" && match) {
+      const schemaId = Number(match[1]);
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => tablolar.filter((t) => t.schemaId === schemaId).map(tabloSummary),
+      });
+    }
+    match = path.match(/^\/api\/tablolar\/(\d+)$/);
+    if (method === "GET" && match) {
+      const tablo = tablolar.find((t) => t.id === Number(match![1]));
+      return Promise.resolve({ ok: true, status: 200, json: async () => tabloResponse(tablo!) });
+    }
+    if (method === "GET" && path === "/api/tags") {
+      return Promise.resolve({ ok: true, status: 200, json: async () => [] });
+    }
+    if (method === "GET" && path === "/api/kullanicilar") {
+      return Promise.resolve({ ok: true, status: 200, json: async () => kullanicilar });
+    }
+    if (method === "POST" && path === "/api/tablolar") {
+      const body = JSON.parse(options!.body as string);
+      const schema = schemalar.find((s) => s.id === body.schemaId)!;
+      const created: FakeTablo = {
+        id: nextTabloId++,
+        name: body.name,
+        schemaId: schema.id,
+        schemaName: schema.name,
+        kolonlar: (body.kolonlar ?? []).map(
+          (k: { name: string; type: string; tagId?: number | null; primaryKey?: boolean }) => ({
+            id: nextKolonId++,
+            name: k.name,
+            type: k.type,
+            tagId: k.tagId ?? null,
+            tagName: null,
+            primaryKey: !!k.primaryKey,
+          })
+        ),
+      };
+      tablolar.push(created);
+      return Promise.resolve({ ok: true, status: 201, json: async () => tabloResponse(created) });
+    }
+    match = path.match(/^\/api\/tablolar\/(\d+)\/schema$/);
+    if (method === "PATCH" && match) {
+      const body = JSON.parse(options!.body as string);
+      const tablo = tablolar.find((t) => t.id === Number(match![1]))!;
+      const schema = schemalar.find((s) => s.id === body.schemaId)!;
+      tablo.schemaId = schema.id;
+      tablo.schemaName = schema.name;
+      return Promise.resolve({ ok: true, status: 200, json: async () => tabloResponse(tablo) });
+    }
+
+    throw new Error(`createFakeBackend: mock icin tanimsiz istek ${method} ${path}`);
+  });
+
   global.fetch = fn as unknown as typeof fetch;
   return fn;
 }
@@ -22,9 +190,9 @@ function mockFetchSequence(responses: Partial<Response>[]) {
 /**
  * Bu dosyadaki testler yazma islemlerini (tablo olusturma, surukle-birak) sinadigi icin sabit
  * bir EDITOR baglami veriyoruz — gercek AuthProvider'in localStorage okuyup `/api/auth/ben`'e
- * gitmesini beklemek gereksiz bir asenkron adim (ve mockFetchSequence'teki cagri sirasini
- * kaydirirdi). Rol bazli gizlemeyi (VIEWER'in yazma butonlarini gormemesi) test etmek
- * istenirse ayri bir testte rol: "VIEWER" ile ayni yardimci kullanilabilir.
+ * gitmesini beklemek gereksiz bir asenkron adim. Rol bazli gizlemeyi (VIEWER'in yazma
+ * butonlarini gormemesi) test etmek istenirse ayri bir testte rol: "VIEWER" ile ayni yardimci
+ * kullanilabilir.
  */
 const EDITOR_AUTH: AuthContextValue = {
   status: "authenticated",
@@ -47,29 +215,7 @@ function renderDashboard(auth: AuthContextValue = EDITOR_AUTH) {
 }
 
 test("tablo olusturunca listeye eklenir ve basari bildirimi gosterilir", async () => {
-  mockFetchSequence([
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
-    {
-      ok: true,
-      status: 201,
-      json: async () => ({
-        id: 1,
-        name: "kullanicilar",
-        schemaId: 1,
-        schemaName: "kayitlar",
-        kolonlar: [],
-      }),
-    },
-    {
-      ok: true,
-      status: 200,
-      json: async () => [
-        { id: 1, name: "kullanicilar", schemaId: 1, schemaName: "kayitlar", kolonlar: [] },
-      ],
-    },
-  ]);
+  createFakeBackend({ schemalar: [{ id: 1, name: "kayitlar" }] });
 
   renderDashboard();
 
@@ -88,21 +234,25 @@ test("tablo olusturunca listeye eklenir ve basari bildirimi gosterilir", async (
 });
 
 test("backend conflict (409) hatasinda turuncu bildirim gosterir", async () => {
-  mockFetchSequence([
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
-    {
-      ok: false,
-      status: 409,
-      json: async () => ({
-        timestamp: "2026-01-01T00:00:00Z",
-        status: 409,
-        error: "Conflict",
-        message: "tablo adi zaten kullaniliyor",
-      }),
-    },
-  ]);
+  createFakeBackend({
+    schemalar: [{ id: 1, name: "kayitlar" }],
+    overrides: [
+      {
+        method: "POST",
+        path: "/api/tablolar",
+        response: {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            timestamp: "2026-01-01T00:00:00Z",
+            status: 409,
+            error: "Conflict",
+            message: "tablo adi zaten kullaniliyor",
+          }),
+        },
+      },
+    ],
+  });
 
   renderDashboard();
 
@@ -119,23 +269,27 @@ test("backend conflict (409) hatasinda turuncu bildirim gosterir", async () => {
 });
 
 test("backend'in gonderdigi hata kodu, ham Ingilizce mesaj yerine cevrilmis Turkce metni gosterir", async () => {
-  mockFetchSequence([
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
-    {
-      ok: false,
-      status: 409,
-      json: async () => ({
-        timestamp: "2026-01-01T00:00:00Z",
-        status: 409,
-        error: "Conflict",
-        message: "a table named 'kullanicilar' already exists",
-        code: "CONFLICT_DUPLICATE_TABLE_NAME",
-        details: { name: "kullanicilar" },
-      }),
-    },
-  ]);
+  createFakeBackend({
+    schemalar: [{ id: 1, name: "kayitlar" }],
+    overrides: [
+      {
+        method: "POST",
+        path: "/api/tablolar",
+        response: {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            timestamp: "2026-01-01T00:00:00Z",
+            status: 409,
+            error: "Conflict",
+            message: "a table named 'kullanicilar' already exists",
+            code: "CONFLICT_DUPLICATE_TABLE_NAME",
+            details: { name: "kullanicilar" },
+          }),
+        },
+      },
+    ],
+  });
 
   renderDashboard();
 
@@ -153,23 +307,27 @@ test("backend'in gonderdigi hata kodu, ham Ingilizce mesaj yerine cevrilmis Turk
 });
 
 test("taninmayan bir hata kodu gelirse backend'in ham mesajina dusulur", async () => {
-  mockFetchSequence([
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
-    {
-      ok: false,
-      status: 409,
-      json: async () => ({
-        timestamp: "2026-01-01T00:00:00Z",
-        status: 409,
-        error: "Conflict",
-        message: "some future backend error not yet translated",
-        code: "SOME_FUTURE_CODE",
-        details: {},
-      }),
-    },
-  ]);
+  createFakeBackend({
+    schemalar: [{ id: 1, name: "kayitlar" }],
+    overrides: [
+      {
+        method: "POST",
+        path: "/api/tablolar",
+        response: {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            timestamp: "2026-01-01T00:00:00Z",
+            status: 409,
+            error: "Conflict",
+            message: "some future backend error not yet translated",
+            code: "SOME_FUTURE_CODE",
+            details: {},
+          }),
+        },
+      },
+    ],
+  });
 
   renderDashboard();
 
@@ -186,42 +344,13 @@ test("taninmayan bir hata kodu gelirse backend'in ham mesajina dusulur", async (
 });
 
 test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", async () => {
-  const fetchMock = mockFetchSequence([
-    {
-      ok: true,
-      status: 200,
-      json: async () => [
-        { id: 10, name: "kullanicilar", schemaId: 1, schemaName: "kayitlar", kolonlar: [] },
-      ],
-    },
-    { ok: true, status: 200, json: async () => [] },
-    {
-      ok: true,
-      status: 200,
-      json: async () => [
-        { id: 1, name: "kayitlar" },
-        { id: 2, name: "ogrenciler" },
-      ],
-    },
-    {
-      ok: true,
-      status: 200,
-      json: async () => ({
-        id: 10,
-        name: "kullanicilar",
-        schemaId: 2,
-        schemaName: "ogrenciler",
-        kolonlar: [],
-      }),
-    },
-    {
-      ok: true,
-      status: 200,
-      json: async () => [
-        { id: 10, name: "kullanicilar", schemaId: 2, schemaName: "ogrenciler", kolonlar: [] },
-      ],
-    },
-  ]);
+  const fetchMock = createFakeBackend({
+    schemalar: [
+      { id: 1, name: "kayitlar" },
+      { id: 2, name: "ogrenciler" },
+    ],
+    tablolar: [{ id: 10, name: "kullanicilar", schemaId: 1, schemaName: "kayitlar", kolonlar: [] }],
+  });
 
   renderDashboard();
 
@@ -246,11 +375,7 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
 });
 
 test("VIEWER rolunde yazma butonlari devre disi kalir", async () => {
-  mockFetchSequence([
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
-  ]);
+  createFakeBackend({ schemalar: [{ id: 1, name: "kayitlar" }] });
 
   renderDashboard({ ...EDITOR_AUTH, rol: "VIEWER", canWrite: false });
 
@@ -262,20 +387,14 @@ test("VIEWER rolunde yazma butonlari devre disi kalir", async () => {
   expect(screen.getByText("+ Yeni Schema")).toBeDisabled();
 });
 
-test("ADMIN icin acilista kullanici listesi de cekilir ve Kullanicilar sekmesinde gosterilir", async () => {
-  mockFetchSequence([
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [] },
-    { ok: true, status: 200, json: async () => [{ id: 1, name: "kayitlar" }] },
-    {
-      ok: true,
-      status: 200,
-      json: async () => [
-        { id: 1, kullaniciAdi: "admin", rol: "ADMIN" },
-        { id: 2, kullaniciAdi: "ayse", rol: "VIEWER" },
-      ],
-    },
-  ]);
+test("ADMIN, Kullanicilar sekmesine girince kullanici listesi cekilir ve gosterilir", async () => {
+  createFakeBackend({
+    schemalar: [{ id: 1, name: "kayitlar" }],
+    kullanicilar: [
+      { id: 1, kullaniciAdi: "admin", rol: "ADMIN" },
+      { id: 2, kullaniciAdi: "ayse", rol: "VIEWER" },
+    ],
+  });
 
   renderDashboard({ ...EDITOR_AUTH, rol: "ADMIN", isAdmin: true });
 

@@ -5,11 +5,41 @@ import "../i18n";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { TaglerPanel } from "./TaglerPanel";
 import { KolonUsage, Tag } from "../api/tags";
+import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
 
 const TAGS: Tag[] = [
   { id: 1, name: "kimlik" },
   { id: 2, name: "iletisim" },
 ];
+
+const EDITOR_AUTH: AuthContextValue = {
+  status: "authenticated",
+  kullaniciAdi: "test_kullanici",
+  rol: "EDITOR",
+  canWrite: true,
+  isAdmin: false,
+  login: jest.fn(),
+  logout: jest.fn(),
+};
+
+/** TaglerPanel useAuth() kullaniyor (canWrite icin), o yuzden her testte AuthContext saglanmali. */
+function renderPanel(props: {
+  tags: Tag[];
+  onLoadUsage: (tagId: number) => Promise<KolonUsage[]>;
+  onRename?: (tagId: number, name: string) => void;
+  onDelete?: (tagId: number) => void;
+}) {
+  return render(
+    <AuthContext.Provider value={EDITOR_AUTH}>
+      <TaglerPanel
+        tags={props.tags}
+        onLoadUsage={props.onLoadUsage}
+        onRename={props.onRename ?? jest.fn()}
+        onDelete={props.onDelete ?? jest.fn()}
+      />
+    </AuthContext.Provider>
+  );
+}
 
 const KIMLIK_USAGE: KolonUsage[] = [
   {
@@ -23,17 +53,17 @@ const KIMLIK_USAGE: KolonUsage[] = [
 ];
 
 /**
- * Bir etiketin kendi satirindaki butonu dondurur. Ekranda birden fazla "Ayrıntı" butonu
- * oldugu icin rol+isim ile aramak yetmiyor — once etiketin <li>'sine inip orada ariyoruz.
+ * Bir etiketin kendi satirindaki "Ayrıntı"/"Gizle" butonunu dondurur. Satirda artik Duzenle/Sil
+ * butonlari da oldugu icin (getByRole("button") tek basina belirsiz olurdu) isme gore ariyoruz.
  */
 function detailButton(tagName: string) {
   const row = screen.getByText(tagName).closest("li") as HTMLElement;
-  return within(row).getByRole("button");
+  return within(row).getByRole("button", { name: /Ayrıntı|Gizle/ });
 }
 
 test("etiketler listelenir ve hicbiri acilmadan kullanim istegi atilmaz", () => {
   const onLoadUsage = jest.fn();
-  render(<TaglerPanel tags={TAGS} onLoadUsage={onLoadUsage} />);
+  renderPanel({ tags: TAGS, onLoadUsage });
 
   expect(screen.getByText("kimlik")).toBeInTheDocument();
   expect(screen.getByText("iletisim")).toBeInTheDocument();
@@ -42,14 +72,14 @@ test("etiketler listelenir ve hicbiri acilmadan kullanim istegi atilmaz", () => 
 });
 
 test("hic etiket yoksa bos liste metni gosterilir", () => {
-  render(<TaglerPanel tags={[]} onLoadUsage={jest.fn()} />);
+  renderPanel({ tags: [], onLoadUsage: jest.fn() });
 
   expect(screen.getByText("Henüz hiç etiket yok")).toBeInTheDocument();
 });
 
 test("Ayrıntı'ya basinca etiketi kullanan kolonlar schema.tablo.kolon seklinde acilir", async () => {
   const onLoadUsage = jest.fn().mockResolvedValue(KIMLIK_USAGE);
-  render(<TaglerPanel tags={TAGS} onLoadUsage={onLoadUsage} />);
+  renderPanel({ tags: TAGS, onLoadUsage });
 
   fireEvent.click(detailButton("kimlik"));
 
@@ -61,7 +91,7 @@ test("Ayrıntı'ya basinca etiketi kullanan kolonlar schema.tablo.kolon seklinde
 
 test("kullanilmayan bir etiket icin bos liste yerine aciklayici metin gosterilir", async () => {
   const onLoadUsage = jest.fn().mockResolvedValue([]);
-  render(<TaglerPanel tags={TAGS} onLoadUsage={onLoadUsage} />);
+  renderPanel({ tags: TAGS, onLoadUsage });
 
   fireEvent.click(detailButton("kimlik"));
 
@@ -70,7 +100,7 @@ test("kullanilmayan bir etiket icin bos liste yerine aciklayici metin gosterilir
 
 test("ayni etiketi kapatip tekrar acmak ikinci bir istek atmaz (onbellek)", async () => {
   const onLoadUsage = jest.fn().mockResolvedValue(KIMLIK_USAGE);
-  render(<TaglerPanel tags={TAGS} onLoadUsage={onLoadUsage} />);
+  renderPanel({ tags: TAGS, onLoadUsage });
 
   fireEvent.click(detailButton("kimlik"));
   expect(await screen.findByText("ders_sema.ogrenciler.tc_no")).toBeInTheDocument();
@@ -87,7 +117,7 @@ test("ayni etiketi kapatip tekrar acmak ikinci bir istek atmaz (onbellek)", asyn
 
 test("baska bir etiket acilinca oncekinin ayrintisi kapanir (accordion)", async () => {
   const onLoadUsage = jest.fn(async (tagId: number) => (tagId === 1 ? KIMLIK_USAGE : []));
-  render(<TaglerPanel tags={TAGS} onLoadUsage={onLoadUsage} />);
+  renderPanel({ tags: TAGS, onLoadUsage });
 
   fireEvent.click(detailButton("kimlik"));
   expect(await screen.findByText("ders_sema.ogrenciler.tc_no")).toBeInTheDocument();
@@ -105,7 +135,7 @@ test("istek surerken yukleniyor metni gosterilir, cevap gelince yerini listeye b
   const onLoadUsage = jest.fn(
     () => new Promise<KolonUsage[]>((resolve) => (resolveUsage = resolve))
   );
-  render(<TaglerPanel tags={TAGS} onLoadUsage={onLoadUsage} />);
+  renderPanel({ tags: TAGS, onLoadUsage });
 
   fireEvent.click(detailButton("kimlik"));
   expect(screen.getByText("Yükleniyor...")).toBeInTheDocument();
@@ -114,4 +144,38 @@ test("istek surerken yukleniyor metni gosterilir, cevap gelince yerini listeye b
 
   expect(screen.queryByText("Yükleniyor...")).not.toBeInTheDocument();
   expect(screen.getByText("ders_sema.ogrenciler.tc_no")).toBeInTheDocument();
+});
+
+test("Düzenle ile isim degistirilip Kaydet'e basilinca onRename yeni isimle cagrilir", () => {
+  const onRename = jest.fn();
+  renderPanel({ tags: TAGS, onLoadUsage: jest.fn(), onRename });
+
+  const row = screen.getByText("kimlik").closest("li") as HTMLElement;
+  fireEvent.click(within(row).getByRole("button", { name: "Düzenle" }));
+
+  const input = within(row).getByDisplayValue("kimlik");
+  fireEvent.change(input, { target: { value: "kimlik_v2" } });
+  fireEvent.click(within(row).getByRole("button", { name: "Kaydet" }));
+
+  expect(onRename).toHaveBeenCalledWith(1, "kimlik_v2");
+});
+
+test("Sil'e basip onaylayinca onDelete cagrilir, onaylanmazsa cagrilmaz", () => {
+  const onDelete = jest.fn();
+  const confirmSpy = jest
+    .spyOn(window, "confirm")
+    .mockReturnValueOnce(false)
+    .mockReturnValueOnce(true);
+  renderPanel({ tags: TAGS, onLoadUsage: jest.fn(), onDelete });
+
+  const row = screen.getByText("kimlik").closest("li") as HTMLElement;
+  const silButton = within(row).getByRole("button", { name: "Sil" });
+
+  fireEvent.click(silButton); // confirm() false donuyor -> silinmemeli
+  expect(onDelete).not.toHaveBeenCalled();
+
+  fireEvent.click(silButton); // confirm() true donuyor -> silinmeli
+  expect(onDelete).toHaveBeenCalledWith(1);
+
+  confirmSpy.mockRestore();
 });

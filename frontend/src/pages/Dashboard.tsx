@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Schema, createSchema, deleteSchema, getSchemalar, renameSchema } from "../api/schemas";
+import {
+  Schema,
+  TabloSummary,
+  createSchema,
+  deleteSchema,
+  getSchemalar,
+  getWorkspace,
+  renameSchema,
+} from "../api/schemas";
 import {
   CreateKolonInput,
   DraftKolon,
@@ -11,9 +19,17 @@ import {
   changeTabloSchema,
   createTablo,
   deleteTablo,
-  getTablolar,
+  getTablo,
 } from "../api/tablolar";
-import { KolonUsage, Tag, createTag, getTagUsage, getTags } from "../api/tags";
+import {
+  KolonUsage,
+  Tag,
+  createTag,
+  deleteTag,
+  getTagUsage,
+  getTags,
+  renameTag,
+} from "../api/tags";
 import { Rol } from "../api/auth";
 import {
   Kullanici,
@@ -55,9 +71,17 @@ let nextDraftKolonId = -1;
  * yapmiyoruz; her mutasyondan sonra backend'den taze veri cekmek daha basit ve garanti dogru.
  */
 export function Dashboard() {
-  const [tablolar, setTablolar] = useState<Tablo[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
   const [schemalar, setSchemalar] = useState<Schema[]>([]);
+  // Her schema'nin altindaki tablolarin ozeti (sadece id/name/kolonSayisi) — schema id'sine gore.
+  // Bir tablonun ko"lonlarinin tam listesi burada YOK; bir tabloya tiklaninca ayrica id'siyle
+  // (GET /api/tablo"lar/{id}, bkz. selectTablo) cekilir.
+  const [tabloSummariesBySchema, setTabloSummariesBySchema] = useState<
+    Record<number, TabloSummary[]>
+  >({});
+  // Su an secili tablonun TAM detayi (kolonlar dahil) — draft'in "orijinal" karsilastirma
+  // kaynagi budur.
+  const [selectedTablo, setSelectedTablo] = useState<Tablo | null>(null);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [kullanicilar, setKullanicilar] = useState<Kullanici[]>([]);
   const { isAdmin } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -68,29 +92,45 @@ export function Dashboard() {
   // ikilisi mi yoksa etiket listesi mi.
   const [activeView, setActiveView] = useState<WorkspaceView>("schemalar");
   // Su an acik olan tablonun duzenleme taslagi ("Kaydet'e basinca hepsi birden gitsin" akisi).
-  // selectedId disinda hicbir sey (ör. arka planda tablolar yenilenmesi) bunu sifirlamamali,
-  // yoksa yarim kalan bir duzenleme kaybolur.
   const [draft, setDraft] = useState<TabloDraft | null>(null);
   const [saving, setSaving] = useState(false);
   // Context API'den gelen paylasilan bildirim fonksiyonu — bkz. NotificationProvider.
   const notify = useNotify();
   const { t } = useTranslation();
 
-  async function refreshTablolar() {
-    const data = await getTablolar();
-    setTablolar(data);
+  async function refreshSchemalar() {
+    const data = await getSchemalar();
+    setSchemalar(data);
     return data;
+  }
+
+  /**
+   * Sidebar'in ihtiyac duydugu her seyi (schema listesi + her birinin tablo ozeti) TEK istekte
+   * tazeler — GET /api/schemalar/schemaList, schema+tablo agacini backend'de tek sorguda
+   * birlestirip donuyor. Eskiden schema listesi + her schema icin ayri istek (N+1) atiliyordu.
+   */
+  async function refreshWorkspace() {
+    const workspace = await getWorkspace();
+    setSchemalar(
+      workspace.map((s) => ({
+        id: s.schemaId,
+        name: s.schemaName,
+        tabloSayisi: s.tableResponseList.length,
+      }))
+    );
+    setTabloSummariesBySchema(
+      Object.fromEntries(
+        workspace.map((s) => [
+          s.schemaId,
+          s.tableResponseList.map((t) => ({ id: t.id, name: t.name, kolonSayisi: t.columnCount })),
+        ])
+      )
+    );
   }
 
   async function refreshTags() {
     const data = await getTags();
     setTags(data);
-    return data;
-  }
-
-  async function refreshSchemalar() {
-    const data = await getSchemalar();
-    setSchemalar(data);
     return data;
   }
 
@@ -100,55 +140,51 @@ export function Dashboard() {
     return data;
   }
 
-  // Bos dependency array ([]) = sadece component ilk kez ekrana geldiginde (mount) bir kez
-  // calisir, "sayfa acilinca ilk veriyi cek" anlaminda. exhaustive-deps kurali normalde
-  // refreshTablolar/refreshTags/refreshSchemalar/isAdmin/notify'i de listeye zorlar; onlar her
-  // render'da yeniden olusturuldugu icin sonsuz donguye sokmemek adina bilerek kapatilmis.
-  useEffect(() => {
-    // Kullanici listesi sadece ADMIN icin cekilir — backend zaten VIEWER/EDITOR'a 403 donuyor
-    // (bkz. SecurityConfig), onlar icin bu istegi hic atmamak "sayfa yuklenemedi" bildirimini
-    // gereksiz yere kirletmemek anlamina gelir.
-    const istekler: Promise<unknown>[] = [refreshTablolar(), refreshTags(), refreshSchemalar()];
-    if (isAdmin) {
-      istekler.push(refreshKullanicilar());
+  /** Bir tabloyu secip TAM detayini (kolonlar dahil) id'siyle ceker ve duzenleme taslagini kurar. */
+  async function selectTablo(id: number) {
+    setSelectedId(id);
+    try {
+      const tablo = await getTablo(id);
+      setSelectedTablo(tablo);
+      setDraft(buildTabloDraft(tablo));
+    } catch (err) {
+      notifyFromError(notify, t, err, t("notifications.loadFailed"));
+      setSelectedId(null);
+      setSelectedTablo(null);
+      setDraft(null);
     }
-    Promise.all(istekler)
+  }
+
+  function clearSelection() {
+    setSelectedId(null);
+    setSelectedTablo(null);
+    setDraft(null);
+  }
+
+  // Bos dependency array ([]) = sadece component ilk kez ekrana geldiginde (mount) bir kez
+  // calisir. Baslangicta SADECE schemalar/tablolar cekilir (varsayilan gorunum "schemalar") —
+  // tags ve kullanicilar, kullanici o sekmelere GIRENE kadar hic istenmez; bkz. handleChangeActiveView.
+  useEffect(() => {
+    refreshWorkspace()
       .catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // selectedId degisince taslak o tablodan yeniden kurulur. Bilerek SADECE selectedId'ye bagli:
-  // tablolar arka planda (baska bir aksiyon yuzunden) yenilenirse bu efekt TEKRAR CALISMAMALI,
-  // yoksa acik olan tablonun uzerindeki kaydedilmemis degisiklikler sessizce silinirdi.
-  useEffect(() => {
-    if (selectedId === null) {
-      setDraft(null);
-      return;
-    }
-    const tablo = tablolar.find((tbl) => tbl.id === selectedId);
-    setDraft(tablo ? buildTabloDraft(tablo) : null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId]);
-
   // Taslak, orijinal tablodan herhangi bir sekilde farkliysa "kirli" sayilir — Kaydet butonu
   // buna gore aktif olur, tablo/gorunum degistirirken de bu kontrol edilir.
   const isDirty = (() => {
-    if (!draft) {
+    if (!draft || !selectedTablo || selectedTablo.id !== draft.tabloId) {
       return false;
     }
-    const orijinal = tablolar.find((tbl) => tbl.id === draft.tabloId);
-    if (!orijinal) {
-      return false;
-    }
-    if (draft.name !== orijinal.name || draft.schemaId !== orijinal.schemaId) {
+    if (draft.name !== selectedTablo.name || draft.schemaId !== selectedTablo.schemaId) {
       return true;
     }
     return draft.kolonlar.some((k) => {
       if (k.isNew || k.silinecek) {
         return true;
       }
-      const ok = orijinal.kolonlar.find((o) => o.id === k.id);
+      const ok = selectedTablo.kolonlar.find((o) => o.id === k.id);
       return !ok || ok.name !== k.name || ok.tagId !== k.tagId || ok.primaryKey !== k.primaryKey;
     });
   })();
@@ -160,11 +196,10 @@ export function Dashboard() {
   // karsilastirmadan sadece draft.schemaId'ye bakmak "hicbir sey degismedi" durumunda bile
   // yanlislikla gosterirdi.
   const pendingSchemaName = (() => {
-    if (!draft) {
+    if (!draft || !selectedTablo || selectedTablo.id !== draft.tabloId) {
       return null;
     }
-    const orijinal = tablolar.find((tbl) => tbl.id === draft.tabloId);
-    if (!orijinal || draft.schemaId === orijinal.schemaId) {
+    if (draft.schemaId === selectedTablo.schemaId) {
       return null;
     }
     return schemalar.find((s) => s.id === draft.schemaId)?.name ?? null;
@@ -177,13 +212,27 @@ export function Dashboard() {
 
   function handleSelectTablo(id: number) {
     if (confirmDiscardIfDirty()) {
-      setSelectedId(id);
+      selectTablo(id);
     }
   }
 
+  /**
+   * Tagler/Kullanicilar verisi ilk mount'ta cekilmiyor — kullanici o sekmeye GIRDIGINDE
+   * (burada) cekilir. isAdmin kontrolu ayni sebeple: backend zaten VIEWER/EDITOR'a 403 donuyor
+   * (bkz. SecurityConfig), onlar icin bu istegi hic atmamak "sayfa yuklenemedi" bildirimini
+   * gereksiz yere kirletmemek anlamina gelir.
+   */
   function handleChangeActiveView(view: WorkspaceView) {
-    if (confirmDiscardIfDirty()) {
-      setActiveView(view);
+    if (!confirmDiscardIfDirty()) {
+      return;
+    }
+    setActiveView(view);
+    if (view === "tagler") {
+      refreshTags().catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")));
+    } else if (view === "kullanicilar" && isAdmin) {
+      refreshKullanicilar().catch((err) =>
+        notifyFromError(notify, t, err, t("notifications.loadFailed"))
+      );
     }
   }
 
@@ -260,9 +309,8 @@ export function Dashboard() {
   }
 
   function handleDiscardDraft() {
-    const orijinal = tablolar.find((tbl) => tbl.id === draft?.tabloId);
-    if (orijinal) {
-      setDraft(buildTabloDraft(orijinal));
+    if (selectedTablo && draft && selectedTablo.id === draft.tabloId) {
+      setDraft(buildTabloDraft(selectedTablo));
     }
   }
 
@@ -271,13 +319,10 @@ export function Dashboard() {
    * cagrisiyla gonderir — backend bunu tek transaction'da uygular (bkz. TabloService.applyChanges).
    */
   async function handleSaveDraft() {
-    if (!draft) {
+    if (!draft || !selectedTablo || selectedTablo.id !== draft.tabloId) {
       return;
     }
-    const orijinal = tablolar.find((tbl) => tbl.id === draft.tabloId);
-    if (!orijinal) {
-      return;
-    }
+    const orijinal = selectedTablo;
     setSaving(true);
     try {
       const guncel = await applyTabloChanges(draft.tabloId, {
@@ -302,8 +347,9 @@ export function Dashboard() {
             yeniPrimaryKey: k.primaryKey,
           })),
       });
-      await refreshTablolar();
+      setSelectedTablo(guncel);
       setDraft(buildTabloDraft(guncel));
+      await refreshWorkspace();
       notify(200, t("notifications.tableChangesSaved"));
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.tableChangesSaveFailed"));
@@ -315,8 +361,10 @@ export function Dashboard() {
   async function handleCreate(name: string, kolonlar: CreateKolonInput[], schemaId: number) {
     try {
       const created = await createTablo(name, kolonlar, schemaId);
-      await refreshTablolar();
+      await refreshWorkspace();
       setSelectedId(created.id);
+      setSelectedTablo(created);
+      setDraft(buildTabloDraft(created));
       setShowCreateForm(false);
       notify(201, t("notifications.tableCreated", { name: created.name }));
     } catch (err) {
@@ -327,7 +375,7 @@ export function Dashboard() {
   async function handleCreateSchema(name: string) {
     try {
       const created = await createSchema(name);
-      await refreshSchemalar();
+      await refreshWorkspace();
       setShowCreateSchemaForm(false);
       notify(201, t("notifications.schemaCreated", { name: created.name }));
     } catch (err) {
@@ -353,12 +401,15 @@ export function Dashboard() {
    * gosteriliyor, burasi sadece asil silme/geri-alma mekanigini yonetiyor.
    */
   function handleDeleteSchema(id: number) {
-    const tableIdsInSchema = new Set(
-      tablolar.filter((tbl) => tbl.schemaId === id).map((tbl) => tbl.id)
-    );
+    const tableIdsInSchema = new Set((tabloSummariesBySchema[id] ?? []).map((tbl) => tbl.id));
     setSchemalar((prev) => prev.filter((s) => s.id !== id));
+    setTabloSummariesBySchema((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     if (selectedId !== null && tableIdsInSchema.has(selectedId)) {
-      setSelectedId(null);
+      clearSelection();
     }
 
     const timerId = window.setTimeout(async () => {
@@ -367,8 +418,7 @@ export function Dashboard() {
       } catch (err) {
         notifyFromError(notify, t, err, t("notifications.schemaDeleteFailed"));
       } finally {
-        await refreshSchemalar();
-        await refreshTablolar();
+        await refreshWorkspace();
       }
     }, NOTIFICATION_DURATION_MS);
 
@@ -376,7 +426,7 @@ export function Dashboard() {
       label: t("common.undo"),
       onClick: () => {
         window.clearTimeout(timerId);
-        refreshSchemalar();
+        refreshWorkspace();
       },
     });
   }
@@ -390,9 +440,18 @@ export function Dashboard() {
    * dokunulmamis gibi tablo geri gelir (backend'de zaten silinmemistir).
    */
   function handleDeleteTablo(id: number) {
-    setTablolar((prev) => prev.filter((tbl) => tbl.id !== id));
+    const schemaEntry = Object.entries(tabloSummariesBySchema).find(([, list]) =>
+      list.some((tbl) => tbl.id === id)
+    );
+    if (schemaEntry) {
+      const [schemaIdKey, list] = schemaEntry;
+      setTabloSummariesBySchema((prev) => ({
+        ...prev,
+        [Number(schemaIdKey)]: list.filter((tbl) => tbl.id !== id),
+      }));
+    }
     if (selectedId === id) {
-      setSelectedId(null);
+      clearSelection();
     }
 
     const timerId = window.setTimeout(async () => {
@@ -401,7 +460,7 @@ export function Dashboard() {
       } catch (err) {
         notifyFromError(notify, t, err, t("notifications.tableDeleteFailed"));
       } finally {
-        await refreshTablolar();
+        await refreshWorkspace();
       }
     }, NOTIFICATION_DURATION_MS);
 
@@ -409,7 +468,7 @@ export function Dashboard() {
       label: t("common.undo"),
       onClick: () => {
         window.clearTimeout(timerId);
-        refreshTablolar();
+        refreshWorkspace();
       },
     });
   }
@@ -427,7 +486,7 @@ export function Dashboard() {
     }
     try {
       await changeTabloSchema(id, schemaId);
-      await refreshTablolar();
+      await refreshWorkspace();
       notify(200, t("notifications.tableSchemaChanged"));
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.tableSchemaChangeFailed"));
@@ -455,6 +514,26 @@ export function Dashboard() {
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.tagUsageLoadFailed"));
       return [];
+    }
+  }
+
+  async function handleRenameTag(id: number, name: string) {
+    try {
+      await renameTag(id, name);
+      await refreshTags();
+      notify(200, t("notifications.tagRenamed"));
+    } catch (err) {
+      notifyFromError(notify, t, err, t("notifications.tagRenameFailed"));
+    }
+  }
+
+  async function handleDeleteTag(id: number) {
+    try {
+      await deleteTag(id);
+      await refreshTags();
+      notify(204, t("notifications.tagDeleted"));
+    } catch (err) {
+      notifyFromError(notify, t, err, t("notifications.tagDeleteFailed"));
     }
   }
 
@@ -499,7 +578,14 @@ export function Dashboard() {
     <div className="dashboard">
       <WorkspaceNav active={activeView} onChange={handleChangeActiveView} />
 
-      {activeView === "tagler" && <TaglerPanel tags={tags} onLoadUsage={handleLoadTagUsage} />}
+      {activeView === "tagler" && (
+        <TaglerPanel
+          tags={tags}
+          onLoadUsage={handleLoadTagUsage}
+          onRename={handleRenameTag}
+          onDelete={handleDeleteTag}
+        />
+      )}
 
       {activeView === "kullanicilar" && (
         <KullanicilarPanel
@@ -514,7 +600,7 @@ export function Dashboard() {
         <>
           <TabloSidebar
             schemalar={schemalar}
-            tablolar={tablolar}
+            tabloSummariesBySchema={tabloSummariesBySchema}
             selectedId={selectedId}
             onSelect={handleSelectTablo}
             onCreateClick={() => setShowCreateForm(true)}

@@ -27,7 +27,8 @@
     "hideDetail": "Hide",
     "loadingUsage": "Loading...",
     "noUsage": "This tag is not used in any column",
-    "usageItem": "{{schema}}.{{table}}.{{column}}"
+    "usageItem": "{{schema}}.{{table}}.{{column}}",
+    "confirmDelete": "Delete tag \"{{name}}\"? Columns using this tag will not be deleted, they'll just lose the tag."
   },
   "sidebar": {
     "newTable": "+ New Table",
@@ -40,8 +41,7 @@
     "dragToMoveHint": "Drag to move to another schema",
     "sortLabel": "Sort by",
     "sortByName": "By name",
-    "sortByKolonCount": "Column count",
-    "sortByUpdatedAt": "Last updated"
+    "sortByKolonCount": "Column count"
   },
   "dashboard": {
     "loading": "Loading...",
@@ -117,6 +117,10 @@
     "primaryKeyUpdateFailed": "Failed to update primary key",
     "tagCreated": "\"{{name}}\" tag created",
     "tagCreateFailed": "Failed to create tag",
+    "tagRenamed": "Tag renamed",
+    "tagRenameFailed": "Failed to rename tag",
+    "tagDeleted": "Tag deleted",
+    "tagDeleteFailed": "Failed to delete tag",
     "schemaCreated": "\"{{name}}\" schema created",
     "schemaCreateFailed": "Failed to create schema",
     "schemaRenamed": "Schema renamed",

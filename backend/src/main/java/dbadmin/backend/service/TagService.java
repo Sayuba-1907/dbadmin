@@ -57,4 +57,33 @@ public class TagService {
         }
         return tagRepository.save(new Tag(name));
     }
+
+    /** Sadece ismi degistirir — Tag'in gercek Postgres semasinda karsiligi olmadigi icin DDL calismaz. */
+    @Transactional
+    public Tag renameTag(Long id, String name) {
+        Tag tag = getTag(id);
+        NameValidator.validate("tag name", "VALIDATION_INVALID_TAG_NAME", name);
+        if (!tag.getName().equals(name) && tagRepository.existsByName(name)) {
+            throw new ConflictException(
+                    "CONFLICT_DUPLICATE_TAG_NAME", "a tag named '" + name + "' already exists", Map.of("name", name));
+        }
+        tag.setName(name);
+        return tagRepository.save(tag);
+    }
+
+    /**
+     * Tag'i siler. Kolon->Tag iliskisinde cascade YOK (bkz. {@link Kolon#getTag()}) — yani
+     * Postgres FK constraint'i yuzunden, tag'i kullanan kolonlar varken direkt silmeye
+     * calisilirsa {@code DataIntegrityViolationException} firlar. Onun yerine, tag'i kullanan
+     * tum kolonlarin tag referansini once null'a cekiyoruz (etiketsiz kalirlar, kolonun kendisi
+     * silinmez), sonra tag satirini siliyoruz — hepsi tek transaction'da.
+     */
+    @Transactional
+    public void deleteTag(Long id) {
+        Tag tag = getTag(id);
+        List<Kolon> kullananKolonlar = kolonRepository.findByTagId(id);
+        kullananKolonlar.forEach(kolon -> kolon.setTag(null));
+        kolonRepository.saveAll(kullananKolonlar);
+        tagRepository.delete(tag);
+    }
 }

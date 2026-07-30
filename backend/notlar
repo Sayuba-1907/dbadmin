@@ -32,16 +32,13 @@ WEEK2:
     +-public schema gözükmesin, bu isimle schema da oluşturulmasın
     +-composite primary key olacak primary_key(col1,col2) _>table ddl executorda yapıldı.
     +-kolon olarak eklemediğin ekstra kolon olmayacak -> id kolonu  ????
-    +-heap kullanımı, thread kullanımı, aktif veya total connectionlar -> bir springboot servisini grafanada incelemek i çin ne tür cardlar koyulur -> heap ve connection panelleri zaten vardı, thread için 2 panel eklendi (live/daemon/peak + state'e göre stacked)
     +-Hata kodları düzenlensin. Http codelar ile karışmasın -> 404 not found. Kendi durumlarımız farklı codelar olsun
     +-Authentication -> Spring Security ve JWT ile yapalım. Roller ekleyelim farklı kullanıcılara. Kimisi update edebilsin.
     +-8080'i 8081'e çek. AI'ya yaptırma.
     +-i18n backend
-    +-hibernate tarafında atılan sqlleri console'a yazdırma -> sonra repository katmanına bağlayacağız.
     +-Frontend dockerlaştırılacak.
 
 
-    -hibernate tarheafında atılan sqlleri console'a yazdırma -> sonra repository katmanına bağlayacağız.
     LLM ile yapabilirsin:
     +Sol tarafa bir menü ekleyeceğiz.
     +1)İki tane item olacak. Şemalar ve Tagler
@@ -60,3 +57,13 @@ WEEK2:
     c)opsiyonel içinde kaç kolon olduğunu count olarak yazabilirsin.
     3)Tablolardan birine tıkladığım anda kolonları da dahil olmak üzere diğer bilgileri gelebilir. Bunu da elindeki id ile yapacaksın. Tablonun id'si ile.
 
+
+
+
+    Kalanlar:
+    -heap kullanımı, thread kullanımı, aktif veya total connectionlar -> bir springboot servisini grafanada incelemek i çin ne tür cardlar koyulur -> heap ve connection panelleri zaten vardı, thread için 2 panel eklendi (live/daemon/peak + state'e göre stacked)
+    -Tag create'de olduğu gibi kendi validationlarımız için 4xx http codelarını kullanmayalım
+    -hibernate tarheafında atılan sqlleri console'a yazdırma -> sonra repository katmanına bağlayacağız.
+    +-Tag tarafına zaman kalırsa delete/update eklensin
+    -Frontend'in düzenini öğren backend gibi
+    +-bizim yeni uç authorization'a uygunlamıyor. Onu geri al

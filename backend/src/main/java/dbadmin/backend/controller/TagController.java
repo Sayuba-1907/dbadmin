@@ -4,6 +4,7 @@ import dbadmin.backend.dto.CreateTagRequest;
 import dbadmin.backend.dto.ErrorExamples;
 import dbadmin.backend.dto.ErrorResponse;
 import dbadmin.backend.dto.KolonUsageResponse;
+import dbadmin.backend.dto.RenameRequest;
 import dbadmin.backend.dto.TagResponse;
 import dbadmin.backend.service.TagService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,7 +18,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -92,5 +95,55 @@ public class TagController {
     public List<KolonUsageResponse> listUsage(
             @Parameter(description = "Etiketin id'si.", example = "1") @PathVariable Long id) {
         return tagService.getTagUsage(id).stream().map(KolonUsageResponse::from).toList();
+    }
+
+    /** PATCH /api/tags/{id} — sadece ismi degistirir (bkz. TagService.renameTag). */
+    @Operation(summary = "Etiketi yeniden adlandir", description = "Verilen etiketin adini degistirir. "
+            + "Etiketin gercek Postgres semasinda karsiligi olmadigi icin hicbir DDL calismaz.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Etiket yeniden adlandirildi."),
+        @ApiResponse(responseCode = "400", description = "Gecersiz etiket adi.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "VALIDATION_INVALID_TAG_NAME",
+                                summary = "Etiket adi kurallara uymuyor",
+                                value = ErrorExamples.VALIDATION_INVALID_TAG_NAME))),
+        @ApiResponse(responseCode = "404", description = "Bu id'de bir etiket yok.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_TAG",
+                                summary = "Etiket bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_TAG))),
+        @ApiResponse(responseCode = "409", description = "Bu isimde baska bir etiket zaten var.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "CONFLICT_DUPLICATE_TAG_NAME",
+                                summary = "Ayni isimde etiket var",
+                                value = ErrorExamples.CONFLICT_DUPLICATE_TAG_NAME)))
+    })
+    @PatchMapping("/{id}")
+    public TagResponse rename(
+            @Parameter(description = "Yeniden adlandirilacak etiketin id'si.", example = "1") @PathVariable
+                    Long id,
+            @RequestBody RenameRequest request) {
+        return TagResponse.from(tagService.renameTag(id, request.name()));
+    }
+
+    /** DELETE /api/tags/{id} — bkz. TagService.deleteTag (kullanan kolonlar etiketsiz kalir, silinmez). */
+    @Operation(summary = "Etiketi sil", description = "Etiketi siler. Bu etiketi tasiyan kolonlar "
+            + "silinmez — sadece etiket referanslari kaldirilir (kolonlar etiketsiz kalir).")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Etiket silindi."),
+        @ApiResponse(responseCode = "404", description = "Bu id'de bir etiket yok.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_TAG",
+                                summary = "Etiket bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_TAG)))
+    })
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@Parameter(description = "Silinecek etiketin id'si.", example = "1") @PathVariable Long id) {
+        tagService.deleteTag(id);
     }
 }

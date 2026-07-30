@@ -27,7 +27,8 @@
     "hideDetail": "Gizle",
     "loadingUsage": "Yükleniyor...",
     "noUsage": "Bu etiket hiçbir kolonda kullanılmıyor",
-    "usageItem": "{{schema}}.{{table}}.{{column}}"
+    "usageItem": "{{schema}}.{{table}}.{{column}}",
+    "confirmDelete": "\"{{name}}\" etiketini silmek istediğinize emin misiniz? Bu etiketi taşıyan kolonlar silinmez, sadece etiketsiz kalır."
   },
   "sidebar": {
     "newTable": "+ Yeni Tablo",
@@ -40,8 +41,7 @@
     "dragToMoveHint": "Başka bir schema'ya taşımak için sürükleyin",
     "sortLabel": "Sıralama",
     "sortByName": "İsme göre",
-    "sortByKolonCount": "Kolon sayısı",
-    "sortByUpdatedAt": "Son değişen"
+    "sortByKolonCount": "Kolon sayısı"
   },
   "dashboard": {
     "loading": "Yükleniyor...",
@@ -117,6 +117,10 @@
     "primaryKeyUpdateFailed": "Birincil anahtar güncellenemedi",
     "tagCreated": "\"{{name}}\" tag'i oluşturuldu",
     "tagCreateFailed": "Tag oluşturulamadı",
+    "tagRenamed": "Tag yeniden adlandırıldı",
+    "tagRenameFailed": "Tag yeniden adlandırılamadı",
+    "tagDeleted": "Tag silindi",
+    "tagDeleteFailed": "Tag silinemedi",
     "schemaCreated": "\"{{name}}\" schema'sı oluşturuldu",
     "schemaCreateFailed": "Schema oluşturulamadı",
     "schemaRenamed": "Schema yeniden adlandırıldı",

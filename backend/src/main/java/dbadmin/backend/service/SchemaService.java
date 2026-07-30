@@ -1,6 +1,8 @@
 package dbadmin.backend.service;
 
 import dbadmin.backend.ddl.SchemaDdlExecutor;
+import dbadmin.backend.dto.SchemaResponseDTO;
+import dbadmin.backend.dto.TableSummaryDTO;
 import dbadmin.backend.entity.Schema;
 import dbadmin.backend.entity.Tablo;
 import dbadmin.backend.exception.ConflictException;
@@ -11,8 +13,13 @@ import dbadmin.backend.repository.TabloRepository;
 import dbadmin.backend.validation.NameValidator;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dbadmin.backend.dto.SchemaResponse;
@@ -64,6 +71,58 @@ public class SchemaService {
                 .filter(schema -> !isHidden(schema))
                 .map(this::toResponse)
                 .toList();
+    }
+    @Transactional(readOnly = true)
+    public List<SchemaResponseDTO>getSchemaListV2() {
+        List<Tablo> tableList = tabloRepository.findAllByOrderByNameAsc();
+        Map<Long, SchemaResponseDTO> schemaIdSchemaResponseMap = new HashMap<>();
+
+        for (Tablo table : tableList) {
+            TableSummaryDTO tableSummaryDTO = new TableSummaryDTO(table.getId(), table.getName(),
+                    table.getKolonlar().size(), table.getSchema().getId());
+            if (schemaIdSchemaResponseMap.containsKey(table.getSchema().getId())) {
+                schemaIdSchemaResponseMap.get(table.getSchema().getId()).addTableSummaryToList(tableSummaryDTO);
+            } else {
+                SchemaResponseDTO schemaResponseDTO = new SchemaResponseDTO(table.getSchema().getId(),
+                        table.getSchema().getName());
+                schemaResponseDTO.addTableSummaryToList(tableSummaryDTO);
+                schemaIdSchemaResponseMap.put(schemaResponseDTO.getSchemaId(), schemaResponseDTO);
+            }
+
+        }
+        return new ArrayList<>(schemaIdSchemaResponseMap.values());
+    }
+
+    @Transactional(readOnly = true)
+    public List<SchemaResponseDTO>getSchemaList(){
+
+        Map<Long, SchemaResponseDTO> schemaIdSchemaResponseMap = new HashMap<>();
+
+        Map<Long, Long> tabloIdColumnCountMap = tabloRepository.countKolonlarGroupByTablo().stream()
+                .collect(Collectors
+                        .toMap(TabloRepository.TabloKolonCountProjection::getTabloId,
+                                TabloRepository.TabloKolonCountProjection::getKolonSayisi));
+
+
+        List<TabloRepository.SchemaTabloProjection> schemaTablePairs = tabloRepository.findAllSchemaTabloPairs();
+        for (TabloRepository.SchemaTabloProjection schemaTablePair : schemaTablePairs) {
+            // Hic kolonu olmayan bir tablo GROUP BY sonucunda hic satir uretmez (bkz.
+            // countKolonlarGroupByTablo javadoc'u), yani map'te yer almaz — getOrDefault ile 0 kabul ediyoruz.
+            TableSummaryDTO tableSummaryDTO = new TableSummaryDTO(schemaTablePair.getTabloId(), schemaTablePair.getTabloName(),
+                    tabloIdColumnCountMap.getOrDefault(schemaTablePair.getTabloId(), 0L).intValue(),
+                    schemaTablePair.getSchemaId());
+            if(schemaIdSchemaResponseMap.containsKey(schemaTablePair.getSchemaId())){
+                schemaIdSchemaResponseMap.get(schemaTablePair.getSchemaId()).addTableSummaryToList(tableSummaryDTO);
+            }else{
+                SchemaResponseDTO schemaResponseDTO = new SchemaResponseDTO(schemaTablePair.getSchemaId(),
+                        schemaTablePair.getSchemaName());
+                schemaIdSchemaResponseMap.put(schemaTablePair.getSchemaId(),schemaResponseDTO);
+                schemaResponseDTO.addTableSummaryToList(tableSummaryDTO);
+                schemaIdSchemaResponseMap.put(schemaResponseDTO.getSchemaId(),schemaResponseDTO);
+            }
+        }
+        return new ArrayList<>(schemaIdSchemaResponseMap.values());
+
     }
 
     /**

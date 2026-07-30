@@ -82,8 +82,9 @@ export function buildTabloDraft(tablo: Tablo): TabloDraft {
 }
 
 /** Bu dosyadaki her fonksiyon, TabloController'daki bir endpoint'in birebir karsiligidir. */
-export function getTablolar(): Promise<Tablo[]> {
-  return apiGet<Tablo[]>("/api/tablolar");
+/** GET /api/tablolar/{id} — tek bir tablonun kolonlar dahil tam detayi. Sidebar'da bir tabloya tiklaninca cagrilir. */
+export function getTablo(id: number): Promise<Tablo> {
+  return apiGet<Tablo>(`/api/tablolar/${id}`);
 }
 
 export function createTablo(

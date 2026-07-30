@@ -1,11 +1,6 @@
 package dbadmin.backend.controller;
 
-import dbadmin.backend.dto.CreateSchemaRequest;
-import dbadmin.backend.dto.ErrorExamples;
-import dbadmin.backend.dto.ErrorResponse;
-import dbadmin.backend.dto.RenameRequest;
-import dbadmin.backend.dto.SchemaResponse;
-import dbadmin.backend.dto.TabloResponse;
+import dbadmin.backend.dto.*;
 import dbadmin.backend.service.SchemaService;
 import dbadmin.backend.service.TabloService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import dbadmin.backend.dto.TabloSummaryResponse;
 
 /** Schema icin HTTP endpoint'leri — {@link TabloController} ile ayni mantik, bkz. oradaki aciklama. */
 @RestController
@@ -54,6 +48,12 @@ public class SchemaController {
     @GetMapping
     public List<SchemaResponse> list() {
         return schemaService.listSchemalar();
+    }
+
+    @GetMapping("/schemaList")
+    public List<SchemaResponseDTO> getSchemaList() {
+        List<SchemaResponseDTO> schemaList = schemaService.getSchemaList();
+        return schemaList;
     }
 
     @Operation(summary = "Tek bir schema'yi getir", description = "Id'si verilen schema'nin bilgilerini doner.")

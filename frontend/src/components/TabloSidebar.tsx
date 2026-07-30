@@ -1,19 +1,22 @@
 import { DragEvent, FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Schema } from "../api/schemas";
-import { Tablo } from "../api/tablolar";
+import { Schema, TabloSummary } from "../api/schemas";
 import { useAuth } from "../auth/AuthProvider";
 
 /**
- * Props: gercek veri (schemalar, tablolar, selectedId) ve "bir seye tikladiginda ne olsun"
- * callback'leri hep Dashboard'dan gelir. Bu component'in kendi tuttugu state, arama kutusunun
- * metni, hangi schema'larin acik (expanded) oldugu ve hangi schema su an yeniden adlandirma
- * modunda oldugu — hepsi salt gorsel/gecici UI durumu, Dashboard'un ya da backend'in hic
- * umrunda degil.
+ * Props: gercek veri (schemalar, her schema'nin tablo ozetleri, selectedId) ve "bir seye
+ * tikladiginda ne olsun" callback'leri hep Dashboard'dan gelir. Bu component'in kendi tuttugu
+ * state, arama kutusunun metni, hangi schema'larin acik (expanded) oldugu ve hangi schema su an
+ * yeniden adlandirma modunda oldugu — hepsi salt gorsel/gecici UI durumu, Dashboard'un ya da
+ * backend'in hic umrunda degil.
+ * <p>
+ * Her schema'nin altindaki tablo listesi TabloSummary (sadece id/name/kolonSayisi) — tablonun
+ * kolonlarinin tam listesi burada YOK, bir tabloya tiklaninca Dashboard onu ayrica id'siyle
+ * (GET /api/tablolar/{id}) ceker.
  */
 interface TabloSidebarProps {
   schemalar: Schema[];
-  tablolar: Tablo[];
+  tabloSummariesBySchema: Record<number, TabloSummary[]>;
   selectedId: number | null;
   onSelect: (id: number) => void;
   onCreateClick: () => void;
@@ -26,7 +29,7 @@ interface TabloSidebarProps {
 /** Sol tarafta schema -> tablo hiyerarsisi + "yeni tablo"/"yeni schema" butonlari + arama kutusu. */
 export function TabloSidebar({
   schemalar,
-  tablolar,
+  tabloSummariesBySchema,
   selectedId,
   onSelect,
   onCreateClick,
@@ -41,27 +44,31 @@ export function TabloSidebar({
   const [expandedSchemaIds, setExpandedSchemaIds] = useState<Set<number>>(new Set());
   const [editingSchemaId, setEditingSchemaId] = useState<number | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
-  // Surukle-birak sirasinda hangi tablo tasiniyor ve hangi schema basligi hedef olarak
-  // vurgulanmali — ikisi de salt gorsel/gecici state, backend'in umrunda degil.
+  // Surukle-birak sirasinda hangi tablo hangi schema'dan tasiniyor ve hangi schema basligi
+  // hedef olarak vurgulanmali — hepsi salt gorsel/gecici state, backend'in umrunda degil.
+  // draggedFromSchemaId ayrica tutuluyor cunku TabloSummary'de schemaId alani yok (sadece
+  // id/name/kolonSayisi) — tablonun su an hangi schema'da oldugunu sadece hangi listeden
+  // suruklendiginden biliyoruz.
   const [draggedTabloId, setDraggedTabloId] = useState<number | null>(null);
+  const [draggedFromSchemaId, setDraggedFromSchemaId] = useState<number | null>(null);
   const [dragOverSchemaId, setDragOverSchemaId] = useState<number | null>(null);
   // Her schema'nin altindaki tablo listesinin hangi kritere gore siralanacagi — sadece
   // gorsel/gecici UI durumu, backend'e hic gitmiyor (backend zaten isme gore sirali doner,
-  // "kolon sayisi"/"son guncelleme" secenekleri tamamen frontend'de, elimizdeki veri
-  // uzerinde hesaplaniyor).
-  const [sortBy, setSortBy] = useState<"name" | "kolonCount" | "updatedAt">("name");
+  // "kolon sayisi" secenegi tamamen frontend'de, elimizdeki ozet veri uzerinde hesaplaniyor).
+  const [sortBy, setSortBy] = useState<"name" | "kolonCount">("name");
 
   /** Bir tablo, uzerine birakildigi schema'nin basligina surukle-birakla tasinir. Zaten o schema'daysa hicbir sey yapmaz. */
   function handleDropOnSchema(event: DragEvent, targetSchemaId: number) {
     event.preventDefault();
     setDragOverSchemaId(null);
     const tabloId = draggedTabloId;
+    const fromSchemaId = draggedFromSchemaId;
     setDraggedTabloId(null);
+    setDraggedFromSchemaId(null);
     if (tabloId == null) {
       return;
     }
-    const draggedTablo = tablolar.find((tbl) => tbl.id === tabloId);
-    if (draggedTablo && draggedTablo.schemaId !== targetSchemaId) {
+    if (fromSchemaId !== targetSchemaId) {
       onChangeTabloSchema(tabloId, targetSchemaId);
     }
   }
@@ -85,41 +92,29 @@ export function TabloSidebar({
   }
 
   // Buyuk/kucuk harf duyarsiz, basit bir "icinde geciyor mu" filtresi — backend'e hic gitmiyor,
-  // tamamen zaten ekranda olan listenin uzerinde calisiyor.
+  // tamamen zaten ekranda olan (yuklenmis) ozet listelerin uzerinde calisiyor.
   const normalizedQuery = query.trim().toLowerCase();
   const isSearching = normalizedQuery !== "";
-  const filteredTablolar = isSearching
-    ? tablolar.filter((tablo) => tablo.name.toLowerCase().includes(normalizedQuery))
-    : tablolar;
 
-  // "kolonCount" -> en cok kolonlu tablo en ustte (azalan, b - a).
-  // "updatedAt" -> en son degisen tablo en ustte (azalan); updatedAt null ise (eski satirlar)
-  // en sona atilir (epoch = 0 kabul edilir).
-  // "name" -> Turkce alfabetik siraya gore (localeCompare "tr").
-  const sortedTablolar = [...filteredTablolar].sort((a, b) => {
-    if (sortBy === "kolonCount") {
-      return b.kolonlar.length - a.kolonlar.length;
-    }
-    if (sortBy === "updatedAt") {
-      const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-      const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-      return bTime - aTime;
-    }
-    return a.name.localeCompare(b.name, "tr");
-  });
-
-  const tablolarBySchemaId = new Map<number, Tablo[]>();
-  for (const tablo of sortedTablolar) {
-    const list = tablolarBySchemaId.get(tablo.schemaId) ?? [];
-    list.push(tablo);
-    tablolarBySchemaId.set(tablo.schemaId, list);
+  function sortedTablolarOf(schemaId: number): TabloSummary[] {
+    const all = tabloSummariesBySchema[schemaId] ?? [];
+    const filtered = isSearching
+      ? all.filter((tablo) => tablo.name.toLowerCase().includes(normalizedQuery))
+      : all;
+    // "kolonCount" -> en cok kolonlu tablo en ustte (azalan, b - a).
+    // "name" -> Turkce alfabetik siraya gore (localeCompare "tr").
+    return [...filtered].sort((a, b) =>
+      sortBy === "kolonCount" ? b.kolonSayisi - a.kolonSayisi : a.name.localeCompare(b.name, "tr")
+    );
   }
+
+  const hasAnyTablo = Object.values(tabloSummariesBySchema).some((list) => list.length > 0);
 
   // Arama yaparken bir schema'nin altinda hic eslesme yoksa o schema'yi tamamen gizliyoruz;
   // aramiyorsak (bos schema dahil) her schema gorunur — kullanici yeni actigi bos bir schema'yi
   // "kayboldu" sanmasin diye.
   const visibleSchemalar = isSearching
-    ? schemalar.filter((schema) => (tablolarBySchemaId.get(schema.id) ?? []).length > 0)
+    ? schemalar.filter((schema) => sortedTablolarOf(schema.id).length > 0)
     : schemalar;
 
   return (
@@ -132,7 +127,7 @@ export function TabloSidebar({
           {t("sidebar.newSchema")}
         </button>
       </div>
-      {tablolar.length > 0 && (
+      {hasAnyTablo && (
         <div className="sidebar-search-row">
           <input
             type="text"
@@ -148,19 +143,18 @@ export function TabloSidebar({
             <select
               className="sidebar-sort"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "name" | "kolonCount" | "updatedAt")}
+              onChange={(e) => setSortBy(e.target.value as "name" | "kolonCount")}
               aria-label={t("sidebar.sortLabel")}
             >
               <option value="name">{t("sidebar.sortByName")}</option>
               <option value="kolonCount">{t("sidebar.sortByKolonCount")}</option>
-              <option value="updatedAt">{t("sidebar.sortByUpdatedAt")}</option>
             </select>
           </div>
         </div>
       )}
       <ul className="schema-list">
         {visibleSchemalar.map((schema) => {
-          const schemaTablolar = tablolarBySchemaId.get(schema.id) ?? [];
+          const schemaTablolar = sortedTablolarOf(schema.id);
           const expanded = isSearching || expandedSchemaIds.has(schema.id);
           // Burada listelenen her schema kullanicinin kendi olusturdugu bir schema; hepsi
           // yeniden adlandirilabilir ve silinebilir. Altyapiya ait "public" backend tarafindan
@@ -210,7 +204,7 @@ export function TabloSidebar({
                     <button className="schema-header" onClick={() => toggleSchema(schema.id)}>
                       <span className={`schema-caret${expanded ? " expanded" : ""}`}>&#9656;</span>
                       {schema.name}
-                      <span className="kolon-count">{schemaTablolar.length}</span>
+                      <span className="kolon-count">{schema.tabloSayisi}</span>
                     </button>
                     <button
                       className="btn btn-link"
@@ -230,7 +224,7 @@ export function TabloSidebar({
                           window.confirm(
                             t("sidebar.confirmDeleteSchema", {
                               name: schema.name,
-                              count: schemaTablolar.length,
+                              count: schema.tabloSayisi,
                             })
                           )
                         ) {
@@ -255,17 +249,21 @@ export function TabloSidebar({
                         draggable={canWrite}
                         onDragStart={(e) => {
                           setDraggedTabloId(tablo.id);
+                          setDraggedFromSchemaId(schema.id);
                           // Bazi ortamlarda (ör. jsdom testleri) dataTransfer tanimsiz olabiliyor —
                           // gercek tarayicida her zaman dolu geliyor ama yine de koruyoruz.
                           if (e.dataTransfer) {
                             e.dataTransfer.effectAllowed = "move";
                           }
                         }}
-                        onDragEnd={() => setDraggedTabloId(null)}
+                        onDragEnd={() => {
+                          setDraggedTabloId(null);
+                          setDraggedFromSchemaId(null);
+                        }}
                         title={t("sidebar.dragToMoveHint")}
                       >
                         {tablo.name}
-                        <span className="kolon-count">{tablo.kolonlar.length}</span>
+                        <span className="kolon-count">{tablo.kolonSayisi}</span>
                       </button>
                     </li>
                   ))}
