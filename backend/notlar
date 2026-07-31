@@ -61,9 +61,8 @@ WEEK2:
 
 
     Kalanlar:
-    -heap kullanımı, thread kullanımı, aktif veya total connectionlar -> bir springboot servisini grafanada incelemek i çin ne tür cardlar koyulur -> heap ve connection panelleri zaten vardı, thread için 2 panel eklendi (live/daemon/peak + state'e göre stacked)
-    -Tag create'de olduğu gibi kendi validationlarımız için 4xx http codelarını kullanmayalım
+    +-heap kullanımı, thread kullanımı, aktif veya total connectionlar -> bir springboot servisini grafanada incelemek i çin ne tür cardlar koyulur -> heap ve connection panelleri zaten vardı, thread için 2 panel eklendi (live/daemon/peak + state'e göre stacked)
     -hibernate tarheafında atılan sqlleri console'a yazdırma -> sonra repository katmanına bağlayacağız.
     +-Tag tarafına zaman kalırsa delete/update eklensin
-    -Frontend'in düzenini öğren backend gibi
+    +-Frontend'in düzenini öğren backend gibi
     +-bizim yeni uç authorization'a uygunlamıyor. Onu geri al

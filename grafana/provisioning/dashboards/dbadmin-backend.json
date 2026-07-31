@@ -325,12 +325,39 @@
       ]
     },
     {
+      "id": 18,
+      "type": "timeseries",
+      "title": "JVM GC Pause Time (avg ms, by cause)",
+      "description": "Bir GC durup dunyayi ne kadar bekletiyor. Sayi degil sure onemli: kisa/sik pause'lar genelde normal, uzayan/seyrek buyuk pause'lar uygulamayi donduran (stop-the-world) bir soruna isaret eder.",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "1000 * rate(jvm_gc_pause_seconds_sum{application=\"backend\"}[5m]) / rate(jvm_gc_pause_seconds_count{application=\"backend\"}[5m])",
+          "legendFormat": "{{action}} ({{cause}})",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 10,
       "type": "stat",
       "title": "Tables Active",
       "gridPos": {
         "x": 0,
-        "y": 36,
+        "y": 44,
         "w": 4,
         "h": 4
       },
@@ -355,7 +382,7 @@
       "title": "Schemas Active",
       "gridPos": {
         "x": 4,
-        "y": 36,
+        "y": 44,
         "w": 4,
         "h": 4
       },
@@ -380,7 +407,7 @@
       "title": "Tables Created (total)",
       "gridPos": {
         "x": 8,
-        "y": 36,
+        "y": 44,
         "w": 4,
         "h": 4
       },
@@ -405,7 +432,7 @@
       "title": "Tables Deleted (total)",
       "gridPos": {
         "x": 12,
-        "y": 36,
+        "y": 44,
         "w": 4,
         "h": 4
       },
@@ -430,7 +457,7 @@
       "title": "Columns Created (total)",
       "gridPos": {
         "x": 16,
-        "y": 36,
+        "y": 44,
         "w": 4,
         "h": 4
       },
@@ -455,7 +482,7 @@
       "title": "Schemas Created (total)",
       "gridPos": {
         "x": 20,
-        "y": 36,
+        "y": 44,
         "w": 4,
         "h": 4
       },
