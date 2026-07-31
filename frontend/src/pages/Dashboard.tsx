@@ -217,17 +217,23 @@ export function Dashboard() {
   }
 
   /**
-   * Tagler/Kullanicilar verisi ilk mount'ta cekilmiyor — kullanici o sekmeye GIRDIGINDE
-   * (burada) cekilir. isAdmin kontrolu ayni sebeple: backend zaten VIEWER/EDITOR'a 403 donuyor
-   * (bkz. SecurityConfig), onlar icin bu istegi hic atmamak "sayfa yuklenemedi" bildirimini
-   * gereksiz yere kirletmemek anlamina gelir.
+   * Her sekmeye GIRILDIGINDE (burada) ilgili veri tazelenir — component hic unmount olmadigi
+   * icin bu, DB'de baska bir yerden (baska bir kullanici, baska bir sekme) yapilan degisiklikleri
+   * gormenin tek yolu. Schemalar icin de ayni sebeple refreshWorkspace() cagriliyor; ilk mount'taki
+   * cekim (yukarida) sadece sayfa hic acilmamisken ilk veriyi getirir. isAdmin kontrolu backend
+   * zaten VIEWER/EDITOR'a 403 dondugu icin (bkz. SecurityConfig), onlar icin bu istegi hic
+   * atmamak "sayfa yuklenemedi" bildirimini gereksiz yere kirletmemek anlamina gelir.
    */
   function handleChangeActiveView(view: WorkspaceView) {
     if (!confirmDiscardIfDirty()) {
       return;
     }
     setActiveView(view);
-    if (view === "tagler") {
+    if (view === "schemalar") {
+      refreshWorkspace().catch((err) =>
+        notifyFromError(notify, t, err, t("notifications.loadFailed"))
+      );
+    } else if (view === "tagler") {
       refreshTags().catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")));
     } else if (view === "kullanicilar" && isAdmin) {
       refreshKullanicilar().catch((err) =>

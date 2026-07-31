@@ -33,6 +33,34 @@ services:
     networks:
       - dbadmin-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: dbadmin_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - dbadmin-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis'i tarayicidan gorsel incelemek icin (Grafana/Prometheus ile ayni mantik). Ilk acilista
+  # "Add Redis database" ekraninda host=redis, port=6379 girilmesi yeterli (sifre yok).
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: dbadmin_redisinsight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - dbadmin-net
+
   backend:
     build: ./backend
     container_name: dbadmin_backend
@@ -43,6 +71,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       # JWT imza anahtari. Bu anahtari bilen herkes istedigi kullanici adina gecerli token
       # uretebilir — .env'den gelmeli, koda/compose'a yazilmamali. En az 32 bayt olmali.
       APP_JWT_SECRET: ${APP_JWT_SECRET:-yerel-gelistirme-icin-varsayilan-jwt-anahtari-degistirin}
@@ -51,6 +81,8 @@ services:
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-admin123}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "8081:8081"
@@ -100,6 +132,7 @@ volumes:
   pgdata:
   prometheus_data:
   grafana_data:
+  redisinsight_data:
 
 networks:
   dbadmin-net:

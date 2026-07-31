@@ -60,9 +60,16 @@ WEEK2:
 
 
 
-    Kalanlar:
-    +-heap kullanımı, thread kullanımı, aktif veya total connectionlar -> bir springboot servisini grafanada incelemek i çin ne tür cardlar koyulur -> heap ve connection panelleri zaten vardı, thread için 2 panel eklendi (live/daemon/peak + state'e göre stacked)
-    -hibernate tarheafında atılan sqlleri console'a yazdırma -> sonra repository katmanına bağlayacağız.
-    +-Tag tarafına zaman kalırsa delete/update eklensin
-    +-Frontend'in düzenini öğren backend gibi
-    +-bizim yeni uç authorization'a uygunlamıyor. Onu geri al
+
+    31Temmuz:
+    -Dashboard kartları beraber incelenecek
+    +1)Frontendde schemas, tags veya users'a tekrar tıkladığımda niye istek atmıyoruz?
+    2)Yeni Teknoloji:REDIS
+    +-Redis, in memory key-value. -> Bizim projemiz için gereksiz, overengineering bir teknoloji ama kullanmayı ve ne işe yaradığını öğrenelim
+    +-Her istekte kullanıcı ile ilgili isteklerde bulunuyoruz. Bunun yerine login olunduğunda user bilgilerini cacheleyelim.
+    +-Cache'in evictini düşünelim. Ne zaman evict etmek lazım ne zaman eklemek lazım ne zaman update etmek lazım.
+    -Requirement çıkart -> Plan oluşturt -> Implementasyon
+
+
+
+    3)Frontend güzelleştirme

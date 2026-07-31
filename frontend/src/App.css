@@ -435,6 +435,9 @@
   display: inline-flex;
   gap: 4px;
   align-items: center;
+  /* .tagler-item-row grid'inin tek cocugu oldugunda tum satiri kaplasin diye (grid disi
+     kullanimlarda, ör. TabloSidebar, bu ozelligin hicbir etkisi yok). */
+  grid-column: 1 / -1;
 }
 
 .btn {
@@ -525,14 +528,22 @@
   padding: 10px 0;
 }
 
+/* Eskiden flex + justify-content: space-between kullaniyordu: tagler-name'in genisligi
+   tag adinin uzunluguna gore degistigi icin (ör. "arsiv" vs "opsiyonel"), Detail/Edit/Delete
+   her satirda farkli bir x konumuna dusuyordu. Sabit genislikli grid, isim ne kadar uzun
+   olursa olsun butonlari hep ayni sutunlara oturtur. */
 .tagler-item-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 90px 90px 90px;
   align-items: center;
-  justify-content: space-between;
+  column-gap: 8px;
 }
 
 .tagler-name {
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tagler-usage {

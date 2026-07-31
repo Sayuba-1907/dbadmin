@@ -6,6 +6,10 @@ docker compose logs -f backend
 ss -ltnp | grep 3000
 ./mvnw spring-boot:run
 npm start
+redisi çalıstırmak için bak:
+-Terminal: docker exec -it dbadmin_redis redis-cli → sonra KEYS user:role:*, HGETALL user:role:admin, TTL user:role:admin
+- Görsel arayüz (RedisInsight): tarayıcıda http://localhost:5540 → ilk açılışta "Add database" → Host: redis, Port: 6379, şifre yok
+
 https://www.baeldung.com/java-equals-hashcode-contracts hashcode equals siteye bak.
 http://localhost:8081/swagger-ui/index.html
 http://localhost:3001/?orgId=1&from=now-6h&to=now&timezone=browser

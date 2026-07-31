@@ -9,8 +9,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -106,16 +104,6 @@ public class SecurityConfig {
         FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);
         return registration;
-    }
-
-    /**
-     * Parolalar BCrypt ile hash'lenir: ayni parola her seferinde farkli bir hash uretir (icine
-     * rastgele bir "salt" gomulur), bu yuzden hazir hash tablolariyla toplu cozum yapilamaz.
-     * Ayrica bilerek yavastir — saniyede milyonlarca deneme yapilmasini zorlastirir.
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 
     /** Giris ucunun ({@code AuthController}) parola dogrulamak icin kullandigi bilesen. */

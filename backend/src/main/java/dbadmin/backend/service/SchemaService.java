@@ -98,6 +98,15 @@ public class SchemaService {
 
         Map<Long, SchemaResponseDTO> schemaIdSchemaResponseMap = new HashMap<>();
 
+        // Once TUM schema'lar icin (tablosu olmasa bile) bos bir DTO acilir — asagidaki
+        // findAllSchemaTabloPairs sadece tablosu OLAN schema'lari uretir (inner join gibi
+        // davranir), bu yuzden yeni olusturulup henuz tablo eklenmemis bir schema o listede
+        // hic gorunmez ve olusturulmasaydi frontend'de kayboluyordu.
+        schemaRepository.findAll().stream()
+                .filter(schema -> !isHidden(schema))
+                .forEach(schema -> schemaIdSchemaResponseMap.put(schema.getId(),
+                        new SchemaResponseDTO(schema.getId(), schema.getName())));
+
         Map<Long, Long> tabloIdColumnCountMap = tabloRepository.countKolonlarGroupByTablo().stream()
                 .collect(Collectors
                         .toMap(TabloRepository.TabloKolonCountProjection::getTabloId,

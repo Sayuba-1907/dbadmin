@@ -6,6 +6,7 @@ import dbadmin.backend.exception.ConflictException;
 import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.KullaniciRepository;
+import dbadmin.backend.security.KullaniciRolCacheService;
 import dbadmin.backend.validation.NameValidator;
 import java.util.List;
 import java.util.Map;
@@ -26,10 +27,15 @@ public class KullaniciService {
 
     private final KullaniciRepository kullaniciRepository;
     private final PasswordEncoder passwordEncoder;
+    private final KullaniciRolCacheService kullaniciRolCacheService;
 
-    public KullaniciService(KullaniciRepository kullaniciRepository, PasswordEncoder passwordEncoder) {
+    public KullaniciService(
+            KullaniciRepository kullaniciRepository,
+            PasswordEncoder passwordEncoder,
+            KullaniciRolCacheService kullaniciRolCacheService) {
         this.kullaniciRepository = kullaniciRepository;
         this.passwordEncoder = passwordEncoder;
+        this.kullaniciRolCacheService = kullaniciRolCacheService;
     }
 
     @Transactional(readOnly = true)
@@ -70,6 +76,13 @@ public class KullaniciService {
                 new Kullanici(kullaniciAdi, passwordEncoder.encode(parola), atanacak));
     }
 
+    /**
+     * Rol degistiginde cache'i EVICT ediyoruz (guncel degeri tekrar yazmak yerine silmek yeterli
+     * — bir sonraki istek zaten cache miss'te DB'den taze rolu okuyup kendisi yazacak, bkz.
+     * {@link dbadmin.backend.security.JwtAuthenticationFilter}). Bunu unutursak: kullanici eski
+     * (yuksek) rolüyle TTL suresince (varsayilan 30 dk) islem yapmaya devam edebilir — bu yuzden
+     * evict burada, DB degisikligiyle AYNI metodun icinde, unutulmasi zor bir yerde.
+     */
     @Transactional
     public Kullanici changeRol(Long id, Rol yeniRol) {
         if (yeniRol == null) {
@@ -78,6 +91,7 @@ public class KullaniciService {
         Kullanici kullanici = getKullanici(id);
         sonAdminKorumasi(kullanici, yeniRol);
         kullanici.setRol(yeniRol);
+        kullaniciRolCacheService.evict(kullanici.getKullaniciAdi());
         return kullanici;
     }
 
@@ -86,6 +100,7 @@ public class KullaniciService {
         Kullanici kullanici = getKullanici(id);
         sonAdminKorumasi(kullanici, null);
         kullaniciRepository.delete(kullanici);
+        kullaniciRolCacheService.evict(kullanici.getKullaniciAdi());
     }
 
     /**

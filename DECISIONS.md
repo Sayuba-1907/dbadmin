@@ -282,3 +282,33 @@ One line per notable decision: what was chosen, what was ruled out, why.
   Ruled out: sadece `@WithMockUser` eklemek (calismadi), ya da her testte gercek token uretmek.
   Why: MockMvc'ye guvenlik filtreleri kendiliginden ekleniyor (kimliksiz istek 401 doner, gercek Bearer token calisir) ama testin koydugu kimlik zincire ulasmiyordu — zincirdeki `SecurityContextHolderFilter` baglami kendi deposundan yukleyip ezdigi icin `@WithMockUser` sessizce etkisizdi ve her sey 401 donuyordu. Not: Spring Boot 4'te bu sinif `org.springframework.boot.webmvc.test.autoconfigure` altina tasindi (eskiden `...test.autoconfigure.web.servlet`).
   Ayrica: `AuthIntegrationTest` bilerek **gercek token** kullanir (mock kimlik yok) — giristen token almaya, token'la korunan uca girmeye kadar tum akis uretimdeki yoluyla test edilir.
+
+## Redis: kullanici rol cache'i (2026-07-31)
+
+- **Cache manuel `RedisTemplate` ile yazildi**, Spring'in `@Cacheable`/`@CacheEvict` annotasyonlari degil.
+  Ruled out: `spring-boot-starter-cache` + `@Cacheable(value="kullaniciRol", key="#kullaniciAdi")`.
+  Why: `notlar`daki hedef Redis'i *ogrenmekti* — annotasyon tabanli cache mekanizmayi (get/put/evict, TTL, ne zaman DB'ye dusuldugu) tamamen gizler. `KullaniciRolCacheService` ile bu adimlarin hepsi acikca kodda goruluyor.
+
+- **Cache `KullaniciDetailsService.loadUserByUsername`'in ICINE degil, `JwtAuthenticationFilter`'a kondu.**
+  Ruled out: cache'i `loadUserByUsername` metodunun basina koymak (tek yer, hem login hem her istek icin gecerli olurdu).
+  Why: bu metod hem login'de (`AuthenticationManager` parola karsilastirmasi icin `parolaHash`'e ihtiyac duyar) hem her istekte `JwtAuthenticationFilter` tarafindan (JWT zaten kimligi kanitladigi icin parola hic kullanilmaz, `credentials=null` gecilir) cagriliyor. Cache'i oraya koysaydik `parolaHash` da Redis'e yazilirdi — parola hash'i ekstra bir sistemde tutmak gereksiz saldiri yuzeyi. Sadece parolasiz calisan JWT yoluna cache eklendi, `JwtAuthenticationFilter` artik `KullaniciDetailsService` yerine dogrudan `KullaniciService`'i (id+rol donen is servisi) kullaniyor.
+
+- **Redis'te veri yapisi: Hash (`id`, `rol` alanlari), duz string degerlerle** — JSON serilestirme yok.
+  Ruled out: `RedisTemplate<String, Object>` + `GenericJackson2JsonRedisSerializer`.
+  Why: sadece iki alanlik basit bir kayit icin JSON serilestirici katmani gereksiz karmasiklik. Duz `StringRedisSerializer` ile `redis-cli HGETALL user:role:admin` / RedisInsight'ta dogrudan okunabilir kaliyor — hem is gorur hem ogrenmesi/hata ayiklamasi kolay.
+
+- **TTL 30 dakika + evict birlikte**, sadece TTL degil.
+  Ruled out: yalnizca TTL'e guvenip evict yazmamak (basit ama rol degisince en fazla TTL kadar eski yetki gecerli kalirdi).
+  Why: `KullaniciService.changeRol`/`deleteKullanici` artik DB degisikligiyle **ayni metodun icinde** `KullaniciRolCacheService.evict()` cagiriyor — tutarliligi asil bu saglar. TTL sadece unutulan bir evict icin guvenlik agi: DB ile Redis en kotu ihtimalle 30 dk arayla senkronize olur, sonsuza kadar degil.
+
+- **Redis erisilemezse fail-open**: `KullaniciRolCacheService`'in her metodu (`get`/`put`/`evict`) hatalari yutup loglar, hicbirini yukari firlatmaz.
+  Ruled out: hatayi yukari firlatip istegi 500 ile reddetmek.
+  Why: cache bir optimizasyon, bir bagimlilik degil — Redis container'i durdugunda bile uygulama (biraz daha yavas) calismaya devam etmeli. `spring.data.redis.timeout=300ms` de ayni sebeple eklendi: varsayilan Lettuce timeout'u (60sn) fail-open'i pratikte anlamsiz kilacak kadar yavasti (canli test: Redis kapatilinca istekler ~60sn suruyordu, 300ms'ye cekilince ~0.6sn'ye dustu).
+
+- **`PasswordEncoder` bean'i `SecurityConfig`'ten ayri bir `PasswordEncoderConfig`'e tasindi.**
+  Ruled out: `SecurityConfig` icinde birakmak (onceki hal).
+  Why: `KullaniciService` (PasswordEncoder'a ihtiyac duyar) `JwtAuthenticationFilter`'a baglaninca su dongu olustu: `SecurityConfig -> JwtAuthenticationFilter -> KullaniciService -> PasswordEncoder (SecurityConfig'in bean'i) -> SecurityConfig`. Bean'i bagimsiz bir config'e almak, Spring'in "circular reference" hatasini kok sebepten cozdu (`spring.main.allow-circular-references=true` gibi bir kacis yoluna gerek kalmadi).
+
+- **RedisInsight (`docker-compose.yml`'e `redisinsight` servisi) eklendi.**
+  Ruled out: sadece `redis-cli` ile terminalden bakmak.
+  Why: Grafana/Prometheus'ta oldugu gibi, cache'in icini gorsel/etkilesimli inceleyebilmek (key'ler, TTL, hash alanlari) ogrenme amaci icin terminale gore daha hizli geri bildirim veriyor. Kalici bir volume ile veri persist etmez — cache zaten kalici olmak zorunda degil.
