@@ -3,8 +3,12 @@ package dbadmin.backend.ddl;
 import dbadmin.backend.exception.ValidationException;
 import org.jspecify.annotations.NonNull;
 
-// The whitelist from the spec, plus the mapping to the real PostgreSQL type.
-// "datetime" has no matching Postgres type name, hence this mapping layer.
+/**
+ * Kolon tipleri icin izin verilen sabit liste (whitelist) + her birinin gercek Postgres
+ * karsiligi. "datetime" diye bir Postgres tipi yok, o yuzden bu mapping katmani var
+ * (datetime -> timestamp). Metadata'da ({@code Kolon.type}) hangi deger tutuluyorsa,
+ * gercek {@code CREATE TABLE} de o degerin postgresType()'ini kullanir.
+ */
 public enum ColumnType {
 
     NUMERIC("numeric", "numeric"),
@@ -28,13 +32,18 @@ public enum ColumnType {
         return postgresType;
     }
 
-    // Never trust the client: this is called even though the UI dropdown already limits the choice.
+    /**
+     * String'i (mesela request body'den gelen "numeric") enum degerine cevirir.
+     * UI'daki dropdown zaten secimi sinirlasa da backend client'a guvenmez —
+     * whitelist disi bir deger gelirse burada reddedilir (defense in depth).
+     */
     public static @NonNull ColumnType fromMetadataValue(String value) {
         for (ColumnType type : values()) {
             if (type.metadataValue.equals(value)) {
                 return type;
             }
         }
-        throw new ValidationException("type must be one of: numeric, text, datetime, boolean");
+        throw new ValidationException(
+                "VALIDATION_INVALID_COLUMN_TYPE", "type must be one of: numeric, text, datetime, boolean");
     }
 }

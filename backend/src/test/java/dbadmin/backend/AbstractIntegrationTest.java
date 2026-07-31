@@ -4,19 +4,24 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 // Shared real Postgres for every integration test - not H2, not a mock,
-// per the assignment's testing requirement. The container is static, so a
-// single instance is started once and reused across all subclasses in the
-// same JVM run instead of paying container-startup cost per test class.
+// per the assignment's testing requirement. Uses Testcontainers' documented
+// "singleton container" pattern: a static initializer block, not @Testcontainers
+// + @Container. The block runs exactly once when this class is first loaded,
+// so the container is genuinely shared across every subclass in the JVM run.
+// (The @Testcontainers/@Container annotation combo looked equivalent but, in
+// practice on this project, caused a fresh container per subclass instead of
+// one shared instance - the static block sidesteps that entirely.)
 @SpringBootTest
-@Testcontainers
+@org.springframework.context.annotation.Import(MockMvcSecurityTestConfig.class)
 public abstract class AbstractIntegrationTest {
 
-    @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine");
+
+    static {
+        POSTGRES.start();
+    }
 
     @DynamicPropertySource
     static void datasourceProperties(DynamicPropertyRegistry registry) {

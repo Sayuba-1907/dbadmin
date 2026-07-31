@@ -1,7 +1,13 @@
 package dbadmin.backend.dto;
 
-// Shared body shape for "rename table" and "rename column" - both take a
-// single new name string.
-//RenameRequest, adı değiştirilmek istenen bir nesne için dış dünyadan gelen yeni ismi taşıyan en pratik ortak formdur.
-public record RenameRequest(String name) {
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/** "Rename table" ve "rename column" endpoint'lerinin ortak request govdesi — ikisi de tek bir yeni isim alir. */
+public record RenameRequest(
+        @Schema(
+                        description = "Yeni isim. 2-30 karakter, kucuk harf/rakam/alt cizgi, buyuk harfle "
+                                + "baslayamaz.",
+                        example = "ogrenciler_v2",
+                        requiredMode = Schema.RequiredMode.REQUIRED)
+                String name) {
 }

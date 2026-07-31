@@ -1,0 +1,19 @@
+# Dockerfile'daki "COPY . ." bu dosyalari atlar.
+# node_modules ozellikle onemli: Dockerfile once "npm ci" ile kendi node_modules'unu kuruyor,
+# sonra "COPY . ." geliyor — dislanmazsa host'taki node_modules imajdakinin uzerine yazilir
+# (host'un isletim sistemi/mimarisi icin derlenmis binary'lerle birlikte).
+node_modules
+build
+
+# Test/gelistirme artiklari — production imajinda isi yok
+e2e
+playwright-report
+test-results
+coverage
+
+.git
+.gitignore
+README.md
+.env
+.env.local
+npm-debug.log*

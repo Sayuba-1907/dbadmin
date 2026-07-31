@@ -1,6 +1,7 @@
 package dbadmin.backend.controller;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -9,16 +10,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dbadmin.backend.AbstractIntegrationTest;
+import dbadmin.backend.dto.ChangePrimaryKeyRequest;
 import dbadmin.backend.dto.ChangeTagRequest;
 import dbadmin.backend.dto.CreateKolonRequest;
+import dbadmin.backend.dto.CreateSchemaRequest;
 import dbadmin.backend.dto.CreateTabloRequest;
 import dbadmin.backend.dto.RenameRequest;
+import dbadmin.backend.dto.TabloUpdateRequest;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 // Automates the same manual curl checks run earlier: every use case must
@@ -26,6 +33,12 @@ import tools.jackson.databind.ObjectMapper;
 // 409/204), because the frontend colours its notifications off of that
 // status. A regression here (e.g. a 500 instead of a 409) fails the build.
 @AutoConfigureMockMvc
+// Bu testler uclara HTTP uzerinden gidiyor, yani artik Spring Security'nin filtre
+// zincirinden de geciyorlar — kimliksiz her istek 401 donerdi. @WithMockUser guvenlik
+// baglamina hazir bir kullanici koyar (gercek bir token uretmeye gerek kalmaz); ADMIN
+// secildi cunku bu siniflarin derdi yetki degil, uclarin kendi davranisi. Yetki
+// kurallarinin kendisi ayrica SecurityRulesIntegrationTest'te sinaniyor.
+@WithMockUser(roles = "ADMIN")
 class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -34,13 +47,42 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private String json(Object body) throws Exception {
+    /** Testlerin tablo kurdugu schema — "public" gecerli bir hedef degil, bkz. SchemaService.RESERVED_SCHEMA_NAME. */
+    private static final String TEST_SCHEMA = "ders_sema";
+
+    private Long testSchemaId;
+
+    private String json(Object body) {
         return objectMapper.writeValueAsString(body);
+    }
+
+    /**
+     * Tablo olusturmak icin schemaId zorunlu oldugundan testler once kendi schema'sini kurar —
+     * bilerek API uzerinden, bu da GET/POST /api/schemalar'i her testte bir kez dogrulamis olur.
+     * Postgres tum testler arasinda paylasildigi icin schema zaten varsa yeniden kurulmaz.
+     */
+    @BeforeEach
+    void ensureTestSchema() throws Exception {
+        String listResponse = mockMvc.perform(get("/api/schemalar"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        for (JsonNode schema : objectMapper.readTree(listResponse)) {
+            if (TEST_SCHEMA.equals(schema.get("name").asString())) {
+                testSchemaId = schema.get("id").asLong();
+                return;
+            }
+        }
+        String createResponse = mockMvc.perform(post("/api/schemalar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new CreateSchemaRequest(TEST_SCHEMA))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        testSchemaId = objectMapper.readTree(createResponse).get("id").asLong();
     }
 
     @Test
     void create_returns201() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("ders1",
+        CreateTabloRequest request = new CreateTabloRequest("ders1", testSchemaId,
                 List.of(new CreateKolonRequest("ad", "text", null)));
 
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
@@ -50,7 +92,7 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void create_duplicateName_returns409() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("ders2",
+        CreateTabloRequest request = new CreateTabloRequest("ders2", testSchemaId,
                 List.of(new CreateKolonRequest("ad", "text", null)));
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
                 .andExpect(status().isCreated());
@@ -62,12 +104,43 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void create_invalidName_returns400() throws Exception {
-        CreateTabloRequest request = new CreateTabloRequest("Buyuk",
+        CreateTabloRequest request = new CreateTabloRequest("Buyuk", testSchemaId,
                 List.of(new CreateKolonRequest("ad", "text", null)));
 
         mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status", is(400)));
+    }
+
+    @Test
+    void create_unknownSchemaId_returns404() throws Exception {
+        CreateTabloRequest request = new CreateTabloRequest("ders4", -1L,
+                List.of(new CreateKolonRequest("ad", "text", null)));
+
+        mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)));
+    }
+
+    @Test
+    void create_noSchemaId_returns400() throws Exception {
+        CreateTabloRequest request = new CreateTabloRequest("ders5", null,
+                List.of(new CreateKolonRequest("ad", "text", null)));
+
+        mockMvc.perform(post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)));
+    }
+
+    @Test
+    void listSchemalar_doesNotContainPublic() throws Exception {
+        String response = mockMvc.perform(get("/api/schemalar"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        for (JsonNode schema : objectMapper.readTree(response)) {
+            assertNotEquals("public", schema.get("name").asString());
+        }
     }
 
     @Test
@@ -84,7 +157,7 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void fullLifecycle_rename_addColumn_changeTag_deleteColumn_deleteTable() throws Exception {
-        CreateTabloRequest createRequest = new CreateTabloRequest("ders3",
+        CreateTabloRequest createRequest = new CreateTabloRequest("ders3", testSchemaId,
                 List.of(new CreateKolonRequest("ad", "text", null)));
         String createResponse = mockMvc.perform(
                         post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(createRequest)))
@@ -117,5 +190,82 @@ class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
         mockMvc.perform(get("/api/tablolar/{id}", tabloId))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void changeKolonPrimaryKey_togglesFlagAndIsVisibleInResponse() throws Exception {
+        CreateTabloRequest createRequest = new CreateTabloRequest("ders_pk1", testSchemaId,
+                List.of(new CreateKolonRequest("ad", "text", null)));
+        String createResponse = mockMvc.perform(
+                        post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(createRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.kolonlar[0].primaryKey", is(false)))
+                .andReturn().getResponse().getContentAsString();
+        long tabloId = objectMapper.readTree(createResponse).get("id").asLong();
+        long kolonId = objectMapper.readTree(createResponse).get("kolonlar").get(0).get("id").asLong();
+
+        mockMvc.perform(patch("/api/tablolar/{id}/kolonlar/{kolonId}/primary-key", tabloId, kolonId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new ChangePrimaryKeyRequest(true))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.primaryKey", is(true)));
+
+        mockMvc.perform(get("/api/tablolar/{id}", tabloId))
+                .andExpect(jsonPath("$.kolonlar[0].primaryKey", is(true)));
+
+        mockMvc.perform(patch("/api/tablolar/{id}/kolonlar/{kolonId}/primary-key", tabloId, kolonId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new ChangePrimaryKeyRequest(false))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.primaryKey", is(false)));
+    }
+
+    @Test
+    void changeKolonPrimaryKey_unknownKolon_returns404() throws Exception {
+        CreateTabloRequest createRequest = new CreateTabloRequest("ders_pk2", testSchemaId,
+                List.of(new CreateKolonRequest("ad", "text", null)));
+        String createResponse = mockMvc.perform(
+                        post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(createRequest)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long tabloId = objectMapper.readTree(createResponse).get("id").asLong();
+
+        mockMvc.perform(patch("/api/tablolar/{id}/kolonlar/{kolonId}/primary-key", tabloId, -1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(new ChangePrimaryKeyRequest(true))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code", is("NOT_FOUND_COLUMN")));
+    }
+
+    @Test
+    void applyChanges_renameAndAddColumn_returns200WithUpdatedTablo() throws Exception {
+        CreateTabloRequest createRequest = new CreateTabloRequest("ders_pk3", testSchemaId,
+                List.of(new CreateKolonRequest("ad", "text", null)));
+        String createResponse = mockMvc.perform(
+                        post("/api/tablolar").contentType(MediaType.APPLICATION_JSON).content(json(createRequest)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long tabloId = objectMapper.readTree(createResponse).get("id").asLong();
+
+        TabloUpdateRequest updateRequest = new TabloUpdateRequest("ders_pk3_yeni", null, null,
+                List.of(new CreateKolonRequest("yeni_kolon", "numeric", null)), null);
+
+        mockMvc.perform(patch("/api/tablolar/{id}/degisiklikler", tabloId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("ders_pk3_yeni")))
+                .andExpect(jsonPath("$.kolonlar", org.hamcrest.Matchers.hasSize(2)));
+    }
+
+    @Test
+    void applyChanges_unknownTablo_returns404() throws Exception {
+        TabloUpdateRequest updateRequest = new TabloUpdateRequest("yeni_isim", null, null, null, null);
+
+        mockMvc.perform(patch("/api/tablolar/{id}/degisiklikler", 999999)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(updateRequest)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code", is("NOT_FOUND_TABLE")));
     }
 }

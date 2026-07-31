@@ -1,10 +1,15 @@
 package dbadmin.backend.service;
 
-// Minimal input carrier for "define a column while creating a table".
-// Not the API request/response shape - that's the DTO layer, which comes
-// after the controller step. This just lets the service have a typed
-// signature today instead of raw (String, String, Long) parameter lists.
-//record : veri tasıyıcısıdır içi değişitirlemez çağrıldığında arka planda bazı metotları otomatik üretir. sadece veri tasımak
-//için üretilmiştir.
-public record KolonTanimi(String name, String type, Long tagId) {
+/**
+ * "Tablo olustururken bir kolon tanimla" icin kucuk veri tasiyici (record).
+ * DTO degildir — DTO'lar API'nin disari verdigi sozlesme (dto paketinde), bu ise sadece
+ * controller'dan service'e gecerken (String, String, Long) parametre listesi yerine
+ * kullanilan ic (internal) bir tip.
+ */
+public record KolonTanimi(String name, String type, Long tagId, boolean primaryKey) {
+
+    /** primaryKey belirtilmedigi cagrilar icin (mevcut testler/cagiranlar) kisayol: varsayilan false. */
+    public KolonTanimi(String name, String type, Long tagId) {
+        this(name, type, tagId, false);
+    }
 }

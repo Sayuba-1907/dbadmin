@@ -1,38 +1,616 @@
 .App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #fff;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.current-user {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.language-switcher {
+  display: flex;
+  gap: 4px;
+}
+
+/* fieldset'in tarayici varsayilanlarini (kenarlik, ic bosluk, min-width: min-content) sifirlar
+   — burada tek amac VIEWER rolunde tum ic form elemanlarini (input/select/button, DOM
+   derinligi fark etmeksizin) tek bir "disabled" ile kapatmak, gorsel olarak bir cerceve
+   eklemek degil. min-width: 0 ozellikle onemli: fieldset'in varsayilani flex/grid
+   layout'lari beklenmedik sekilde tasirabiliyor. */
+.unstyled-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 100vh;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 280px;
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.login-form h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.login-field input {
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.login-submit {
+  margin-top: 8px;
+}
+
+.language-switcher-btn {
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.language-switcher-btn.active {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  cursor: default;
+}
+
+.dashboard {
+  display: flex;
+  flex: 1;
+}
+
+.workspace-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 96px;
+  padding: 12px 8px;
+  border-right: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.workspace-nav-btn {
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.workspace-nav-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.workspace-nav-btn.active {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.sidebar {
+  width: 240px;
+  border-right: 1px solid #e2e8f0;
+  padding: 12px;
+  background-color: #fff;
+}
+
+.sidebar-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sidebar-search {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.sidebar-search:focus-visible,
+.sidebar-sort:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+/* Sitelerde alisik oldugumuz "sirala" ikonlu secim kutusu: ikonu select'in ustune bindiriyoruz
+   (position: absolute), select'in kendisinin sol padding'ini ikona yer acacak kadar genisletiyoruz. */
+.sidebar-sort-control {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sidebar-sort-icon {
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  font-size: 12px;
+  line-height: 1;
+  color: #64748b;
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.sidebar-sort {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 104px;
+  padding: 6px 8px 6px 24px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #334155;
+  background-color: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.sidebar-sort:hover {
+  border-color: #94a3b8;
+}
+
+.schema-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.schema-group {
+  margin-bottom: 2px;
+  border-radius: 6px;
+  transition:
+    background-color 0.15s ease,
+    outline-color 0.15s ease;
+}
+
+.schema-header-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.schema-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.schema-header:hover {
+  background-color: #f1f5f9;
+}
+
+.schema-header span:not(.kolon-count):not(.schema-caret) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schema-caret {
+  display: inline-block;
+  font-size: 10px;
+  color: #94a3b8;
+  transition: transform 0.15s ease;
+}
+
+.schema-caret.expanded {
+  transform: rotate(90deg);
+}
+
+.schema-header-row .btn-link {
+  font-size: 12px;
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.schema-header-row .btn-link:hover {
+  color: #475569;
+  text-decoration: underline;
+}
+
+.schema-header-row .btn-danger.btn-link:hover {
+  color: #dc2626;
+}
+
+/* Bir tablo suruklenirken uzerine gelinen schema'nin tum alanini (baslik + tablo listesi)
+   vurgular — kullaniciya "burasi birakma hedefi" geri bildirimi verir. Dashed outline yerine
+   sol kenarlik + hafif zemin renginin sebebi: daha sakin/az "titrek" gorunmesi. */
+.schema-group.drag-over {
+  background-color: #eff6ff;
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+}
+
+.tablo-list {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding: 0 0 0 14px;
+  border-left: 1px solid #e2e8f0;
+  margin-left: 10px;
+}
+
+.tablo-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: 5px;
+  text-align: left;
+  cursor: grab;
+  font-size: 14px;
+  color: #475569;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.tablo-list-item:hover {
+  background-color: #f1f5f9;
+}
+
+.tablo-list-item.selected {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+.tablo-list-item.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.kolon-count {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 400;
+  flex-shrink: 0;
+}
+
+.detail-panel {
+  flex: 1;
+  padding: 20px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.detail-header-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tablo-name-input {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.tablo-name-input:hover,
+.tablo-name-input:focus {
+  border-color: #cbd5e1;
+}
+
+.pending-move-hint {
+  font-size: 13px;
+  color: #92400e;
+  font-style: italic;
+}
+
+.kolon-row-silinecek {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.new-badge {
+  font-size: 11px;
+  color: #15803d;
+  margin-left: 6px;
+}
+
+.kolon-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.kolon-table th,
+.kolon-table td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.type-badge {
+  font-family: monospace;
+  background-color: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.pk-badge {
+  font-family: monospace;
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.add-kolon-form,
+.add-tag-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.inline-edit-form {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  /* .tagler-item-row grid'inin tek cocugu oldugunda tum satiri kaplasin diye (grid disi
+     kullanimlarda, ör. TabloSidebar, bu ozelligin hicbir etkisi yok). */
+  grid-column: 1 / -1;
+}
+
+.btn {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn:focus-visible,
+.tablo-list-item:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.btn-danger {
+  color: #dc2626;
+}
+
+.btn-link {
+  border: none;
+  background: none;
+  text-decoration: underline;
+}
+
+.empty-hint {
+  color: #64748b;
+  font-style: italic;
+}
+
+.loading-hint {
+  padding: 20px;
+}
+
+.tagler-panel,
+.kullanicilar-panel {
+  flex: 1;
+  padding: 20px;
+}
+
+.kullanici-table {
+  width: 100%;
+  max-width: 480px;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.kullanici-table th,
+.kullanici-table td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.you-badge {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.create-kullanici-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tagler-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tagler-item {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 0;
+}
+
+/* Eskiden flex + justify-content: space-between kullaniyordu: tagler-name'in genisligi
+   tag adinin uzunluguna gore degistigi icin (ör. "arsiv" vs "opsiyonel"), Detail/Edit/Delete
+   her satirda farkli bir x konumuna dusuyordu. Sabit genislikli grid, isim ne kadar uzun
+   olursa olsun butonlari hep ayni sutunlara oturtur. */
+.tagler-item-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 90px 90px;
+  align-items: center;
+  column-gap: 8px;
+}
+
+.tagler-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagler-usage {
+  margin-top: 8px;
+  padding-left: 12px;
+}
+
+.tagler-usage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.tagler-usage-list li {
+  padding: 2px 0;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.modal {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.kolon-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kolon-row {
+  display: flex;
+  gap: 8px;
+}
+
+label.checkbox-label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
