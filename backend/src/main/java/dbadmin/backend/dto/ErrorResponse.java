@@ -1,5 +1,6 @@
 package dbadmin.backend.dto;
 
+import dbadmin.backend.exception.ErrorCodeRegistry;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.Map;
@@ -60,6 +61,12 @@ public record ErrorResponse(
                         },
                         example = "CONFLICT_DUPLICATE_TABLE_NAME")
                 String code,
+        @Schema(description = "Uygulamanin kendi SAYISAL hata kodu — code alaniyla birebir eslesir "
+                        + "(bkz. ErrorCodeRegistry), sadece sayisal arama/loglama/dokumantasyon icin "
+                        + "ek bir katman. Ilk 3 hane gercek HTTP status'u tasir (ör. 40401 -> 404 "
+                        + "ailesi), son 1-2 hane ayni HTTP status altindaki durumu ayirt eder.",
+                        example = "40901")
+                int errorCode,
         @Schema(description = "Mesajin icindeki degisken kisimlar (frontend kendi dilindeki sablonu "
                         + "bunlarla doldurur). Hataya gore bos olabilir.",
                         example = "{\"name\": \"ogrenciler\"}")
@@ -67,6 +74,7 @@ public record ErrorResponse(
 
     public static ErrorResponse of(
             int status, String error, String message, String code, Map<String, String> details) {
-        return new ErrorResponse(Instant.now(), status, error, message, code, details);
+        return new ErrorResponse(
+                Instant.now(), status, error, message, code, ErrorCodeRegistry.numberFor(code), details);
     }
 }

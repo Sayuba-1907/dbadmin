@@ -316,3 +316,21 @@ One line per notable decision: what was chosen, what was ruled out, why.
 - **RedisInsight (`docker-compose.yml`'e `redisinsight` servisi) eklendi.**
   Ruled out: sadece `redis-cli` ile terminalden bakmak.
   Why: Grafana/Prometheus'ta oldugu gibi, cache'in icini gorsel/etkilesimli inceleyebilmek (key'ler, TTL, hash alanlari) ogrenme amaci icin terminale gore daha hizli geri bildirim veriyor. Kalici bir volume ile veri persist etmez — cache zaten kalici olmak zorunda degil.
+
+## Sayisal hata kodlari (2026-08-03)
+
+- **`ErrorResponse`'a yeni bir `errorCode` (int) alani eklendi**, `code` (string) kaldirilmadi — ikisi birlikte donuyor.
+  Ruled out: `code` string'ini tamamen sayiyla degistirmek.
+  Why: `code` string'i frontend'in i18next ceviri anahtari (`errors.NOT_FOUND_TABLE`) — sayiya cevirmek 32 ceviri anahtarini, tum testleri (`jsonPath("$.code", ...)`) ve Swagger ornek adlarini degistirmek demekti, hem de sayi kendi basina anlam tasimadigi icin (10001 nedir, ayrica bir tabloya bakmadan bilinemez) okunabilirligi dusururdu. Ek bir alan hem "kendi sayimiz olsun" istegini karsiliyor hem hicbir mevcut sistemi bozmuyor.
+
+- **Sayi semasi: `<HTTP status><2-hane sira>`** (ör. `40401` = 404 ailesinin 1. durumu = `NOT_FOUND_TABLE`), rastgele/keyfi bir kategori numarasi degil.
+  Ruled out: HTTP'den tamamen bagimsiz keyfi bir numaralandirma (ör. 1000'ler validation, 2000'ler not-found gibi).
+  Why: ilk onerilen keyfi sema ("1xxxx = validation") ezberlenmesi gereken ayri bir sozluk gerektiriyordu; HTTP status'u ilk 3 hanede tasimak sayiyi tek basina okunabilir kiliyor (40401 gorunce zaten 404 ailesinde oldugunu biliyorsun). Riski: bir hatanin HTTP status'u ileride degisirse (nadir) sayisi da degismesi gerekir — bu proje olceginde kabul edilebilir bir bagimlilik.
+
+- **Tek merkezi eslesme noktasi: `ErrorCodeRegistry`** (`exception` paketinde, `Map<String,Integer>`), her `throw new XException(code, ...)` satirina sayi eklenmedi.
+  Ruled out: her exception constructor'ina ikinci bir `errorCode` parametresi eklemek (30+ throw call site'ini degistirmek).
+  Why: `ErrorResponse.of()` zaten tek merkezi cevap uretme noktasi (`GlobalExceptionHandler`/`RestSecurityErrorHandler` disinda hicbir yer `ErrorResponse` construct etmiyor) — sayiyi orada, `code` string'inden otomatik lookup ile eklemek, geri kalan tum kodu degistirmeden calisiyor. Kayitli olmayan bir `code` icin `ErrorCodeRegistry.numberFor` bilerek `IllegalStateException` firlatiyor (sessizce 0 donmuyor) — yeni bir hata kodu eklenip buraya yazilmasi unutulursa istek 500'e duser, sessizce yanlis sayi donmez.
+
+- **`ErrorCodeRegistryTest`**: `ErrorExamples`'taki 32 sabiti reflection'la okuyup her birinin `errorCode`'unun hem registry'yle hem kendi `status` alaniyla (ilk 3 hane) tutarli oldugunu ve hicbir errorCode'un tekrar etmedigini dogruluyor — 32 sayi elle girildigi icin (kopyala-yapistir riski) bu test olmadan bir yazim hatasi fark edilmeden kalabilirdi.
+
+- **Bu turda kesfedilen ayri bir sorun (dokunulmadi): `SecurityRulesIntegrationTest.actuatorHealth_kimliksiz_erisilebilir_kalmali` artik host makineden `./mvnw test` ile calistirildiginda 503 donuyor** (200 bekleniyordu) — sebebi bu degisiklikle ilgisiz: onceki bir commit'te `docker-compose.yml`'de redis'in `ports` eslemesi `expose`'a cevrildi (bkz. "Swagger hata orneklerini... Redis cache hit/miss metrikleri ekle" commit'i), yani Redis artik host'tan `localhost:6379` ile erisilemiyor, sadece docker network'unden. Actuator health Redis'i DOWN gorup 503 donuyor. Ayri bir konu, ayrica ele alinmali.
