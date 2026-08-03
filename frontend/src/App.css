@@ -611,6 +611,36 @@ select:disabled {
   background-color: var(--color-type-boolean-bg);
 }
 
+.tag-select {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.tag-select:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.tag-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tag-select option {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-weight: 400;
+}
+
 .pk-badge {
   font-family: var(--font-mono);
   background-color: var(--color-pk-bg);

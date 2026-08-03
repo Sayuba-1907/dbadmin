@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { DraftKolon } from "../api/tablolar";
 import { Tag } from "../api/tags";
+import { tagColorStyle } from "../utils/tagColor";
 
 interface KolonRowProps {
   kolon: DraftKolon;
@@ -30,6 +31,7 @@ export function KolonRow({
   onToggleDelete,
 }: KolonRowProps) {
   const { t } = useTranslation();
+  const selectedTag = tags.find((tag) => tag.id === kolon.tagId);
 
   return (
     <tr className={kolon.silinecek ? "kolon-row-silinecek" : undefined}>
@@ -60,13 +62,15 @@ export function KolonRow({
       </td>
       <td>
         <select
+          className="tag-select"
+          style={selectedTag ? tagColorStyle(selectedTag.name) : undefined}
           value={kolon.tagId ?? ""}
           disabled={kolon.silinecek}
           onChange={(e) => onChangeTag(kolon.id, e.target.value ? Number(e.target.value) : null)}
         >
           <option value="">{t("kolonRow.noTag")}</option>
           {tags.map((tag) => (
-            <option key={tag.id} value={tag.id}>
+            <option key={tag.id} value={tag.id} style={tagColorStyle(tag.name)}>
               {tag.name}
             </option>
           ))}

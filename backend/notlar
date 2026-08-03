@@ -81,7 +81,8 @@ Ağustos 3
      senaryolarına karşı bir güvenlik ağı (fallback) niteliğinde kısa süreli bir TTL (örn. 30 dakika) tanımlanacaktır.
      Bunda ne demek isteniyor, bunu ayrıntılandırmak adına sorar mısın konuşalım sonra
     8-@Cacheable anotasyonu niye kullanılmamış sorar mısın?
-    9-Redis için bir implementasyon daha yapalım. Ana sayfadaki schema,tag ve userlar cacheli gelsin. Aynı şekilde onların da evict, update ve insertini düşünelim. Burada @Cacheable kullanıp kullanmayacağını sor. Normalde kullanmasını bekliyorum ama kullanmayacaksa ayrıntısını alalım
+    9-Redis için bir implementasyon daha yapalım. Ana sayfadaki schema,tag ve userlar cacheli gelsin. Aynı şekilde onların da evict, update ve insertini düşünelim.
+     Burada @Cacheable kullanıp kullanmayacağını sor. Normalde kullanmasını bekliyorum ama kullanmayacaksa ayrıntısını alalım
 
 
     ufuk.sungu@interprobe.com.tr
