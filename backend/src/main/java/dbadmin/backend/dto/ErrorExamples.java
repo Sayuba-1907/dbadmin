@@ -66,6 +66,17 @@ public final class ErrorExamples {
               "details": { "id": "3" }
             }""";
 
+    public static final String NOT_FOUND_USER =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 404,
+              "error": "Not Found",
+              "message": "user not found: 12",
+              "code": "NOT_FOUND_USER",
+              "details": { "id": "12" }
+            }""";
+
     // ---------------------------------------------------------------- 400
     public static final String VALIDATION_INVALID_TABLE_NAME =
             """
@@ -155,6 +166,62 @@ public final class ErrorExamples {
               "details": { "name": "public" }
             }""";
 
+    public static final String VALIDATION_INVALID_USERNAME =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "username must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
+              "code": "VALIDATION_INVALID_USERNAME",
+              "details": {}
+            }""";
+
+    public static final String VALIDATION_WEAK_PASSWORD =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "password must be at least 8 characters",
+              "code": "VALIDATION_WEAK_PASSWORD",
+              "details": { "min": "8" }
+            }""";
+
+    public static final String VALIDATION_MISSING_ROLE =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "a role must be specified",
+              "code": "VALIDATION_MISSING_ROLE",
+              "details": {}
+            }""";
+
+    // ---------------------------------------------------------------- 401 / 403
+    public static final String AUTH_INVALID_CREDENTIALS =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 401,
+              "error": "Unauthorized",
+              "message": "invalid username or password",
+              "code": "AUTH_INVALID_CREDENTIALS",
+              "details": {}
+            }""";
+
+    public static final String AUTH_REQUIRED =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 401,
+              "error": "Unauthorized",
+              "message": "authentication is required, send a valid Bearer token",
+              "code": "AUTH_REQUIRED",
+              "details": {}
+            }""";
+
     // ---------------------------------------------------------------- 409
     public static final String CONFLICT_DUPLICATE_TABLE_NAME =
             """
@@ -223,6 +290,99 @@ public final class ErrorExamples {
               "error": "Conflict",
               "message": "the operation conflicts with the table's current data (e.g. a column being made primary key contains null or duplicate values)",
               "code": "CONFLICT_COLUMN_NOT_UNIQUE",
+              "details": {}
+            }""";
+
+    public static final String CONFLICT_DUPLICATE_USERNAME =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 409,
+              "error": "Conflict",
+              "message": "a user named 'ahmet' already exists",
+              "code": "CONFLICT_DUPLICATE_USERNAME",
+              "details": { "name": "ahmet" }
+            }""";
+
+    public static final String CONFLICT_LAST_ADMIN =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 409,
+              "error": "Conflict",
+              "message": "the last remaining admin cannot be removed or demoted",
+              "code": "CONFLICT_LAST_ADMIN",
+              "details": {}
+            }""";
+
+    // ---------------------------------------------------------------- genel / framework
+    // Bunlar tek bir controller'a degil HER uca uygulanabildigi icin (bkz.
+    // GlobalExceptionHandler), hicbir @ApiResponse'a tek tek baglanmiyor — sadece burada,
+    // ErrorResponse.code'un allowableValues listesiyle bire bir eslesecek sekilde bulunuyorlar.
+
+    public static final String AUTH_FORBIDDEN =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 403,
+              "error": "Forbidden",
+              "message": "your role is not allowed to perform this operation",
+              "code": "AUTH_FORBIDDEN",
+              "details": {}
+            }""";
+
+    public static final String NOT_FOUND_ENDPOINT =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 404,
+              "error": "Not Found",
+              "message": "no endpoint at this path",
+              "code": "NOT_FOUND_ENDPOINT",
+              "details": { "path": "/api/yanlis-yol" }
+            }""";
+
+    public static final String VALIDATION_INVALID_PATH_PARAM =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "id must be a valid Long: abc",
+              "code": "VALIDATION_INVALID_PATH_PARAM",
+              "details": { "parameter": "id", "type": "Long", "value": "abc" }
+            }""";
+
+    public static final String VALIDATION_MALFORMED_BODY =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "request body is missing or not valid JSON",
+              "code": "VALIDATION_MALFORMED_BODY",
+              "details": {}
+            }""";
+
+    public static final String VALIDATION_METHOD_NOT_ALLOWED =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 405,
+              "error": "Method Not Allowed",
+              "message": "method PUT is not supported here, use one of: GET, POST",
+              "code": "VALIDATION_METHOD_NOT_ALLOWED",
+              "details": { "method": "PUT", "supported": "GET, POST" }
+            }""";
+
+    public static final String INTERNAL_ERROR =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 500,
+              "error": "Internal Server Error",
+              "message": "an unexpected error occurred",
+              "code": "INTERNAL_ERROR",
               "details": {}
             }""";
 }

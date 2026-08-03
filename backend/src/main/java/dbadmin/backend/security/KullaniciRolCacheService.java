@@ -1,6 +1,8 @@
 package dbadmin.backend.security;
 
 import dbadmin.backend.entity.Rol;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -44,29 +46,41 @@ public class KullaniciRolCacheService {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final Duration ttl;
+    private final Counter cacheHitCounter;
+    private final Counter cacheMissCounter;
 
     public KullaniciRolCacheService(
             RedisTemplate<String, String> redisTemplate,
-            @Value("${app.cache.kullanici-rol.ttl-dakika}") long ttlDakika) {
+            @Value("${app.cache.kullanici-rol.ttl-dakika}") long ttlDakika,
+            MeterRegistry meterRegistry) {
         this.redisTemplate = redisTemplate;
         this.ttl = Duration.ofMinutes(ttlDakika);
+        this.cacheHitCounter = meterRegistry.counter("dbadmin.cache.rol.hits");
+        this.cacheMissCounter = meterRegistry.counter("dbadmin.cache.rol.misses");
     }
 
     public record OnbellekliKullanici(Long id, Rol rol) {
     }
 
-    /** Cache miss ya da Redis'e erisilemiyorsa {@code Optional.empty()} doner — cagiran taraf DB'ye duser. */
+    /**
+     * Cache miss ya da Redis'e erisilemiyorsa {@code Optional.empty()} doner — cagiran taraf DB'ye
+     * duser. Her iki durum da (gercek miss / Redis hatasi) Grafana'da "miss" olarak sayilir, cunku
+     * cagiranin perspektifinden ikisi de ayni sonucu doguruyor: DB'ye gitmek zorunda kalmak.
+     */
     public Optional<OnbellekliKullanici> get(String kullaniciAdi) {
         try {
             Map<Object, Object> alanlar = redisTemplate.opsForHash().entries(anahtar(kullaniciAdi));
             if (alanlar.isEmpty()) {
+                cacheMissCounter.increment();
                 return Optional.empty();
             }
             Long id = Long.valueOf((String) alanlar.get(ALAN_ID));
             Rol rol = Rol.valueOf((String) alanlar.get(ALAN_ROL));
+            cacheHitCounter.increment();
             return Optional.of(new OnbellekliKullanici(id, rol));
         } catch (Exception ex) {
             log.warn("redis'ten kullanici rolu okunamadi, DB'ye dusuluyor: {}", ex.getMessage());
+            cacheMissCounter.increment();
             return Optional.empty();
         }
     }

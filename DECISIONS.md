@@ -278,6 +278,10 @@ One line per notable decision: what was chosen, what was ruled out, why.
   Ruled out: kontrolu atlamak.
   Why: tek admin kendi rolunu dusurup ya da kendini silip kullanici yonetimine bir daha girilemez hale getirebilirdi — geri donusu sadece veritabanina elle mudahaleyle olan bir kilitlenme.
 
+- **`CONFLICT_LAST_ADMIN` HTTP 409'da kaldi (2026-08-03)**, ayri bir 422 Unprocessable Entity kategorisi acilmadi.
+  Ruled out: 422 (istek gecerli ama is kurali reddediyor).
+  Why: `ConflictException`'in bu projedeki tanimi zaten "istek dogru formatta ama mevcut durumla catisiyor" (bkz. `CONFLICT_DUPLICATE_TABLE_NAME`, `CONFLICT_COLUMN_NOT_UNIQUE`) — son admin durumu da ayni kalibi izliyor: `DELETE /kullanicilar/{id}` sistemde 2 admin varken sorunsuz calisir, sadece *mevcut veri durumuyla* (admin sayisi=1) catisiyor. Yeni bir HTTP status eklemek yerine var olan kategoriyle tutarli kalindi.
+
 - **Testlerde `@WithMockUser` icin `springSecurity()` koprusu elle kuruldu** (`MockMvcSecurityTestConfig`).
   Ruled out: sadece `@WithMockUser` eklemek (calismadi), ya da her testte gercek token uretmek.
   Why: MockMvc'ye guvenlik filtreleri kendiliginden ekleniyor (kimliksiz istek 401 doner, gercek Bearer token calisir) ama testin koydugu kimlik zincire ulasmiyordu — zincirdeki `SecurityContextHolderFilter` baglami kendi deposundan yukleyip ezdigi icin `@WithMockUser` sessizce etkisizdi ve her sey 401 donuyordu. Not: Spring Boot 4'te bu sinif `org.springframework.boot.webmvc.test.autoconfigure` altina tasindi (eskiden `...test.autoconfigure.web.servlet`).

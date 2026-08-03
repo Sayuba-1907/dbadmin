@@ -1,5 +1,6 @@
 package dbadmin.backend.controller;
 
+import dbadmin.backend.dto.ErrorExamples;
 import dbadmin.backend.dto.ErrorResponse;
 import dbadmin.backend.dto.LoginRequest;
 import dbadmin.backend.dto.LoginResponse;
@@ -8,10 +9,12 @@ import dbadmin.backend.security.JwtService;
 import dbadmin.backend.service.KullaniciService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -57,8 +60,12 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Giris basarili, token dondu"),
         @ApiResponse(
                 responseCode = "401",
-                description = "Kullanici adi ya da parola hatali (AUTH_INVALID_CREDENTIALS)",
-                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                description = "Kullanici adi ya da parola hatali.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "AUTH_INVALID_CREDENTIALS",
+                                summary = "Kullanici adi ya da parola yanlis",
+                                value = ErrorExamples.AUTH_INVALID_CREDENTIALS)))
     })
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest request) {
@@ -82,8 +89,12 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Token gecerli, kullanici bilgisi dondu"),
         @ApiResponse(
                 responseCode = "401",
-                description = "Token yok, bozuk ya da suresi dolmus (AUTH_REQUIRED)",
-                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                description = "Token yok, bozuk ya da suresi dolmus.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "AUTH_REQUIRED",
+                                summary = "Token yok/gecersiz",
+                                value = ErrorExamples.AUTH_REQUIRED)))
     })
     @GetMapping("/ben")
     public ResponseEntity<LoginResponse> ben(Authentication authentication) {
