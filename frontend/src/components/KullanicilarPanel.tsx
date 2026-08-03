@@ -63,6 +63,9 @@ export function KullanicilarPanel({
                 )}
               </td>
               <td>
+                <span className={`role-badge role-badge-${kullanici.rol.toLowerCase()}`}>
+                  {kullanici.rol}
+                </span>
                 <select
                   value={kullanici.rol}
                   onChange={(e) => onChangeRol(kullanici.id, e.target.value as Rol)}

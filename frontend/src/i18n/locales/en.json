@@ -165,6 +165,12 @@
     "VALIDATION_MISSING_ROLE": "A role must be specified",
     "NOT_FOUND_USER": "User not found (id: {{id}})",
     "CONFLICT_DUPLICATE_USERNAME": "A user named \"{{name}}\" already exists",
-    "CONFLICT_LAST_ADMIN": "The last remaining admin cannot be removed or demoted"
+    "CONFLICT_LAST_ADMIN": "The last remaining admin cannot be removed or demoted",
+    "NOT_FOUND_ENDPOINT": "No endpoint at this path: {{path}}",
+    "VALIDATION_METHOD_NOT_ALLOWED": "Method {{method}} is not supported here, use one of: {{supported}}",
+    "VALIDATION_MALFORMED_BODY": "Request body is missing or not valid JSON",
+    "VALIDATION_INVALID_PATH_PARAM": "{{parameter}} must be a valid {{type}}: {{value}}",
+    "CONFLICT_COLUMN_NOT_UNIQUE": "The operation conflicts with the table's current data (e.g. a column being made primary key contains null or duplicate values)",
+    "INTERNAL_ERROR": "An unexpected error occurred"
   }
 }

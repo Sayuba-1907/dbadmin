@@ -635,7 +635,15 @@ export function Dashboard() {
               onCreateTag={handleCreateTag}
             />
           ) : (
-            <section className="detail-panel empty-hint">{t("dashboard.selectTable")}</section>
+            <section className="detail-panel">
+              <div className="empty-state">
+                <p className="empty-state-line">
+                  <span className="empty-state-comment">-- </span>
+                  {t("dashboard.selectTable")}
+                  <span className="empty-state-cursor">_</span>
+                </p>
+              </div>
+            </section>
           )}
         </>
       )}

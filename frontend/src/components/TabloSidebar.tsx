@@ -4,6 +4,22 @@ import { Schema, TabloSummary } from "../api/schemas";
 import { useAuth } from "../auth/AuthProvider";
 
 /**
+ * Schema adindan deterministik bir renk turetir (ayni isim her zaman ayni renk) — sidebar'da
+ * cok schema oldugunda goz taramasini kolaylastiran salt gorsel bir ipucu, backend'de karsiligi
+ * yok. Basit bir string hash'i hue'ya (0-360) esliyor, sabit doygunluk/parlaklik koyu temada
+ * hepsinin okunakli kalmasini sagliyor.
+ */
+function schemaColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash << 5) - hash + name.charCodeAt(i);
+    hash |= 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 65%, 60%)`;
+}
+
+/**
  * Props: gercek veri (schemalar, her schema'nin tablo ozetleri, selectedId) ve "bir seye
  * tikladiginda ne olsun" callback'leri hep Dashboard'dan gelir. Bu component'in kendi tuttugu
  * state, arama kutusunun metni, hangi schema'larin acik (expanded) oldugu ve hangi schema su an
@@ -203,7 +219,12 @@ export function TabloSidebar({
                   <>
                     <button className="schema-header" onClick={() => toggleSchema(schema.id)}>
                       <span className={`schema-caret${expanded ? " expanded" : ""}`}>&#9656;</span>
-                      {schema.name}
+                      <span
+                        className="schema-dot"
+                        style={{ backgroundColor: schemaColor(schema.name) }}
+                        aria-hidden="true"
+                      />
+                      <span className="mono">{schema.name}</span>
                       <span className="kolon-count">{schema.tabloSayisi}</span>
                     </button>
                     <button

@@ -36,6 +36,7 @@ export function KolonRow({
       <td>
         <input
           type="text"
+          className="mono"
           value={kolon.name}
           onChange={(e) => onRename(kolon.id, e.target.value)}
           disabled={kolon.silinecek}
@@ -43,7 +44,7 @@ export function KolonRow({
         {kolon.isNew && <span className="new-badge">{t("tabloDetail.newColumnBadge")}</span>}
       </td>
       <td>
-        <span className="type-badge">{kolon.type}</span>
+        <span className={`type-badge type-badge-${kolon.type}`}>{kolon.type}</span>
       </td>
       <td>
         <label className="checkbox-label">

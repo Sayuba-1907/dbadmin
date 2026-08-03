@@ -124,86 +124,88 @@ export function TabloDetail({
           </div>
         </div>
 
-        <table className="kolon-table">
-          <thead>
-            <tr>
-              <th>{t("tabloDetail.colName")}</th>
-              <th>{t("tabloDetail.colType")}</th>
-              <th>{t("tabloDetail.colPrimaryKey")}</th>
-              <th>{t("tabloDetail.colTag")}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {draft.kolonlar.map((kolon: DraftKolon) => (
-              <KolonRow
-                key={kolon.id}
-                kolon={kolon}
-                tags={tags}
-                onRename={onChangeKolonName}
-                onChangeTag={onChangeKolonTag}
-                onChangePrimaryKey={onChangeKolonPrimaryKey}
-                onToggleDelete={onToggleDeleteKolon}
-              />
-            ))}
-            {draft.kolonlar.length === 0 && (
+        <div className="detail-card">
+          <table className="kolon-table">
+            <thead>
               <tr>
-                <td colSpan={5} className="empty-hint">
-                  {t("tabloDetail.emptyColumns")}
-                </td>
+                <th>{t("tabloDetail.colName")}</th>
+                <th>{t("tabloDetail.colType")}</th>
+                <th>{t("tabloDetail.colPrimaryKey")}</th>
+                <th>{t("tabloDetail.colTag")}</th>
+                <th></th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {draft.kolonlar.map((kolon: DraftKolon) => (
+                <KolonRow
+                  key={kolon.id}
+                  kolon={kolon}
+                  tags={tags}
+                  onRename={onChangeKolonName}
+                  onChangeTag={onChangeKolonTag}
+                  onChangePrimaryKey={onChangeKolonPrimaryKey}
+                  onToggleDelete={onToggleDeleteKolon}
+                />
+              ))}
+              {draft.kolonlar.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="empty-hint">
+                    {t("tabloDetail.emptyColumns")}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
-        <form className="add-kolon-form" onSubmit={handleAddKolonSubmit}>
-          <input
-            type="text"
-            placeholder={t("tabloDetail.columnNamePlaceholder")}
-            value={kolonName}
-            onChange={(e) => {
-              clearCustomValidity(e);
-              setKolonName(e.target.value);
-            }}
-            onInvalid={onRequiredInvalid(t)}
-            required
-          />
-          <select value={kolonType} onChange={(e) => setKolonType(e.target.value as KolonType)}>
-            {KOLON_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-          <label className="checkbox-label">
+          <form className="add-kolon-form" onSubmit={handleAddKolonSubmit}>
             <input
-              type="checkbox"
-              checked={kolonPrimaryKey}
-              onChange={(e) => setKolonPrimaryKey(e.target.checked)}
+              type="text"
+              placeholder={t("tabloDetail.columnNamePlaceholder")}
+              value={kolonName}
+              onChange={(e) => {
+                clearCustomValidity(e);
+                setKolonName(e.target.value);
+              }}
+              onInvalid={onRequiredInvalid(t)}
+              required
             />
-            {t("tabloDetail.primaryKeyLabel")}
-          </label>
-          <button className="btn" type="submit">
-            {t("tabloDetail.addColumn")}
-          </button>
-        </form>
+            <select value={kolonType} onChange={(e) => setKolonType(e.target.value as KolonType)}>
+              {KOLON_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={kolonPrimaryKey}
+                onChange={(e) => setKolonPrimaryKey(e.target.checked)}
+              />
+              {t("tabloDetail.primaryKeyLabel")}
+            </label>
+            <button className="btn" type="submit">
+              {t("tabloDetail.addColumn")}
+            </button>
+          </form>
 
-        <form className="add-tag-form" onSubmit={handleCreateTagSubmit}>
-          <input
-            type="text"
-            placeholder={t("tabloDetail.tagNamePlaceholder")}
-            value={newTagName}
-            onChange={(e) => {
-              clearCustomValidity(e);
-              setNewTagName(e.target.value);
-            }}
-            onInvalid={onRequiredInvalid(t)}
-            required
-          />
-          <button className="btn" type="submit">
-            {t("tabloDetail.createTag")}
-          </button>
-        </form>
+          <form className="add-tag-form" onSubmit={handleCreateTagSubmit}>
+            <input
+              type="text"
+              placeholder={t("tabloDetail.tagNamePlaceholder")}
+              value={newTagName}
+              onChange={(e) => {
+                clearCustomValidity(e);
+                setNewTagName(e.target.value);
+              }}
+              onInvalid={onRequiredInvalid(t)}
+              required
+            />
+            <button className="btn" type="submit">
+              {t("tabloDetail.createTag")}
+            </button>
+          </form>
+        </div>
       </fieldset>
     </section>
   );

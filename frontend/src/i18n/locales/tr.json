@@ -165,6 +165,12 @@
     "VALIDATION_MISSING_ROLE": "Bir rol belirtilmeli",
     "NOT_FOUND_USER": "Kullanıcı bulunamadı (id: {{id}})",
     "CONFLICT_DUPLICATE_USERNAME": "\"{{name}}\" adında bir kullanıcı zaten var",
-    "CONFLICT_LAST_ADMIN": "Sistemdeki son yönetici silinemez ya da yetkisi düşürülemez"
+    "CONFLICT_LAST_ADMIN": "Sistemdeki son yönetici silinemez ya da yetkisi düşürülemez",
+    "NOT_FOUND_ENDPOINT": "Bu yolda bir uç nokta yok: {{path}}",
+    "VALIDATION_METHOD_NOT_ALLOWED": "{{method}} metodu burada desteklenmiyor, şunlardan birini kullanın: {{supported}}",
+    "VALIDATION_MALFORMED_BODY": "İstek gövdesi eksik ya da geçerli bir JSON değil",
+    "VALIDATION_INVALID_PATH_PARAM": "{{parameter}} geçerli bir {{type}} olmalı: {{value}}",
+    "CONFLICT_COLUMN_NOT_UNIQUE": "Bu işlem tablodaki mevcut veriyle çelişiyor (ör. birincil anahtar yapılmak istenen kolonda boş veya tekrar eden değerler var)",
+    "INTERNAL_ERROR": "Beklenmeyen bir hata oluştu"
   }
 }

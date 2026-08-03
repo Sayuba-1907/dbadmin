@@ -27,12 +27,18 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
         className={`workspace-nav-btn${active === "schemalar" ? " active" : ""}`}
         onClick={() => onChange("schemalar")}
       >
+        <span className="nav-icon" aria-hidden="true">
+          ▦
+        </span>
         {t("nav.schemalar")}
       </button>
       <button
         className={`workspace-nav-btn${active === "tagler" ? " active" : ""}`}
         onClick={() => onChange("tagler")}
       >
+        <span className="nav-icon" aria-hidden="true">
+          ◈
+        </span>
         {t("nav.tagler")}
       </button>
       {isAdmin && (
@@ -40,6 +46,9 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
           className={`workspace-nav-btn${active === "kullanicilar" ? " active" : ""}`}
           onClick={() => onChange("kullanicilar")}
         >
+          <span className="nav-icon" aria-hidden="true">
+            ◉
+          </span>
           {t("nav.kullanicilar")}
         </button>
       )}

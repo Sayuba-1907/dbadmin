@@ -38,7 +38,10 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <form className="login-form" onSubmit={handleSubmit}>
-        <h1>DBAdmin</h1>
+        <h1>
+          <span className="brand-mark" aria-hidden="true" />
+          DBAdmin
+        </h1>
         <label className="login-field">
           <span>{t("auth.username")}</span>
           <input

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dashboard } from "./pages/Dashboard";
 import { LoginPage } from "./pages/LoginPage";
@@ -13,6 +14,11 @@ import "./App.css";
 function AppContent() {
   const { t } = useTranslation();
   const { status, kullaniciAdi, rol, logout } = useAuth();
+  // Dashboard'u yeniden mount ederek "ana sayfa"ya donusu tetikler — router olmadigi icin
+  // Dashboard'un ic state'ine (activeView/selectedId) disaridan mudahale etmek yerine, key'i
+  // degistirip Dashboard'un kendi useState varsayilanlarina (schemalar view, secim yok) sifirdan
+  // baslamasini sagliyoruz.
+  const [homeKey, setHomeKey] = useState(0);
 
   if (status === "loading") {
     // localStorage'daki token'in gecerliligi /api/auth/ben ile dogrulanirken kisa bir an —
@@ -28,7 +34,12 @@ function AppContent() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1>DBAdmin</h1>
+        <h1>
+          <button className="brand-button" onClick={() => setHomeKey((k) => k + 1)}>
+            <span className="brand-mark" aria-hidden="true" />
+            DBAdmin
+          </button>
+        </h1>
         <div className="app-header-right">
           <span className="current-user">
             {kullaniciAdi} · {rol}
@@ -39,7 +50,7 @@ function AppContent() {
           <LanguageSwitcher />
         </div>
       </header>
-      <Dashboard />
+      <Dashboard key={homeKey} />
     </div>
   );
 }
