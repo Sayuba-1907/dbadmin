@@ -17,9 +17,11 @@ Studio, DBeaver dark, pgAdmin dark) zaten öyle, ayrıca iki temayı senkron tut
 **İmza fikri — "kod kimliği" ayrımı:** Uygulamada iki tür isim var: gerçek bir Postgres
 nesnesinin adı (schema, tablo, kolon, tag — hepsi `NameValidator`'dan geçen, DB'de karşılığı
 olan teknik kimlikler) ve bir insan kaydının adı (kullanıcı adı, rol). Birincisi her yerde
-**monospace + teal** ile, ikincisi **sans-serif** ile gösterilecek. Tek bakışta "bu bir DB
-nesnesi mi, insan kaydı mı" ayrımı yapılabiliyor olacak — çoğu admin panelinde bu ayrım
-bilinçli yapılmıyor, DBAdmin'in kendine has detayı bu olacak.
+**monospace + accent rengi** ile, ikincisi **sans-serif** ile gösterilecek. Tek bakışta "bu
+bir DB nesnesi mi, insan kaydı mı" ayrımı yapılabiliyor olacak — çoğu admin panelinde bu
+ayrım bilinçli yapılmıyor, DBAdmin'in kendine has detayı bu olacak. (Bu kavramın kendisi ve
+tüm yapısal kararlar — kart, boş durum, rozetler — bize ait; §8'de değişen sadece ham
+renk/font değerleri, kimlik mantığı aynı kaldı.)
 
 İkincil imza: **amber = ayrıcalıklı/özel** anlamı tüm uygulamada tutarlı — PK badge zaten
 amber, admin rol rozeti de aynı aileden olacak (bkz. §4).
@@ -30,24 +32,28 @@ amber, admin rol rozeti de aynı aileden olacak (bkz. §4).
 sabit paneller) → `surface-raised` (modal, dropdown, hover). Koyu temada gölge yerine bu
 katman farkı elevation'ı taşıyor (gölgeler koyu zeminde neredeyse görünmez).
 
+> **Güncel değerler (§8, ui-ux-pro-max "Developer Tool/IDE" paletinden, 2026-08-03):**
+> aşağıdaki tablo bu paleti yansıtıyor. İlk tasarımdaki değerler (teal `#2DD4BF` bazlı)
+> §8'de referans olarak duruyor.
+
 | Token | Hex | Kullanım |
 |---|---|---|
-| `--color-bg` | `#0B0F14` | Sayfa zemini, detay panelin arka planı |
-| `--color-surface` | `#121821` | Header, sidebar, workspace-nav, tablo/kart zemini |
-| `--color-surface-raised` | `#1A222E` | Modal, dropdown, hover durumları |
-| `--color-border` | `#232C3A` | İnce ayraç çizgileri (mevcut `#e2e8f0`'ın karşılığı) |
-| `--color-border-strong` | `#2E3947` | Hover/focus'ta belirginleşen kenarlık |
-| `--color-text-primary` | `#E6EAF0` | Ana metin |
-| `--color-text-secondary` | `#8A97A8` | İkincil metin, sayaç, hint, placeholder |
-| `--color-text-disabled` | `#4B5563` | VIEWER rolünde kapalı alanlar |
-| `--color-accent` | `#2DD4BF` | Link/seçili metin, focus ring, imza rengi |
-| `--color-accent-strong` | `#14B8A6` | Primary buton zemini, aktif nav/dil butonu zemini |
-| `--color-accent-soft` | `rgba(45,212,191,.14)` | Seçili satır zemini, drag-over zemini |
-| `--color-on-accent` | `#06201C` | Accent zemin üstündeki metin (koyu, teal açık olduğu için) |
-| `--color-success` | `#16A34A` | Başarı toast'ı (mevcutla aynı, zaten iyi çalışıyor) |
+| `--color-bg` | `#0F172A` | Sayfa zemini, detay panelin arka planı |
+| `--color-surface` | `#1B2336` | Header, sidebar, workspace-nav, tablo/kart zemini |
+| `--color-surface-raised` | `#334155` | Modal, dropdown, hover durumları |
+| `--color-border` | `#475569` | İnce ayraç çizgileri |
+| `--color-border-strong` | `#64748B` | Hover/focus'ta belirginleşen kenarlık |
+| `--color-text-primary` | `#F8FAFC` | Ana metin |
+| `--color-text-secondary` | `#94A3B8` | İkincil metin, sayaç, hint, placeholder |
+| `--color-text-disabled` | `#64748B` | VIEWER rolünde kapalı alanlar |
+| `--color-accent` | `#22C55E` | Link/seçili metin, focus ring, imza rengi |
+| `--color-accent-strong` | `#16A34A` | Primary buton zemini, aktif nav/dil butonu zemini |
+| `--color-accent-soft` | `rgba(34,197,94,.14)` | Seçili satır zemini, drag-over zemini |
+| `--color-on-accent` | `#0F172A` | Accent zemin üstündeki metin |
+| `--color-success` | `#16A34A` | Başarı toast'ı (artık accent-strong ile aynı yeşil aile — bkz. §8) |
 | `--color-conflict` | `#D97706` | 409 toast'ı (mevcutla aynı) |
-| `--color-danger` | `#F87171` | Sil butonu/linki, hata metni (eski `#dc2626` koyu temada çok sert kalıyordu, yumuşatıldı) |
-| `--color-danger-bg` | `rgba(248,113,113,.14)` | Hata toast'ı zemini gerekirse |
+| `--color-danger` | `#EF4444` | Sil butonu/linki, hata metni |
+| `--color-danger-bg` | `rgba(239,68,68,.14)` | Hata toast'ı zemini gerekirse |
 
 **Tip rozeti (type-badge) renk ailesi — 4 farklı hue, birbirine karışmasın diye:**
 
@@ -70,14 +76,15 @@ metin) — değiştirilmiyor, sadece yeni gölge token'ına hizalanıyor.
 
 ## 3) Tipografi
 
-- `--font-sans`: `'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` — UI
-  metni (nav, buton, etiket, başlık, kullanıcı adı, rol).
-- `--font-mono`: `'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace` — DB
-  kimlikleri: tablo/kolon/schema/tag adı, type-badge, pk-badge, `tagler-usage-list`
-  (zaten monospace, korunuyor).
+- `--font-sans`: `'Fira Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` —
+  UI metni (nav, buton, etiket, başlık, kullanıcı adı, rol). (İlk tasarım: Inter, §8'de
+  ui-ux-pro-max önerisiyle Fira Sans'a değişti.)
+- `--font-mono`: `'Fira Code', ui-monospace, Menlo, Consolas, monospace` — DB kimlikleri:
+  tablo/kolon/schema/tag adı, type-badge, pk-badge, `tagler-usage-list` (zaten monospace,
+  korunuyor). (İlk tasarım: JetBrains Mono.)
 
-Google Fonts: Inter (400/500/600/700) + JetBrains Mono (400/500/600), `public/index.html`'e
-`<link>` ile eklenecek.
+Google Fonts: Fira Sans (400/500/600/700) + Fira Code (400/500/600), `public/index.html`'e
+`<link>` ile eklendi.
 
 | Token | px | Kullanım |
 |---|---|---|
@@ -177,3 +184,27 @@ geçeceğim.
   glif seti, dış ikon kütüphanesi eklenmedi.
 - **Mikro-etkileşimler**: `.btn:active`/`.workspace-nav-btn:active` hafif `scale(0.97)`,
   `.tablo-list-item:hover` `translateX(2px)` — tıklama/hover'da tıklanabilirlik hissi.
+
+## 8) Palet değişikliği — ui-ux-pro-max karşılaştırması (2026-08-03)
+
+`backend/week3-uiux-deneme` branch'inde `ui-ux-pro-max-skill` denendi (bkz. sohbet geçmişi).
+Skill'in kendi CSV veritabanından "Developer Tool / IDE" + "Dark Mode (OLED)" araması, slate +
+yeşil bir palet ve Fira Sans/Fira Code font ikilisi önerdi. Karşılaştırıldı, bu palet tercih
+edildi ve kalıcı hale getirildi:
+
+- **Ne değişti:** sadece `tokens.css`'teki ham renk/font değerleri (yukarıdaki §2/§3
+  tabloları güncel değerleri gösteriyor). Yapısal/imza kararların (mono/sans ayrımı, terminal
+  boş durumu, `detail-card`, schema renk noktaları, rozetler, mikro-etkileşimler) hiçbiri
+  değişmedi — onlar bu projeye özel, skill'in üretmediği kararlar.
+- **Neden ui-ux-pro-max'ın önerisi işe yaradı:** eski teal (`#2DD4BF`) accent, zaten var olan
+  yeşil `success`/`type-badge-text` renkleriyle hafif çakışıyordu (iki farklı "yeşilimsi" ton
+  yarışıyordu). Yeni palette accent de yeşil (`#22C55E`) olduğu için tüm bu renkler tek bir
+  aileye toplandı — tutarlılık, skill'in "akıllı" bir önerisinden çok var olan bir çakışmanın
+  çözülmesinden geliyor.
+- **Kart gölgesi ve seçili satır vurgusu güçlendirildi** (2026-08-03, kullanıcı geri
+  bildirimiyle — ilk palet karşılaştırmasında arayüz "çok sade" hissettirdi): `--shadow-md`
+  `0 4px 16px rgba(0,0,0,.5)` → `0 8px 24px rgba(0,0,0,.65)`; `.tablo-list-item.selected`
+  sol çubuğu 2px → 3px + `box-shadow: inset` ile hafif glow + `font-weight: 600`.
+  Not: GitHub'daki showcase görselleri (landing page/hero/gradient ağırlıklı) ile
+  karıştırılmamalı — o örnekler pazarlama sayfaları için, DBAdmin bir veri tablosu aracı;
+  oraya özgü gösterişi (gradyan, illüstrasyon, hero section) buraya taşımak yanlış yön olurdu.
