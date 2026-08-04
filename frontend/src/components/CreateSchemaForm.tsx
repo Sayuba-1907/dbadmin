@@ -1,5 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { InputText } from "primereact/inputtext";
+import { Button } from "primereact/button";
 import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation";
 
 interface CreateSchemaFormProps {
@@ -30,7 +32,7 @@ export function CreateSchemaForm({ onSubmit, onClose }: CreateSchemaFormProps) {
 
         <label>
           {t("createSchemaForm.schemaNameLabel")}
-          <input
+          <InputText
             type="text"
             placeholder={t("createSchemaForm.schemaNamePlaceholder")}
             value={name}
@@ -44,12 +46,13 @@ export function CreateSchemaForm({ onSubmit, onClose }: CreateSchemaFormProps) {
         </label>
 
         <div className="modal-actions">
-          <button type="button" className="btn" onClick={onClose}>
-            {t("common.cancel")}
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {t("createSchemaForm.submit")}
-          </button>
+          <Button type="button" className="btn" onClick={onClose} label={t("common.cancel")} />
+          <Button
+            type="submit"
+            className="btn btn-primary"
+            disabled={submitting}
+            label={t("createSchemaForm.submit")}
+          />
         </div>
       </form>
     </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PrimeReactProvider } from "primereact/api";
 import { Dashboard } from "./pages/Dashboard";
 import { LoginPage } from "./pages/LoginPage";
 import { NotificationProvider } from "./notifications/NotificationProvider";
@@ -66,16 +67,23 @@ function AppContent() {
 /**
  * {@link NotificationProvider} en disarida: {@link AuthProvider} oturum suresi dolunca
  * bildirim gosterebilmek icin useNotify'a ihtiyac duyuyor, o yuzden onun icinde olmali.
+ * <p>
+ * {@code unstyled: true} — PrimeReact bilesenlerinin (ör. TabloDetail'deki DataTable) kendi
+ * hazir temasini (Material/Bootstrap/PrimeOne) hic yuklemiyoruz; bilesenler CSS'siz, ciplak
+ * yapida geliyor ve mevcut tasarim sistemimizin (tokens.css, App.css) class'larini kullanarak
+ * biz giydiriyoruz — boylece DBAdmin'in kendi kimligiyle (slate+yesil, monospace) cakismiyor.
  */
 function App() {
   return (
-    <NotificationProvider>
-      <ConfirmProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </ConfirmProvider>
-    </NotificationProvider>
+    <PrimeReactProvider value={{ unstyled: true }}>
+      <NotificationProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </ConfirmProvider>
+      </NotificationProvider>
+    </PrimeReactProvider>
   );
 }
 

@@ -57,7 +57,7 @@ class KullaniciServiceIntegrationTest extends AbstractIntegrationTest {
     void changeRol_sonAdmin_dusurulemez() {
         Kullanici tekAdmin = kullaniciService.createKullanici("test_tek_admin", "parolam1234", Rol.ADMIN);
         long adminSayisi = kullaniciService.listKullanicilar().stream()
-                .filter(k -> k.getRol() == Rol.ADMIN)
+                .filter(k -> k.rol() == Rol.ADMIN)
                 .count();
 
         if (adminSayisi <= 1) {

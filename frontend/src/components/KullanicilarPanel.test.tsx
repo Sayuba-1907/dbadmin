@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom";
 import "../i18n";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { PrimeReactProvider } from "primereact/api";
 import { KullanicilarPanel } from "./KullanicilarPanel";
 import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
 import { Kullanici } from "../api/kullanicilar";
@@ -32,11 +33,13 @@ function renderPanel(
     onDelete: jest.fn(),
   };
   return render(
-    <ConfirmProvider>
-      <AuthContext.Provider value={auth}>
-        <KullanicilarPanel {...defaultProps} {...props} />
-      </AuthContext.Provider>
-    </ConfirmProvider>
+    <PrimeReactProvider value={{ unstyled: true }}>
+      <ConfirmProvider>
+        <AuthContext.Provider value={auth}>
+          <KullanicilarPanel {...defaultProps} {...props} />
+        </AuthContext.Provider>
+      </ConfirmProvider>
+    </PrimeReactProvider>
   );
 }
 

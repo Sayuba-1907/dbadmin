@@ -4,6 +4,7 @@ import "@testing-library/jest-dom";
 // yerine ham key string'ini ("sidebar.empty") render eder ve testler o ham key'i arar bulamaz.
 import "../i18n";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { PrimeReactProvider } from "primereact/api";
 import { Dashboard } from "./Dashboard";
 import { NotificationProvider } from "../notifications/NotificationProvider";
 import { ConfirmProvider } from "../notifications/ConfirmProvider";
@@ -207,13 +208,15 @@ const EDITOR_AUTH: AuthContextValue = {
 
 function renderDashboard(auth: AuthContextValue = EDITOR_AUTH) {
   return render(
-    <NotificationProvider>
-      <ConfirmProvider>
-        <AuthContext.Provider value={auth}>
-          <Dashboard />
-        </AuthContext.Provider>
-      </ConfirmProvider>
-    </NotificationProvider>
+    <PrimeReactProvider value={{ unstyled: true }}>
+      <NotificationProvider>
+        <ConfirmProvider>
+          <AuthContext.Provider value={auth}>
+            <Dashboard />
+          </AuthContext.Provider>
+        </ConfirmProvider>
+      </NotificationProvider>
+    </PrimeReactProvider>
   );
 }
 
@@ -359,15 +362,22 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
 
   await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
-  // Schema varsayilan kapali baslar; icindeki tabloyu gormek icin acmak lazim.
-  fireEvent.click(screen.getByText("kayitlar"));
+  // Schema varsayilan kapali baslar; icindeki tabloyu gormek icin acmak lazim. Isme tiklamak
+  // artik genisletmiyor (Tree'nin kendi ayri toggler butonu var, bkz. TabloSidebar.tsx) —
+  // toggler'i "kayitlar" satirinin en yakin treeitem'i icinde arayip ona tikliyoruz.
+  const kayitlarNode = screen.getByText("kayitlar").closest('[role="treeitem"]') as HTMLElement;
+  // Toggler'in erisilebilir bir adi yok (sadece aria-hidden bir SVG icon), o yuzden role
+  // sorgusu yerine PrimeReact'in kendi kararli data-pc-section niteligiyle buluyoruz.
+  fireEvent.click(kayitlarNode.querySelector('[data-pc-section="toggler"]') as HTMLElement);
   const tableItem = await screen.findByText("kullanicilar");
-  const targetLi = screen.getByText("ogrenciler").closest("li");
-  expect(targetLi).not.toBeNull();
+  // Drop handler'lari artik <li> (treeitem) uzerinde degil, onun icindeki schema-header-row
+  // div'inde — bkz. TabloSidebar.tsx'teki nodeTemplate.
+  const targetDropZone = screen.getByText("ogrenciler").closest(".schema-header-row");
+  expect(targetDropZone).not.toBeNull();
 
   fireEvent.dragStart(tableItem);
-  fireEvent.dragOver(targetLi as HTMLElement);
-  fireEvent.drop(targetLi as HTMLElement);
+  fireEvent.dragOver(targetDropZone as HTMLElement);
+  fireEvent.drop(targetDropZone as HTMLElement);
 
   await waitFor(() =>
     expect(fetchMock).toHaveBeenCalledWith(

@@ -1,5 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { InputText } from "primereact/inputtext";
+import { Button } from "primereact/button";
 import { Schema } from "../api/schemas";
 import { CreateKolonInput, KOLON_TYPES, KolonType } from "../api/tablolar";
 import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation";
@@ -67,9 +69,7 @@ export function CreateTabloForm({ schemalar, onSubmit, onClose }: CreateTabloFor
           <h2>{t("createTabloForm.title")}</h2>
           <p>{t("createTabloForm.noSchemaHint")}</p>
           <div className="modal-actions">
-            <button type="button" className="btn" onClick={onClose}>
-              {t("common.cancel")}
-            </button>
+            <Button type="button" className="btn" onClick={onClose} label={t("common.cancel")} />
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@ export function CreateTabloForm({ schemalar, onSubmit, onClose }: CreateTabloFor
 
         <label>
           {t("createTabloForm.tableNameLabel")}
-          <input
+          <InputText
             type="text"
             placeholder={t("createTabloForm.tableNamePlaceholder")}
             value={name}
@@ -110,7 +110,7 @@ export function CreateTabloForm({ schemalar, onSubmit, onClose }: CreateTabloFor
         <div className="kolon-rows">
           {kolonlar.map((kolon, index) => (
             <div className="kolon-row" key={index}>
-              <input
+              <InputText
                 type="text"
                 placeholder={t("tabloDetail.columnNamePlaceholder")}
                 value={kolon.name}
@@ -134,28 +134,31 @@ export function CreateTabloForm({ schemalar, onSubmit, onClose }: CreateTabloFor
                 />
                 {t("tabloDetail.primaryKeyLabel")}
               </label>
-              <button
+              <Button
                 type="button"
                 className="btn btn-link btn-danger"
                 onClick={() => removeKolonRow(index)}
-              >
-                {t("common.delete")}
-              </button>
+                label={t("common.delete")}
+              />
             </div>
           ))}
         </div>
 
-        <button type="button" className="btn btn-link" onClick={addKolonRow}>
-          {t("createTabloForm.addColumnRow")}
-        </button>
+        <Button
+          type="button"
+          className="btn btn-link"
+          onClick={addKolonRow}
+          label={t("createTabloForm.addColumnRow")}
+        />
 
         <div className="modal-actions">
-          <button type="button" className="btn" onClick={onClose}>
-            {t("common.cancel")}
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {t("createTabloForm.submit")}
-          </button>
+          <Button type="button" className="btn" onClick={onClose} label={t("common.cancel")} />
+          <Button
+            type="submit"
+            className="btn btn-primary"
+            disabled={submitting}
+            label={t("createTabloForm.submit")}
+          />
         </div>
       </form>
     </div>

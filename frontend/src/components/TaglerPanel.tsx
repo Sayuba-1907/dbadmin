@@ -104,11 +104,24 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
                   </form>
                 ) : (
                   <>
-                    <span className="tagler-name">{tag.name}</span>
+                    {/* Detay artik ayri bir "Ayrıntı" butonuyla degil, isme (genel olarak
+                        satirin bu alanina) tiklayinca aciliyor/kapaniyor — bkz. TabloSidebar'daki
+                        schema baslik satiriyla ayni desen. */}
+                    <span
+                      className="tagler-name"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleToggleDetail(tag.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleToggleDetail(tag.id);
+                        }
+                      }}
+                    >
+                      {tag.name}
+                    </span>
                     <div className="tagler-item-actions">
-                      <button className="btn btn-link" onClick={() => handleToggleDetail(tag.id)}>
-                        {expanded ? t("tagler.hideDetail") : t("tagler.showDetail")}
-                      </button>
                       {canWrite && (
                         <button
                           className="btn btn-link"

@@ -9,6 +9,8 @@ import dbadmin.backend.repository.TagRepository;
 import dbadmin.backend.validation.NameValidator;
 import java.util.List;
 import java.util.Map;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,11 @@ public class TagService {
         this.kolonRepository = kolonRepository;
     }
 
+    /**
+     * "tags" cache'i (bkz. CacheConfig) — metod parametresiz oldugu icin tek bir cache girdisi
+     * var, create/rename/delete asagida {@code allEntries = true} ile onu evict ediyor.
+     */
+    @Cacheable("tags")
     @Transactional(readOnly = true)
     public List<Tag> listTags() {
         return tagRepository.findAll();
@@ -48,6 +55,7 @@ public class TagService {
         return kolonRepository.findByTagId(tagId);
     }
 
+    @CacheEvict(cacheNames = "tags", allEntries = true)
     @Transactional
     public Tag createTag(String name) {
         NameValidator.validate("tag name", "VALIDATION_INVALID_TAG_NAME", name);
@@ -59,6 +67,7 @@ public class TagService {
     }
 
     /** Sadece ismi degistirir — Tag'in gercek Postgres semasinda karsiligi olmadigi icin DDL calismaz. */
+    @CacheEvict(cacheNames = "tags", allEntries = true)
     @Transactional
     public Tag renameTag(Long id, String name) {
         Tag tag = getTag(id);
@@ -78,6 +87,7 @@ public class TagService {
      * tum kolonlarin tag referansini once null'a cekiyoruz (etiketsiz kalirlar, kolonun kendisi
      * silinmez), sonra tag satirini siliyoruz — hepsi tek transaction'da.
      */
+    @CacheEvict(cacheNames = "tags", allEntries = true)
     @Transactional
     public void deleteTag(Long id) {
         Tag tag = getTag(id);

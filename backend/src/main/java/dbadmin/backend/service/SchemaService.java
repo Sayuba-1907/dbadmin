@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dbadmin.backend.dto.SchemaResponse;
@@ -93,6 +95,16 @@ public class SchemaService {
         return new ArrayList<>(schemaIdSchemaResponseMap.values());
     }
 
+    /**
+     * "schemaWorkspace" cache'i (bkz. CacheConfig) — ana sayfanin (Dashboard) tek istekte
+     * cektigi schema+tablo agaci. Sadece bu sinifin create/rename/delete'i degil,
+     * {@link TabloService}'teki tablo/kolon sayisini etkileyen HER mutasyon da (createTablo,
+     * changeSchema, renameTablo, deleteTablo, addKolon, deleteKolon, applyChanges) ayni cache
+     * adini evict ediyor — cunku donen DTO'da tablo isimleri ve kolon sayilari da var. Kolonun
+     * adi/tag'i/PK'si degisen ama sayisi degismeyen islemler (renameKolon, changeKolonTag,
+     * changeKolonPrimaryKey) BILEREK evict etmiyor: bu DTO'da o alanlar hic yok.
+     */
+    @Cacheable("schemaWorkspace")
     @Transactional(readOnly = true)
     public List<SchemaResponseDTO>getSchemaList(){
 
@@ -158,6 +170,7 @@ public class SchemaService {
                         "NOT_FOUND_SCHEMA", "schema not found: " + id, Map.of("id", String.valueOf(id))));
     }
 
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Schema createSchema(String name) {
         NameValidator.validate("schema name", "VALIDATION_INVALID_SCHEMA_NAME", name);
@@ -185,6 +198,7 @@ public class SchemaService {
      * (gizli), hedef isim olarak da asagidaki kontrol engeller — yoksa var olan bir schema
      * "public" adini alarak gizli hale gelir ve icindeki tablolar erisilemez olurdu.
      */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Schema renameSchema(Long id, String newName) {
         Schema schema = getSchema(id);
@@ -219,6 +233,7 @@ public class SchemaService {
      * {@code CASCADE} ile gercek tablolari fiziksel siliyor; metadata'yi da ayni yonde
      * temizlemezsek DBAdmin arayuzunde artik var olmayan "hayalet" tablolar gorunurdu.
      */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public void deleteSchema(Long id) {
         // getSchema "public" icin 404 verir; buraya asla "DROP SCHEMA public CASCADE" gelemez.

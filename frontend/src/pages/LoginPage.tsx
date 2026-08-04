@@ -1,5 +1,8 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { InputText } from "primereact/inputtext";
+import { Password } from "primereact/password";
+import { Button } from "primereact/button";
 import { useAuth } from "../auth/AuthProvider";
 import { ApiError } from "../api/client";
 import { notifyFromError, useNotify } from "../notifications/NotificationProvider";
@@ -45,8 +48,7 @@ export function LoginPage() {
         </h1>
         <label className="login-field">
           <span>{t("auth.username")}</span>
-          <input
-            type="text"
+          <InputText
             autoComplete="username"
             value={kullaniciAdi}
             onChange={(e) => setKullaniciAdi(e.target.value)}
@@ -56,17 +58,27 @@ export function LoginPage() {
         </label>
         <label className="login-field">
           <span>{t("auth.password")}</span>
-          <input
-            type="password"
+          {/* feedback={false}: PrimeReact'in varsayilan "parola gucu" overlay panelini
+              kapatiyoruz — o panel icin de ConfirmDialog/Toast'ta oldugu gibi ayri bir
+              unstyled-mode reskin ugrasi gerekirdi, kazanci yokken riski var. toggleMask
+              ise sadece bir buton (overlay degil), goz ikonuyla goster/gizle bedavaya geliyor. */}
+          <Password
+            inputId="login-parola"
+            className="login-password"
             autoComplete="current-password"
             value={parola}
             onChange={(e) => setParola(e.target.value)}
+            feedback={false}
+            toggleMask
             required
           />
         </label>
-        <button className="btn btn-primary login-submit" type="submit" disabled={submitting}>
-          {submitting ? t("auth.loggingIn") : t("auth.login")}
-        </button>
+        <Button
+          className="btn btn-primary login-submit"
+          type="submit"
+          disabled={submitting}
+          label={submitting ? t("auth.loggingIn") : t("auth.login")}
+        />
       </form>
     </div>
   );

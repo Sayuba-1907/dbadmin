@@ -1,5 +1,6 @@
 package dbadmin.backend.service;
 
+import dbadmin.backend.dto.KullaniciResponse;
 import dbadmin.backend.entity.Kullanici;
 import dbadmin.backend.entity.Rol;
 import dbadmin.backend.exception.ConflictException;
@@ -10,6 +11,8 @@ import dbadmin.backend.security.KullaniciRolCacheService;
 import dbadmin.backend.validation.NameValidator;
 import java.util.List;
 import java.util.Map;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,9 +41,22 @@ public class KullaniciService {
         this.kullaniciRolCacheService = kullaniciRolCacheService;
     }
 
+    /**
+     * "kullanicilar" cache'i (bkz. CacheConfig) — {@link #kullaniciRolCacheService}'ten farkli
+     * bir cache: bu, ADMIN'in gordugu listeyi tutar; rol cache'i ise sadece id+rol'u, JWT
+     * filter'inda parolasiz bir yolda kullaniliyor.
+     * <p>
+     * BILEREK {@link Kullanici} entity'sini degil {@link KullaniciResponse} DTO'sunu
+     * cachliyoruz: entity'nin {@code getParolaHash()} getter'i var, JSON serilestirici
+     * (GenericJackson2JsonRedisSerializer) tum alanlari yazdigi icin entity'yi olduğu gibi
+     * cache'lersek her kullanicinin BCrypt hash'i Redis'e duz JSON olarak girerdi —
+     * {@code KullaniciRolCacheService}'in parola hash'ini Redis'e hic yazmama karariyla
+     * (bkz. o sinifin javadoc'u) tam ters duserdi.
+     */
+    @Cacheable("kullanicilar")
     @Transactional(readOnly = true)
-    public List<Kullanici> listKullanicilar() {
-        return kullaniciRepository.findAll();
+    public List<KullaniciResponse> listKullanicilar() {
+        return kullaniciRepository.findAll().stream().map(KullaniciResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -59,6 +75,7 @@ public class KullaniciService {
     }
 
     /** Rol verilmezse en dusuk yetkiyle (VIEWER) baslar — yeni kullanici kazara yazma yetkisi almasin. */
+    @CacheEvict(cacheNames = "kullanicilar", allEntries = true)
     @Transactional
     public Kullanici createKullanici(String kullaniciAdi, String parola, Rol rol) {
         NameValidator.validate("username", "VALIDATION_INVALID_USERNAME", kullaniciAdi);
@@ -83,6 +100,7 @@ public class KullaniciService {
      * (yuksek) rolüyle TTL suresince (varsayilan 30 dk) islem yapmaya devam edebilir — bu yuzden
      * evict burada, DB degisikligiyle AYNI metodun icinde, unutulmasi zor bir yerde.
      */
+    @CacheEvict(cacheNames = "kullanicilar", allEntries = true)
     @Transactional
     public Kullanici changeRol(Long id, Rol yeniRol) {
         if (yeniRol == null) {
@@ -95,6 +113,7 @@ public class KullaniciService {
         return kullanici;
     }
 
+    @CacheEvict(cacheNames = "kullanicilar", allEntries = true)
     @Transactional
     public void deleteKullanici(Long id) {
         Kullanici kullanici = getKullanici(id);

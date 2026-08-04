@@ -47,7 +47,7 @@ public class KullaniciController {
             description = "Parola hash'leri cevaba dahil edilmez.")
     @GetMapping
     public List<KullaniciResponse> list() {
-        return kullaniciService.listKullanicilar().stream().map(KullaniciResponse::from).toList();
+        return kullaniciService.listKullanicilar();
     }
 
     @Operation(

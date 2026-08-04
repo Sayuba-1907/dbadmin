@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -105,6 +106,7 @@ public class TabloService {
      * {@link SchemaService#RESERVED_SCHEMA_NAME}) boyle bir tablo olusturuldugu anda arayuzde
      * gorunmez olurdu — o yuzden sessiz varsayilan yerine hata veriyoruz.
      */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Tablo createTablo(String name, Long schemaId, List<KolonTanimi> kolonTanimlari) {
         NameValidator.validate("table name", "VALIDATION_INVALID_TABLE_NAME", name);
@@ -176,6 +178,7 @@ public class TabloService {
      * ve gercek bir schema olmali: "public" gizli oldugu icin (bkz.
      * {@link SchemaService#RESERVED_SCHEMA_NAME}) oraya tasima 404 ile reddedilir.
      */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Tablo changeSchema(Long tabloId, Long newSchemaId) {
         Tablo tablo = getTablo(tabloId);
@@ -191,6 +194,7 @@ public class TabloService {
     }
 
     /** Hem metadata'daki (Tablo.name) hem gercek Postgres tablosunun adini degistirir. */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Tablo renameTablo(Long id, String newName) {
         Tablo tablo = getTablo(id);
@@ -216,6 +220,7 @@ public class TabloService {
     }
 
     /** Tablo silinince {@code tabloRepository.delete} JPA cascade sayesinde altindaki tum Kolon satirlarini da siler; sonra gercek tablo da drop edilir. */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public void deleteTablo(Long id) {
         Tablo tablo = getTablo(id);
@@ -227,6 +232,7 @@ public class TabloService {
     }
 
     /** Mevcut bir tabloya yeni kolon ekler; metadata + gercek {@code ALTER TABLE ADD COLUMN} birlikte gider. */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Kolon addKolon(Long tabloId, KolonTanimi tanim) {
         Tablo tablo = getTablo(tabloId);
@@ -261,6 +267,7 @@ public class TabloService {
      * kullaniyoruz, cunku Kolon'u Tablo'nun kendi listesinden cikarmak, Tablo entity'sindeki
      * {@code orphanRemoval = true} sayesinde otomatik DB'den silinmesini tetikler.
      */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public void deleteKolon(Long tabloId, Long kolonId) {
         Tablo tablo = getTablo(tabloId);
@@ -388,6 +395,7 @@ public class TabloService {
      * yeniden kurulur) — dogru sonucu verir ama en verimli yol degildir; tek bir Kaydet'te
      * beklenen kolon sayisi kucuk oldugu icin simdilik bu kabul edilebilir bir maliyet.
      */
+    @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Tablo applyChanges(Long tabloId, String yeniIsim, Long yeniSchemaId,
             List<Long> silinecekKolonIdler, List<KolonTanimi> eklenecekKolonlar,

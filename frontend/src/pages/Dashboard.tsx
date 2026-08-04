@@ -644,6 +644,7 @@ export function Dashboard() {
             onRenameSchema={handleRenameSchema}
             onDeleteSchema={handleDeleteSchema}
             onChangeTabloSchema={handleChangeTabloSchema}
+            onLoadKolonlar={getTablo}
           />
 
           {draft ? (

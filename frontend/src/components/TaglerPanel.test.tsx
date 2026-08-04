@@ -3,6 +3,7 @@ import "@testing-library/jest-dom";
 // i18next kurulumu elle import edilmezse t("tagler.title") ceviri yerine ham key doner.
 import "../i18n";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { PrimeReactProvider } from "primereact/api";
 import { TaglerPanel } from "./TaglerPanel";
 import { KolonUsage, Tag } from "../api/tags";
 import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
@@ -31,16 +32,18 @@ function renderPanel(props: {
   onDelete?: (tagId: number) => void;
 }) {
   return render(
-    <ConfirmProvider>
-      <AuthContext.Provider value={EDITOR_AUTH}>
-        <TaglerPanel
-          tags={props.tags}
-          onLoadUsage={props.onLoadUsage}
-          onRename={props.onRename ?? jest.fn()}
-          onDelete={props.onDelete ?? jest.fn()}
-        />
-      </AuthContext.Provider>
-    </ConfirmProvider>
+    <PrimeReactProvider value={{ unstyled: true }}>
+      <ConfirmProvider>
+        <AuthContext.Provider value={EDITOR_AUTH}>
+          <TaglerPanel
+            tags={props.tags}
+            onLoadUsage={props.onLoadUsage}
+            onRename={props.onRename ?? jest.fn()}
+            onDelete={props.onDelete ?? jest.fn()}
+          />
+        </AuthContext.Provider>
+      </ConfirmProvider>
+    </PrimeReactProvider>
   );
 }
 
@@ -56,12 +59,11 @@ const KIMLIK_USAGE: KolonUsage[] = [
 ];
 
 /**
- * Bir etiketin kendi satirindaki "Ayrıntı"/"Gizle" butonunu dondurur. Satirda artik Duzenle/Sil
- * butonlari da oldugu icin (getByRole("button") tek basina belirsiz olurdu) isme gore ariyoruz.
+ * Artik ayri bir "Ayrıntı" butonu yok — tag'in ismine tiklamak ayrinti panelini ac/kapa
+ * yapiyor (bkz. TaglerPanel.tsx, role="button" olan .tagler-name span'i).
  */
 function detailButton(tagName: string) {
-  const row = screen.getByText(tagName).closest("li") as HTMLElement;
-  return within(row).getByRole("button", { name: /Ayrıntı|Gizle/ });
+  return screen.getByText(tagName, { selector: ".tagler-name" });
 }
 
 test("etiketler listelenir ve hicbiri acilmadan kullanim istegi atilmaz", () => {
@@ -107,7 +109,6 @@ test("ayni etiketi kapatip tekrar acmak ikinci bir istek atmaz (onbellek)", asyn
 
   fireEvent.click(detailButton("kimlik"));
   expect(await screen.findByText("ders_sema.ogrenciler.tc_no")).toBeInTheDocument();
-  expect(detailButton("kimlik")).toHaveTextContent("Gizle");
 
   fireEvent.click(detailButton("kimlik")); // kapat
   expect(screen.queryByText("ders_sema.ogrenciler.tc_no")).not.toBeInTheDocument();
@@ -179,7 +180,10 @@ test("Sil'e basip onaylayinca onDelete cagrilir, onaylanmazsa cagrilmaz", async 
   const cancelBtn = await screen.findByRole("button", { name: "Vazgeç" });
   fireEvent.click(cancelBtn); // Iptal -> silinmemeli
   expect(onDelete).not.toHaveBeenCalled();
-  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  // PrimeReact'in ConfirmDialog'u kapanirken bir CSS gecis animasyonu oynatiyor (bkz.
+  // confirm-modal-in/exit) — element tiklamadan hemen sonra degil, o gecis bitince DOM'dan
+  // kalkiyor, o yuzden anlik queryBy* degil waitFor gerekiyor.
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
 
   fireEvent.click(silButton);
   const modal = await screen.findByRole("alertdialog");

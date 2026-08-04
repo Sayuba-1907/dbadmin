@@ -1,8 +1,13 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { InputText } from "primereact/inputtext";
+import { Button } from "primereact/button";
+import { Checkbox } from "primereact/checkbox";
 import { DraftKolon, KOLON_TYPES, KolonType, TabloDraft } from "../api/tablolar";
 import { Tag } from "../api/tags";
-import { KolonRow } from "./KolonRow";
+import { tagColorStyle } from "../utils/tagColor";
 import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation";
 import { useAuth } from "../auth/AuthProvider";
 import { useConfirm } from "../notifications/ConfirmProvider";
@@ -68,6 +73,9 @@ export function TabloDetail({
   const [kolonType, setKolonType] = useState<KolonType>(KOLON_TYPES[0]);
   const [kolonPrimaryKey, setKolonPrimaryKey] = useState(false);
   const [newTagName, setNewTagName] = useState("");
+  // Kolon tablosunda ad'a gore arama — DataTable'in globalFilter'i, onceden hic yoktu (deneme:
+  // PrimeReact DataTable, bkz. DECISIONS.md).
+  const [kolonSearch, setKolonSearch] = useState("");
 
   function handleAddKolonSubmit(event: FormEvent) {
     event.preventDefault();
@@ -86,7 +94,7 @@ export function TabloDetail({
     <section className="detail-panel">
       {/* VIEWER rolu icin tum yazma kontrollerini tek yerden kapatir — fieldset'in disabled'i
           DOM derinligi fark etmeksizin her input/select/button torununa uygulanir, yani
-          KolonRow'un icindeki tekil kontrollere ayrica dokunmaya gerek yok. Backend zaten
+          DataTable'in kolon body'lerindeki tekil kontrollere ayrica dokunmaya gerek yok. Backend zaten
           403 donuyor (bkz. SecurityConfig); bu sadece kullanicinin yapamayacagi bir seyi
           denemesini engelleyen bir UX katmani. */}
       <fieldset className="unstyled-fieldset" disabled={!canWrite}>
@@ -129,41 +137,110 @@ export function TabloDetail({
         </div>
 
         <div className="detail-card">
-          <table className="kolon-table">
-            <thead>
-              <tr>
-                <th>{t("tabloDetail.colName")}</th>
-                <th>{t("tabloDetail.colType")}</th>
-                <th>{t("tabloDetail.colPrimaryKey")}</th>
-                <th>{t("tabloDetail.colTag")}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {draft.kolonlar.map((kolon: DraftKolon) => (
-                <KolonRow
-                  key={kolon.id}
-                  kolon={kolon}
-                  tags={tags}
-                  onRename={onChangeKolonName}
-                  onChangeTag={onChangeKolonTag}
-                  onChangePrimaryKey={onChangeKolonPrimaryKey}
-                  onToggleDelete={onToggleDeleteKolon}
-                />
-              ))}
-              {draft.kolonlar.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="empty-hint">
-                    {t("tabloDetail.emptyColumns")}
-                  </td>
-                </tr>
+          {draft.kolonlar.length > 0 && (
+            <input
+              type="text"
+              className="sidebar-search"
+              style={{ marginBottom: "var(--space-2)", maxWidth: 240 }}
+              placeholder={t("tabloDetail.columnSearchPlaceholder")}
+              value={kolonSearch}
+              onChange={(e) => setKolonSearch(e.target.value)}
+            />
+          )}
+          <DataTable
+            value={draft.kolonlar}
+            dataKey="id"
+            className="kolon-table"
+            emptyMessage={t("tabloDetail.emptyColumns")}
+            globalFilter={kolonSearch}
+            globalFilterFields={["name"]}
+            rowClassName={(kolon: DraftKolon) =>
+              kolon.silinecek ? "kolon-row-silinecek" : undefined
+            }
+          >
+            <Column
+              field="name"
+              header={t("tabloDetail.colName")}
+              sortable
+              body={(kolon: DraftKolon) => (
+                <>
+                  <input
+                    type="text"
+                    className="mono"
+                    value={kolon.name}
+                    onChange={(e) => onChangeKolonName(kolon.id, e.target.value)}
+                    disabled={kolon.silinecek}
+                  />
+                  {kolon.isNew && (
+                    <span className="new-badge">{t("tabloDetail.newColumnBadge")}</span>
+                  )}
+                </>
               )}
-            </tbody>
-          </table>
+            />
+            <Column
+              field="type"
+              header={t("tabloDetail.colType")}
+              sortable
+              body={(kolon: DraftKolon) => (
+                <span className={`type-badge type-badge-${kolon.type}`}>{kolon.type}</span>
+              )}
+            />
+            <Column
+              header={t("tabloDetail.colPrimaryKey")}
+              body={(kolon: DraftKolon) => (
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={kolon.primaryKey}
+                    disabled={kolon.silinecek}
+                    onChange={(e) => onChangeKolonPrimaryKey(kolon.id, e.target.checked)}
+                    aria-label={t("tabloDetail.primaryKeyLabel")}
+                  />
+                  {kolon.primaryKey && <span className="pk-badge">PK</span>}
+                </label>
+              )}
+            />
+            <Column
+              header={t("tabloDetail.colTag")}
+              body={(kolon: DraftKolon) => {
+                const selectedTag = tags.find((tag) => tag.id === kolon.tagId);
+                return (
+                  <select
+                    className="tag-select"
+                    style={selectedTag ? tagColorStyle(selectedTag.name) : undefined}
+                    value={kolon.tagId ?? ""}
+                    disabled={kolon.silinecek}
+                    onChange={(e) =>
+                      onChangeKolonTag(kolon.id, e.target.value ? Number(e.target.value) : null)
+                    }
+                  >
+                    <option value="">{t("kolonRow.noTag")}</option>
+                    {tags.map((tag) => (
+                      <option key={tag.id} value={tag.id} style={tagColorStyle(tag.name)}>
+                        {tag.name}
+                      </option>
+                    ))}
+                  </select>
+                );
+              }}
+            />
+            <Column
+              body={(kolon: DraftKolon) =>
+                canWrite && (
+                  <button
+                    className="btn btn-link btn-danger"
+                    onClick={() => onToggleDeleteKolon(kolon.id)}
+                  >
+                    {kolon.silinecek ? t("common.undo") : t("common.delete")}
+                  </button>
+                )
+              }
+            />
+          </DataTable>
 
           {canWrite && (
             <form className="add-kolon-form" onSubmit={handleAddKolonSubmit}>
-              <input
+              <InputText
                 type="text"
                 placeholder={t("tabloDetail.columnNamePlaceholder")}
                 value={kolonName}
@@ -182,22 +259,19 @@ export function TabloDetail({
                 ))}
               </select>
               <label className="checkbox-label">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={kolonPrimaryKey}
-                  onChange={(e) => setKolonPrimaryKey(e.target.checked)}
+                  onChange={(e) => setKolonPrimaryKey(e.checked ?? false)}
                 />
                 {t("tabloDetail.primaryKeyLabel")}
               </label>
-              <button className="btn" type="submit">
-                {t("tabloDetail.addColumn")}
-              </button>
+              <Button className="btn" type="submit" label={t("tabloDetail.addColumn")} />
             </form>
           )}
 
           {canWrite && (
             <form className="add-tag-form" onSubmit={handleCreateTagSubmit}>
-              <input
+              <InputText
                 type="text"
                 placeholder={t("tabloDetail.tagNamePlaceholder")}
                 value={newTagName}
@@ -208,9 +282,7 @@ export function TabloDetail({
                 onInvalid={onRequiredInvalid(t)}
                 required
               />
-              <button className="btn" type="submit">
-                {t("tabloDetail.createTag")}
-              </button>
+              <Button className="btn" type="submit" label={t("tabloDetail.createTag")} />
             </form>
           )}
         </div>

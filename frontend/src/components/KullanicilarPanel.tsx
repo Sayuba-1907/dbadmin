@@ -1,5 +1,10 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { InputText } from "primereact/inputtext";
+import { Password } from "primereact/password";
+import { Button } from "primereact/button";
 import { Kullanici } from "../api/kullanicilar";
 import { Rol } from "../api/auth";
 import { useAuth } from "../auth/AuthProvider";
@@ -47,68 +52,67 @@ export function KullanicilarPanel({
   return (
     <section className="kullanicilar-panel">
       <h2>{t("kullanicilar.title")}</h2>
-      <table className="kullanici-table">
-        <thead>
-          <tr>
-            <th>{t("kullanicilar.colUsername")}</th>
-            <th>{t("kullanicilar.colRole")}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {kullanicilar.map((kullanici) => (
-            <tr key={kullanici.id}>
-              <td>
-                {kullanici.kullaniciAdi}
-                {kullanici.kullaniciAdi === benimKullaniciAdim && (
-                  <span className="you-badge"> ({t("kullanicilar.you")})</span>
-                )}
-              </td>
-              <td>
-                <span className={`role-badge role-badge-${kullanici.rol.toLowerCase()}`}>
-                  {kullanici.rol}
-                </span>
-                <select
-                  value={kullanici.rol}
-                  onChange={(e) => onChangeRol(kullanici.id, e.target.value as Rol)}
-                >
-                  {ROLLER.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td>
-                <button
-                  className="btn btn-link btn-danger"
-                  onClick={async () => {
-                    if (
-                      await confirm(
-                        t("kullanicilar.confirmDelete", { name: kullanici.kullaniciAdi })
-                      )
-                    ) {
-                      onDelete(kullanici.id);
-                    }
-                  }}
-                >
-                  {t("common.delete")}
-                </button>
-              </td>
-            </tr>
-          ))}
-          {kullanicilar.length === 0 && (
-            <tr>
-              <td colSpan={3} className="empty-hint">
-                {t("kullanicilar.empty")}
-              </td>
-            </tr>
+      <DataTable
+        value={kullanicilar}
+        dataKey="id"
+        className="kullanici-table"
+        emptyMessage={t("kullanicilar.empty")}
+      >
+        <Column
+          field="kullaniciAdi"
+          header={t("kullanicilar.colUsername")}
+          sortable
+          body={(kullanici: Kullanici) => (
+            <>
+              {kullanici.kullaniciAdi}
+              {kullanici.kullaniciAdi === benimKullaniciAdim && (
+                <span className="you-badge"> ({t("kullanicilar.you")})</span>
+              )}
+            </>
           )}
-        </tbody>
-      </table>
+        />
+        <Column
+          field="rol"
+          header={t("kullanicilar.colRole")}
+          sortable
+          body={(kullanici: Kullanici) => (
+            <>
+              <span className={`role-badge role-badge-${kullanici.rol.toLowerCase()}`}>
+                {kullanici.rol}
+              </span>
+              <select
+                value={kullanici.rol}
+                onChange={(e) => onChangeRol(kullanici.id, e.target.value as Rol)}
+              >
+                {ROLLER.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+        />
+        <Column
+          body={(kullanici: Kullanici) => (
+            <button
+              className="btn btn-link btn-danger"
+              onClick={async () => {
+                if (
+                  await confirm(t("kullanicilar.confirmDelete", { name: kullanici.kullaniciAdi }))
+                ) {
+                  onDelete(kullanici.id);
+                }
+              }}
+            >
+              {t("common.delete")}
+            </button>
+          )}
+        />
+      </DataTable>
 
       <form className="create-kullanici-form" onSubmit={handleCreateSubmit}>
-        <input
+        <InputText
           type="text"
           placeholder={t("kullanicilar.usernamePlaceholder")}
           value={kullaniciAdi}
@@ -119,8 +123,8 @@ export function KullanicilarPanel({
           onInvalid={onRequiredInvalid(t)}
           required
         />
-        <input
-          type="password"
+        <Password
+          className="kullanici-password"
           placeholder={t("kullanicilar.passwordPlaceholder")}
           value={parola}
           onChange={(e) => {
@@ -128,6 +132,8 @@ export function KullanicilarPanel({
             setParola(e.target.value);
           }}
           onInvalid={onRequiredInvalid(t)}
+          feedback={false}
+          toggleMask
           required
         />
         <select value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
@@ -137,9 +143,7 @@ export function KullanicilarPanel({
             </option>
           ))}
         </select>
-        <button className="btn btn-primary" type="submit">
-          {t("kullanicilar.create")}
-        </button>
+        <Button className="btn btn-primary" type="submit" label={t("kullanicilar.create")} />
       </form>
     </section>
   );
