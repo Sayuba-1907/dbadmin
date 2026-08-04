@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthProvider";
 import { ApiError } from "../api/client";
 import { notifyFromError, useNotify } from "../notifications/NotificationProvider";
+import { Logo } from "../components/Logo";
 
 /**
  * Giris ekrani. AuthProvider'in "anonymous" durumundayken App.tsx bunu Dashboard yerine
@@ -39,7 +40,7 @@ export function LoginPage() {
     <div className="login-page">
       <form className="login-form" onSubmit={handleSubmit}>
         <h1>
-          <span className="brand-mark" aria-hidden="true" />
+          <Logo className="brand-mark" />
           DBAdmin
         </h1>
         <label className="login-field">

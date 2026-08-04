@@ -40,6 +40,7 @@ import {
 } from "../api/kullanicilar";
 import { CreateSchemaForm } from "../components/CreateSchemaForm";
 import { CreateTabloForm } from "../components/CreateTabloForm";
+import { DashboardSkeleton } from "../components/DashboardSkeleton";
 import { KullanicilarPanel } from "../components/KullanicilarPanel";
 import { TabloDetail } from "../components/TabloDetail";
 import { TabloSidebar } from "../components/TabloSidebar";
@@ -533,14 +534,31 @@ export function Dashboard() {
     }
   }
 
-  async function handleDeleteTag(id: number) {
-    try {
-      await deleteTag(id);
-      await refreshTags();
-      notify(204, t("notifications.tagDeleted"));
-    } catch (err) {
-      notifyFromError(notify, t, err, t("notifications.tagDeleteFailed"));
-    }
+  /**
+   * handleDeleteTablo ile ayni geri-alinabilir-silme deseni (bkz. oradaki aciklama) — onceden
+   * tag/kullanici silme dogrudan (geri alinamaz) calisiyordu, tutarlilik icin diger silmelerle
+   * ayni "Geri Al" penceresine cekildi.
+   */
+  function handleDeleteTag(id: number) {
+    setTags((prev) => prev.filter((tag) => tag.id !== id));
+
+    const timerId = window.setTimeout(async () => {
+      try {
+        await deleteTag(id);
+      } catch (err) {
+        notifyFromError(notify, t, err, t("notifications.tagDeleteFailed"));
+      } finally {
+        await refreshTags();
+      }
+    }, NOTIFICATION_DURATION_MS);
+
+    notify(204, t("notifications.tagDeleted"), {
+      label: t("common.undo"),
+      onClick: () => {
+        window.clearTimeout(timerId);
+        refreshTags();
+      },
+    });
   }
 
   async function handleCreateKullanici(kullaniciAdi: string, parola: string, rol: Rol) {
@@ -566,18 +584,30 @@ export function Dashboard() {
     }
   }
 
-  async function handleDeleteKullanici(id: number) {
-    try {
-      await deleteKullanici(id);
-      await refreshKullanicilar();
-      notify(204, t("notifications.kullaniciDeleted"));
-    } catch (err) {
-      notifyFromError(notify, t, err, t("notifications.kullaniciDeleteFailed"));
-    }
+  function handleDeleteKullanici(id: number) {
+    setKullanicilar((prev) => prev.filter((kullanici) => kullanici.id !== id));
+
+    const timerId = window.setTimeout(async () => {
+      try {
+        await deleteKullanici(id);
+      } catch (err) {
+        notifyFromError(notify, t, err, t("notifications.kullaniciDeleteFailed"));
+      } finally {
+        await refreshKullanicilar();
+      }
+    }, NOTIFICATION_DURATION_MS);
+
+    notify(204, t("notifications.kullaniciDeleted"), {
+      label: t("common.undo"),
+      onClick: () => {
+        window.clearTimeout(timerId);
+        refreshKullanicilar();
+      },
+    });
   }
 
   if (loading) {
-    return <p className="loading-hint">{t("dashboard.loading")}</p>;
+    return <DashboardSkeleton />;
   }
 
   return (

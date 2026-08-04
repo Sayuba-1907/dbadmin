@@ -4,11 +4,19 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0b0f14" />
+    <meta name="theme-color" content="#0f172a" />
     <meta
       name="description"
       content="DBAdmin - a lightweight database admin panel"
     />
+    <!-- index.css yuklenmeden once tarayicinin beyaz zemini gostermemesi icin: koyu tema
+         rengi burada tekrarlanip donuk sekilde ilk boyada uygulaniyor (FOUC onlemi). -->
+    <style>
+      html,
+      body {
+        background-color: #0f172a;
+      }
+    </style>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

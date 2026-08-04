@@ -51,10 +51,10 @@
 
 .brand-mark {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: var(--radius-sm);
-  background-color: var(--color-accent);
+  width: 22px;
+  height: 22px;
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .app-header-right {
@@ -249,6 +249,7 @@ select:disabled {
   border-right: 1px solid var(--color-border);
   padding: var(--space-3);
   background-color: var(--color-surface);
+  animation: view-fade var(--transition-base) ease;
 }
 
 .sidebar-search-row {
@@ -464,6 +465,7 @@ select:disabled {
 .detail-panel {
   flex: 1;
   padding: var(--space-5);
+  animation: view-fade var(--transition-base) ease;
 }
 
 .detail-header {
@@ -577,7 +579,10 @@ select:disabled {
 }
 
 .kolon-table tbody tr {
-  transition: background-color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    opacity var(--transition-base);
+  animation: row-enter 500ms ease;
 }
 
 .kolon-table tbody tr:hover {
@@ -735,10 +740,108 @@ select:disabled {
   padding: 20px;
 }
 
+.app-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 100vh;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-surface-raised);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Skeleton yukleme gorunumu: gercek verinin kaplayacagi alani onceden dolduran, hafif
+   pulse'layan bloklar. Renkler tokens.css'teki yuzey hiyerarsisinden (surface-raised
+   surface'ten belirgin ama abartisiz) - prefers-reduced-motion global kurali (tokens.css)
+   bu animasyonu da otomatik durduruyor. */
+.skeleton {
+  background-color: var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-block {
+  width: 100%;
+}
+
+.skeleton-nav-btn {
+  height: 36px;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-schema-group {
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-indent {
+  width: 80%;
+  margin-left: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+/* Sekme (Semalar/Tagler/Kullanicilar) panelleri veya secili tablo detayi ilk kez DOM'a
+   girdiginde kisa bir fade+kaydirma - .sidebar/.detail-panel/.tagler-panel/.kullanicilar-panel
+   class'larina dogrudan baglandigi icin sadece element MOUNT olunca (view degisince,
+   ya da bos durumdan tablo secilince) tetikleniyor; ayni panel icinde veri guncellenirken
+   (ör. baska bir tablo secilirken TabloDetail yeniden render olurken) tekrar oynamiyor. */
+/* Yeni eklenen bir satir (kolon/tag/kullanici) DOM'a girerken kisa bir vurgu: hafif yesil
+   zeminden seffafa, opaklik 0'dan 1'e - "az once eklendi" hissi. tr/li elementlerinde transform
+   yerine sadece opacity/background-color kullaniliyor (transform'un table-row'da tarayicilar
+   arasi destegi tutarsiz). Sadece MOUNT'ta oynuyor (bkz. view-fade'deki ayni not) - var olan
+   satirlar yeniden render olurken tekrar oynamiyor. */
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    background-color: var(--color-accent-soft);
+  }
+  to {
+    opacity: 1;
+    background-color: transparent;
+  }
+}
+
+@keyframes view-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .tagler-panel,
 .kullanicilar-panel {
   flex: 1;
   padding: var(--space-5);
+  animation: view-fade var(--transition-base) ease;
 }
 
 .kullanici-table {
@@ -754,6 +857,10 @@ select:disabled {
   padding: var(--space-2);
   border-bottom: 1px solid var(--color-border);
   font-size: var(--text-base);
+}
+
+.kullanici-table tbody tr {
+  animation: row-enter 500ms ease;
 }
 
 .kullanici-table th {
@@ -808,6 +915,7 @@ select:disabled {
 .tagler-item {
   border-bottom: 1px solid var(--color-border);
   padding: var(--space-2) 0;
+  animation: row-enter 500ms ease;
 }
 
 /* Eskiden flex + justify-content: space-between kullaniyordu: tagler-name'in genisligi
@@ -816,9 +924,19 @@ select:disabled {
    olursa olsun butonlari hep ayni sutunlara oturtur. */
 .tagler-item-row {
   display: grid;
-  grid-template-columns: 1fr 90px 90px 90px;
+  grid-template-columns: 1fr 286px;
   align-items: center;
   column-gap: var(--space-2);
+}
+
+/* Detail/Edit/Delete tek bir grid hucresinde, sag kenara yaslanmis flex grubu — VIEWER'da
+   Edit/Delete hic render edilmedigi icin (bkz. TaglerPanel) Detail ortada asili kalmasin diye:
+   butonlar kac tane olursa olsun hep sag kenarda durur, 286px'lik hucre genisligi de (3 buton +
+   2 bosluk) tum satirlarin ayni x konumunda hizalanmasini garanti eder. */
+.tagler-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 .tagler-name {

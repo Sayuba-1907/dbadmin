@@ -5,6 +5,7 @@ import { Tag } from "../api/tags";
 import { KolonRow } from "./KolonRow";
 import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation";
 import { useAuth } from "../auth/AuthProvider";
+import { useConfirm } from "../notifications/ConfirmProvider";
 
 /**
  * Handler'lar Dashboard'dan geliyor. Buradaki tum onChange* callback'leri SENKRON — hicbiri
@@ -62,6 +63,7 @@ export function TabloDetail({
 }: TabloDetailProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
+  const confirm = useConfirm();
   const [kolonName, setKolonName] = useState("");
   const [kolonType, setKolonType] = useState<KolonType>(KOLON_TYPES[0]);
   const [kolonPrimaryKey, setKolonPrimaryKey] = useState(false);
@@ -111,16 +113,18 @@ export function TabloDetail({
                 </button>
               </>
             )}
-            <button
-              className="btn btn-danger"
-              onClick={() => {
-                if (window.confirm(t("tabloDetail.confirmDeleteTable", { name: draft.name }))) {
-                  onDeleteTablo(draft.tabloId);
-                }
-              }}
-            >
-              {t("tabloDetail.deleteTable")}
-            </button>
+            {canWrite && (
+              <button
+                className="btn btn-danger"
+                onClick={async () => {
+                  if (await confirm(t("tabloDetail.confirmDeleteTable", { name: draft.name }))) {
+                    onDeleteTablo(draft.tabloId);
+                  }
+                }}
+              >
+                {t("tabloDetail.deleteTable")}
+              </button>
+            )}
           </div>
         </div>
 
@@ -157,54 +161,58 @@ export function TabloDetail({
             </tbody>
           </table>
 
-          <form className="add-kolon-form" onSubmit={handleAddKolonSubmit}>
-            <input
-              type="text"
-              placeholder={t("tabloDetail.columnNamePlaceholder")}
-              value={kolonName}
-              onChange={(e) => {
-                clearCustomValidity(e);
-                setKolonName(e.target.value);
-              }}
-              onInvalid={onRequiredInvalid(t)}
-              required
-            />
-            <select value={kolonType} onChange={(e) => setKolonType(e.target.value as KolonType)}>
-              {KOLON_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-            <label className="checkbox-label">
+          {canWrite && (
+            <form className="add-kolon-form" onSubmit={handleAddKolonSubmit}>
               <input
-                type="checkbox"
-                checked={kolonPrimaryKey}
-                onChange={(e) => setKolonPrimaryKey(e.target.checked)}
+                type="text"
+                placeholder={t("tabloDetail.columnNamePlaceholder")}
+                value={kolonName}
+                onChange={(e) => {
+                  clearCustomValidity(e);
+                  setKolonName(e.target.value);
+                }}
+                onInvalid={onRequiredInvalid(t)}
+                required
               />
-              {t("tabloDetail.primaryKeyLabel")}
-            </label>
-            <button className="btn" type="submit">
-              {t("tabloDetail.addColumn")}
-            </button>
-          </form>
+              <select value={kolonType} onChange={(e) => setKolonType(e.target.value as KolonType)}>
+                {KOLON_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={kolonPrimaryKey}
+                  onChange={(e) => setKolonPrimaryKey(e.target.checked)}
+                />
+                {t("tabloDetail.primaryKeyLabel")}
+              </label>
+              <button className="btn" type="submit">
+                {t("tabloDetail.addColumn")}
+              </button>
+            </form>
+          )}
 
-          <form className="add-tag-form" onSubmit={handleCreateTagSubmit}>
-            <input
-              type="text"
-              placeholder={t("tabloDetail.tagNamePlaceholder")}
-              value={newTagName}
-              onChange={(e) => {
-                clearCustomValidity(e);
-                setNewTagName(e.target.value);
-              }}
-              onInvalid={onRequiredInvalid(t)}
-              required
-            />
-            <button className="btn" type="submit">
-              {t("tabloDetail.createTag")}
-            </button>
-          </form>
+          {canWrite && (
+            <form className="add-tag-form" onSubmit={handleCreateTagSubmit}>
+              <input
+                type="text"
+                placeholder={t("tabloDetail.tagNamePlaceholder")}
+                value={newTagName}
+                onChange={(e) => {
+                  clearCustomValidity(e);
+                  setNewTagName(e.target.value);
+                }}
+                onInvalid={onRequiredInvalid(t)}
+                required
+              />
+              <button className="btn" type="submit">
+                {t("tabloDetail.createTag")}
+              </button>
+            </form>
+          )}
         </div>
       </fieldset>
     </section>

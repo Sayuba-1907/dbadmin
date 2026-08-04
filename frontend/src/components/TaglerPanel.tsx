@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { KolonUsage, Tag } from "../api/tags";
 import { useAuth } from "../auth/AuthProvider";
+import { useConfirm } from "../notifications/ConfirmProvider";
 
 interface TaglerPanelProps {
   tags: Tag[];
@@ -13,7 +14,8 @@ interface TaglerPanelProps {
 /**
  * "Tagler" gorunumu: sistemdeki tum etiketleri listeler, her birinin yaninda bir "Ayrıntı"
  * butonu vardir. Butona basilinca o etiketi tasiyan kolonlar (schema.tablo.kolon seklinde)
- * aciklanir — TabloSidebar'daki schema acilir/kapanir (accordion) deseniyle ayni.
+ * aciklanir — TabloSidebar'daki schema acilir/kapanir mantigiyla ayni: birden fazla tag'in
+ * ayrintisi ayni anda acik kalabilir, accordion (tekli) degil.
  * <p>
  * Kullanim verisi tag basina lazy cekilir (sadece "Ayrıntı"ya basildiginda) ve bir kez
  * cekildikten sonra {@code usageByTagId} icinde onbelleklenir — ayni etiketi tekrar
@@ -22,9 +24,13 @@ interface TaglerPanelProps {
 export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPanelProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
-  const [expandedTagId, setExpandedTagId] = useState<number | null>(null);
+  const confirm = useConfirm();
+  // TabloSidebar'daki schema acilir/kapanir deseniyle ayni (bkz. expandedSchemaIds): Set
+  // oldugu icin birden fazla tag'in ayrinti alani AYNI ANDA acik kalabiliyor, tek elemanli
+  // bir "su an acik olan" degeri degil.
+  const [expandedTagIds, setExpandedTagIds] = useState<Set<number>>(new Set());
   const [usageByTagId, setUsageByTagId] = useState<Map<number, KolonUsage[]>>(new Map());
-  const [loadingTagId, setLoadingTagId] = useState<number | null>(null);
+  const [loadingTagIds, setLoadingTagIds] = useState<Set<number>>(new Set());
   // Schema/tablo yeniden adlandirmasindaki ile ayni desen: hangi tag su an duzenleme modunda,
   // ve o an input'ta yazan taslak isim — salt gorsel/gecici UI durumu.
   const [editingTagId, setEditingTagId] = useState<number | null>(null);
@@ -37,20 +43,28 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
   }
 
   async function handleToggleDetail(tagId: number) {
-    if (expandedTagId === tagId) {
-      setExpandedTagId(null);
+    if (expandedTagIds.has(tagId)) {
+      setExpandedTagIds((prev) => {
+        const next = new Set(prev);
+        next.delete(tagId);
+        return next;
+      });
       return;
     }
-    setExpandedTagId(tagId);
+    setExpandedTagIds((prev) => new Set(prev).add(tagId));
     if (usageByTagId.has(tagId)) {
       return;
     }
-    setLoadingTagId(tagId);
+    setLoadingTagIds((prev) => new Set(prev).add(tagId));
     try {
       const usage = await onLoadUsage(tagId);
       setUsageByTagId((prev) => new Map(prev).set(tagId, usage));
     } finally {
-      setLoadingTagId(null);
+      setLoadingTagIds((prev) => {
+        const next = new Set(prev);
+        next.delete(tagId);
+        return next;
+      });
     }
   }
 
@@ -59,9 +73,9 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
       <h2>{t("tagler.title")}</h2>
       <ul className="tagler-list">
         {tags.map((tag) => {
-          const expanded = expandedTagId === tag.id;
+          const expanded = expandedTagIds.has(tag.id);
           const usage = usageByTagId.get(tag.id);
-          const loading = loadingTagId === tag.id;
+          const loading = loadingTagIds.has(tag.id);
           const isEditing = editingTagId === tag.id;
           return (
             <li key={tag.id} className="tagler-item">
@@ -91,36 +105,50 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
                 ) : (
                   <>
                     <span className="tagler-name">{tag.name}</span>
-                    <button className="btn btn-link" onClick={() => handleToggleDetail(tag.id)}>
-                      {expanded ? t("tagler.hideDetail") : t("tagler.showDetail")}
-                    </button>
-                    <button
-                      className="btn btn-link"
-                      disabled={!canWrite}
-                      onClick={() => {
-                        setRenameDraft(tag.name);
-                        setEditingTagId(tag.id);
-                      }}
-                    >
-                      {t("common.edit")}
-                    </button>
-                    <button
-                      className="btn btn-link btn-danger"
-                      disabled={!canWrite}
-                      onClick={() => {
-                        if (window.confirm(t("tagler.confirmDelete", { name: tag.name }))) {
-                          onDelete(tag.id);
-                        }
-                      }}
-                    >
-                      {t("common.delete")}
-                    </button>
+                    <div className="tagler-item-actions">
+                      <button className="btn btn-link" onClick={() => handleToggleDetail(tag.id)}>
+                        {expanded ? t("tagler.hideDetail") : t("tagler.showDetail")}
+                      </button>
+                      {canWrite && (
+                        <button
+                          className="btn btn-link"
+                          onClick={() => {
+                            setRenameDraft(tag.name);
+                            setEditingTagId(tag.id);
+                          }}
+                        >
+                          {t("common.edit")}
+                        </button>
+                      )}
+                      {canWrite && (
+                        <button
+                          className="btn btn-link btn-danger"
+                          onClick={async () => {
+                            if (await confirm(t("tagler.confirmDelete", { name: tag.name }))) {
+                              onDelete(tag.id);
+                            }
+                          }}
+                        >
+                          {t("common.delete")}
+                        </button>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
               {expanded && (
                 <div className="tagler-usage">
-                  {loading && <p className="loading-hint">{t("tagler.loadingUsage")}</p>}
+                  {loading && (
+                    <div aria-busy="true" aria-label={t("tagler.loadingUsage")}>
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className="skeleton skeleton-block"
+                          style={{ height: 14, marginBottom: 8, width: `${70 - i * 12}%` }}
+                        />
+                      ))}
+                    </div>
+                  )}
                   {!loading && usage && usage.length === 0 && (
                     <p className="empty-hint">{t("tagler.noUsage")}</p>
                   )}

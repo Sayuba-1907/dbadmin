@@ -3,8 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Dashboard } from "./pages/Dashboard";
 import { LoginPage } from "./pages/LoginPage";
 import { NotificationProvider } from "./notifications/NotificationProvider";
+import { ConfirmProvider } from "./notifications/ConfirmProvider";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { Logo } from "./components/Logo";
 import "./App.css";
 
 /**
@@ -23,8 +25,14 @@ function AppContent() {
   if (status === "loading") {
     // localStorage'daki token'in gecerliligi /api/auth/ben ile dogrulanirken kisa bir an —
     // bu adim atlanirsa gecerli bir oturumu olan kullaniciya bir yanip sonme (login formu,
-    // sonra Dashboard) goruntusu yasatilirdi.
-    return <p className="loading-hint">{t("dashboard.loading")}</p>;
+    // sonra Dashboard) goruntusu yasatilirdi. Tam ekran ortalanmis, App'in kendi koyu zemininde
+    // gosteriliyor ki index.html'deki FOUC-onleme rengiyle kesintisiz devam etsin.
+    return (
+      <div className="app-loading">
+        <span className="spinner" aria-hidden="true" />
+        <span>{t("dashboard.loading")}</span>
+      </div>
+    );
   }
 
   if (status === "anonymous") {
@@ -36,7 +44,7 @@ function AppContent() {
       <header className="app-header">
         <h1>
           <button className="brand-button" onClick={() => setHomeKey((k) => k + 1)}>
-            <span className="brand-mark" aria-hidden="true" />
+            <Logo className="brand-mark" />
             DBAdmin
           </button>
         </h1>
@@ -62,9 +70,11 @@ function AppContent() {
 function App() {
   return (
     <NotificationProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ConfirmProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ConfirmProvider>
     </NotificationProvider>
   );
 }

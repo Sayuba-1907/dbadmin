@@ -1,7 +1,19 @@
-.notification {
+/* Sabit konumlu tek kap, icindeki toast'lar artik kendileri fixed degil (position: static) —
+   boylece birden fazlasi ust uste binmeden alt alta yigilabiliyor. column-reverse: dizideki
+   en yeni eleman (en sonda push edilen) hep sabit alt koseye en yakin durur, eskiler yukari
+   itilir - klasik toast-stack davranisi. */
+.notification-stack {
   position: fixed;
   bottom: 20px;
   right: 20px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  max-width: 360px;
+}
+
+.notification {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -10,7 +22,33 @@
   color: #fff;
   font-size: var(--text-base);
   box-shadow: var(--shadow-md);
-  max-width: 360px;
+  animation: toast-in 200ms ease;
+}
+
+.notification-leaving {
+  animation: toast-out 200ms ease forwards;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
 }
 
 .notification-icon {

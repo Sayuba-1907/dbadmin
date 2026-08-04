@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useState } from "react";
 import { TFunction } from "i18next";
 import { ApiError } from "../api/client";
 import "./notifications.css";
@@ -17,6 +17,16 @@ interface Notification {
   action?: NotificationAction;
 }
 
+/** Ekranda ayni anda gosterilen bir toast — id, art arda gelen bildirimleri React'in key'iyle
+ * ayirt edebilmek icin (array index yeterli olmazdi: ortadan biri kaybolunca digerlerinin
+ * index'i kayar). Negatif olmayan artan bir sayac, Dashboard'daki draft-kolon id deseniyle ayni. */
+interface ActiveNotification extends Notification {
+  id: number;
+  leaving: boolean;
+}
+
+let nextNotificationId = 0;
+
 /** action opsiyonel: cogu bildirim (basari/hata) sadece bilgilendirir, sadece geri alinabilir islemler bir aksiyon tasir. */
 type NotifyFn = (status: number, message: string, action?: NotificationAction) => void;
 
@@ -26,6 +36,10 @@ type NotifyFn = (status: number, message: string, action?: NotificationAction) =
  * tam bu bildirim kaybolurken tetikleyecek sekilde ayni degeri kullanabilsin.
  */
 export const NOTIFICATION_DURATION_MS = 5000;
+
+/** Toast'in kayarak kaybolma animasyonunun suresi — notifications.css'teki toast-out keyframe'iyle
+ * ayni sureyi paylasir, DOM'dan asil kaldirma bu sure kadar geciktirilir ki animasyon tamamlansin. */
+const EXIT_DURATION_MS = 200;
 
 /**
  * React Context: "prop drilling" olmadan (her component'e tek tek notify fonksiyonunu
@@ -65,48 +79,66 @@ const KIND_ICON: Record<NotificationKind, string> = {
  * ile birlikte, varsa aktif bildirim kutusunu da ekranin bir kosesinde render eder.
  */
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notification, setNotification] = useState<Notification | null>(null);
+  // Tek bir bildirim yerine bir yigin (stack): art arda gelen bildirimler birbirini kesmeden
+  // alt alta birikir, her biri kendi NOTIFICATION_DURATION_MS'ini bagimsiz isletir.
+  const [notifications, setNotifications] = useState<ActiveNotification[]>([]);
+
+  // id'ye gore cikis animasyonunu baslatir, EXIT_DURATION_MS sonra o tek toast'i yigindan
+  // gercekten kaldirir — digerlerine dokunmaz.
+  const dismiss = useCallback((id: number) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, leaving: true } : n)));
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }, EXIT_DURATION_MS);
+  }, []);
 
   // useCallback: notify fonksiyonunun her render'da yeniden olusturulmamasini saglar
   // (referans stabil kalir), boylece Context.Provider'a verilen value her seferinde
   // "degismis" gibi algilanip alt component'lerin gereksiz yere yeniden render olmasina yol acmaz.
-  const notify = useCallback<NotifyFn>((status, message, action) => {
-    setNotification({ kind: kindForStatus(status), message, action });
-  }, []);
-
-  // Yeni bir bildirim geldiginde NOTIFICATION_DURATION_MS sonra otomatik kaybolmasi icin
-  // timer kurar. Bildirim degismeden onceki timer'i temizlemek (cleanup fonksiyonu = return
-  // edilen fonksiyon) onemli: yoksa ust uste bildirimler gelince eski timer'lar yeni
-  // bildirimi erken kapatabilirdi.
-  useEffect(() => {
-    if (!notification) {
-      return;
-    }
-    const timer = setTimeout(() => setNotification(null), NOTIFICATION_DURATION_MS);
-    return () => clearTimeout(timer);
-  }, [notification]);
+  const notify = useCallback<NotifyFn>(
+    (status, message, action) => {
+      const id = nextNotificationId++;
+      setNotifications((prev) => [
+        ...prev,
+        { id, kind: kindForStatus(status), message, action, leaving: false },
+      ]);
+      // Her toast kendi zamanlayicisini kurar (tek paylasilan timer yerine) — biri erken
+      // kapanirsa digerlerini etkilemez. Cikis animasyonu gercek kaldirmadan EXIT_DURATION_MS
+      // once baslasin diye sure oradan dusuluyor.
+      setTimeout(() => dismiss(id), Math.max(0, NOTIFICATION_DURATION_MS - EXIT_DURATION_MS));
+    },
+    [dismiss]
+  );
 
   return (
     <NotificationContext.Provider value={notify}>
       {children}
-      {notification && (
-        <div className={`notification notification-${notification.kind}`} role="alert">
-          <span className="notification-icon" aria-hidden="true">
-            {KIND_ICON[notification.kind]}
-          </span>
-          <span className="notification-message">{notification.message}</span>
-          {notification.action && (
-            <button
-              type="button"
-              className="notification-action"
-              onClick={() => {
-                notification.action!.onClick();
-                setNotification(null);
-              }}
+      {notifications.length > 0 && (
+        <div className="notification-stack">
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`notification notification-${notification.kind}${notification.leaving ? " notification-leaving" : ""}`}
+              role="alert"
             >
-              {notification.action.label}
-            </button>
-          )}
+              <span className="notification-icon" aria-hidden="true">
+                {KIND_ICON[notification.kind]}
+              </span>
+              <span className="notification-message">{notification.message}</span>
+              {notification.action && (
+                <button
+                  type="button"
+                  className="notification-action"
+                  onClick={() => {
+                    notification.action!.onClick();
+                    dismiss(notification.id);
+                  }}
+                >
+                  {notification.action.label}
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </NotificationContext.Provider>

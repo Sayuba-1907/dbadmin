@@ -2,6 +2,7 @@ import { DragEvent, FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Schema, TabloSummary } from "../api/schemas";
 import { useAuth } from "../auth/AuthProvider";
+import { useConfirm } from "../notifications/ConfirmProvider";
 
 /**
  * Schema adindan deterministik bir renk turetir (ayni isim her zaman ayni renk) — sidebar'da
@@ -56,6 +57,7 @@ export function TabloSidebar({
 }: TabloSidebarProps) {
   const { t } = useTranslation();
   const { canWrite } = useAuth();
+  const confirm = useConfirm();
   const [query, setQuery] = useState("");
   const [expandedSchemaIds, setExpandedSchemaIds] = useState<Set<number>>(new Set());
   const [editingSchemaId, setEditingSchemaId] = useState<number | null>(null);
@@ -135,14 +137,16 @@ export function TabloSidebar({
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-actions">
-        <button className="btn btn-primary" onClick={onCreateClick} disabled={!canWrite}>
-          {t("sidebar.newTable")}
-        </button>
-        <button className="btn" onClick={onCreateSchemaClick} disabled={!canWrite}>
-          {t("sidebar.newSchema")}
-        </button>
-      </div>
+      {canWrite && (
+        <div className="sidebar-actions">
+          <button className="btn btn-primary" onClick={onCreateClick}>
+            {t("sidebar.newTable")}
+          </button>
+          <button className="btn" onClick={onCreateSchemaClick}>
+            {t("sidebar.newSchema")}
+          </button>
+        </div>
+      )}
       {hasAnyTablo && (
         <div className="sidebar-search-row">
           <input
@@ -227,34 +231,36 @@ export function TabloSidebar({
                       <span className="mono">{schema.name}</span>
                       <span className="kolon-count">{schema.tabloSayisi}</span>
                     </button>
-                    <button
-                      className="btn btn-link"
-                      disabled={!canWrite}
-                      onClick={() => {
-                        setRenameDraft(schema.name);
-                        setEditingSchemaId(schema.id);
-                      }}
-                    >
-                      {t("common.edit")}
-                    </button>
-                    <button
-                      className="btn btn-link btn-danger"
-                      disabled={!canWrite}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            t("sidebar.confirmDeleteSchema", {
-                              name: schema.name,
-                              count: schema.tabloSayisi,
-                            })
-                          )
-                        ) {
-                          onDeleteSchema(schema.id);
-                        }
-                      }}
-                    >
-                      {t("common.delete")}
-                    </button>
+                    {canWrite && (
+                      <button
+                        className="btn btn-link"
+                        onClick={() => {
+                          setRenameDraft(schema.name);
+                          setEditingSchemaId(schema.id);
+                        }}
+                      >
+                        {t("common.edit")}
+                      </button>
+                    )}
+                    {canWrite && (
+                      <button
+                        className="btn btn-link btn-danger"
+                        onClick={async () => {
+                          if (
+                            await confirm(
+                              t("sidebar.confirmDeleteSchema", {
+                                name: schema.name,
+                                count: schema.tabloSayisi,
+                              })
+                            )
+                          ) {
+                            onDeleteSchema(schema.id);
+                          }
+                        }}
+                      >
+                        {t("common.delete")}
+                      </button>
+                    )}
                   </>
                 )}
               </div>

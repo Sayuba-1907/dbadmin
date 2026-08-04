@@ -4,6 +4,7 @@ import { Kullanici } from "../api/kullanicilar";
 import { Rol } from "../api/auth";
 import { useAuth } from "../auth/AuthProvider";
 import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation";
+import { useConfirm } from "../notifications/ConfirmProvider";
 
 const ROLLER: Rol[] = ["VIEWER", "EDITOR", "ADMIN"];
 
@@ -30,6 +31,7 @@ export function KullanicilarPanel({
 }: KullanicilarPanelProps) {
   const { t } = useTranslation();
   const { kullaniciAdi: benimKullaniciAdim } = useAuth();
+  const confirm = useConfirm();
   const [kullaniciAdi, setKullaniciAdi] = useState("");
   const [parola, setParola] = useState("");
   const [rol, setRol] = useState<Rol>("VIEWER");
@@ -80,9 +82,9 @@ export function KullanicilarPanel({
               <td>
                 <button
                   className="btn btn-link btn-danger"
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      window.confirm(
+                      await confirm(
                         t("kullanicilar.confirmDelete", { name: kullanici.kullaniciAdi })
                       )
                     ) {

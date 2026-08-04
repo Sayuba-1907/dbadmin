@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { DraftKolon } from "../api/tablolar";
 import { Tag } from "../api/tags";
 import { tagColorStyle } from "../utils/tagColor";
+import { useAuth } from "../auth/AuthProvider";
 
 interface KolonRowProps {
   kolon: DraftKolon;
@@ -31,6 +32,7 @@ export function KolonRow({
   onToggleDelete,
 }: KolonRowProps) {
   const { t } = useTranslation();
+  const { canWrite } = useAuth();
   const selectedTag = tags.find((tag) => tag.id === kolon.tagId);
 
   return (
@@ -77,9 +79,11 @@ export function KolonRow({
         </select>
       </td>
       <td>
-        <button className="btn btn-link btn-danger" onClick={() => onToggleDelete(kolon.id)}>
-          {kolon.silinecek ? t("common.undo") : t("common.delete")}
-        </button>
+        {canWrite && (
+          <button className="btn btn-link btn-danger" onClick={() => onToggleDelete(kolon.id)}>
+            {kolon.silinecek ? t("common.undo") : t("common.delete")}
+          </button>
+        )}
       </td>
     </tr>
   );
