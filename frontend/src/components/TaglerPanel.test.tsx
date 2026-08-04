@@ -2,10 +2,11 @@ import "@testing-library/jest-dom";
 // Dashboard.test.tsx'teki ile ayni gerekce: testler index.tsx'i calistirmaz, o yuzden
 // i18next kurulumu elle import edilmezse t("tagler.title") ceviri yerine ham key doner.
 import "../i18n";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { TaglerPanel } from "./TaglerPanel";
 import { KolonUsage, Tag } from "../api/tags";
 import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
+import { ConfirmProvider } from "../notifications/ConfirmProvider";
 
 const TAGS: Tag[] = [
   { id: 1, name: "kimlik" },
@@ -30,14 +31,16 @@ function renderPanel(props: {
   onDelete?: (tagId: number) => void;
 }) {
   return render(
-    <AuthContext.Provider value={EDITOR_AUTH}>
-      <TaglerPanel
-        tags={props.tags}
-        onLoadUsage={props.onLoadUsage}
-        onRename={props.onRename ?? jest.fn()}
-        onDelete={props.onDelete ?? jest.fn()}
-      />
-    </AuthContext.Provider>
+    <ConfirmProvider>
+      <AuthContext.Provider value={EDITOR_AUTH}>
+        <TaglerPanel
+          tags={props.tags}
+          onLoadUsage={props.onLoadUsage}
+          onRename={props.onRename ?? jest.fn()}
+          onDelete={props.onDelete ?? jest.fn()}
+        />
+      </AuthContext.Provider>
+    </ConfirmProvider>
   );
 }
 
@@ -115,7 +118,7 @@ test("ayni etiketi kapatip tekrar acmak ikinci bir istek atmaz (onbellek)", asyn
   expect(onLoadUsage).toHaveBeenCalledTimes(1);
 });
 
-test("baska bir etiket acilinca oncekinin ayrintisi kapanir (accordion)", async () => {
+test("baska bir etiket acilinca oncekinin ayrintisi acik kalir (birden fazla ayni anda acilabilir)", async () => {
   const onLoadUsage = jest.fn(async (tagId: number) => (tagId === 1 ? KIMLIK_USAGE : []));
   renderPanel({ tags: TAGS, onLoadUsage });
 
@@ -125,10 +128,12 @@ test("baska bir etiket acilinca oncekinin ayrintisi kapanir (accordion)", async 
   fireEvent.click(detailButton("iletisim"));
 
   expect(await screen.findByText("Bu etiket hiçbir kolonda kullanılmıyor")).toBeInTheDocument();
-  expect(screen.queryByText("ders_sema.ogrenciler.tc_no")).not.toBeInTheDocument();
+  // TabloSidebar'daki schema acilir/kapanir deseniyle ayni: "iletisim" acilinca "kimlik"
+  // kapanmiyor, ikisi de ayni anda ekranda kaliyor.
+  expect(screen.getByText("ders_sema.ogrenciler.tc_no")).toBeInTheDocument();
 });
 
-test("istek surerken yukleniyor metni gosterilir, cevap gelince yerini listeye birakir", async () => {
+test("istek surerken yukleniyor durumu gosterilir, cevap gelince yerini listeye birakir", async () => {
   // Promise'i bilerek elde tutuyoruz: boylece "istek surerken" anini gozlemleyebiliyoruz,
   // normalde mockResolvedValue ile bu ara durum bir microtask'ta gecip gorunmez olurdu.
   let resolveUsage!: (usage: KolonUsage[]) => void;
@@ -138,11 +143,11 @@ test("istek surerken yukleniyor metni gosterilir, cevap gelince yerini listeye b
   renderPanel({ tags: TAGS, onLoadUsage });
 
   fireEvent.click(detailButton("kimlik"));
-  expect(screen.getByText("Yükleniyor...")).toBeInTheDocument();
+  expect(screen.getByRole("status", { name: "Yükleniyor..." })).toBeInTheDocument();
 
   await act(async () => resolveUsage(KIMLIK_USAGE));
 
-  expect(screen.queryByText("Yükleniyor...")).not.toBeInTheDocument();
+  expect(screen.queryByRole("status", { name: "Yükleniyor..." })).not.toBeInTheDocument();
   expect(screen.getByText("ders_sema.ogrenciler.tc_no")).toBeInTheDocument();
 });
 
@@ -160,22 +165,24 @@ test("Düzenle ile isim degistirilip Kaydet'e basilinca onRename yeni isimle cag
   expect(onRename).toHaveBeenCalledWith(1, "kimlik_v2");
 });
 
-test("Sil'e basip onaylayinca onDelete cagrilir, onaylanmazsa cagrilmaz", () => {
+test("Sil'e basip onaylayinca onDelete cagrilir, onaylanmazsa cagrilmaz", async () => {
   const onDelete = jest.fn();
-  const confirmSpy = jest
-    .spyOn(window, "confirm")
-    .mockReturnValueOnce(false)
-    .mockReturnValueOnce(true);
   renderPanel({ tags: TAGS, onLoadUsage: jest.fn(), onDelete });
 
   const row = screen.getByText("kimlik").closest("li") as HTMLElement;
   const silButton = within(row).getByRole("button", { name: "Sil" });
 
-  fireEvent.click(silButton); // confirm() false donuyor -> silinmemeli
+  // window.confirm yerine ConfirmProvider'in Promise tabanli ozel modali (bkz.
+  // notifications/ConfirmProvider.tsx) — "Sil" hem satirdaki butonun hem modaldeki onay
+  // butonunun adi oldugu icin modal icindeki butonu within(modal) ile ayirt ediyoruz.
+  fireEvent.click(silButton);
+  const cancelBtn = await screen.findByRole("button", { name: "Vazgeç" });
+  fireEvent.click(cancelBtn); // Iptal -> silinmemeli
   expect(onDelete).not.toHaveBeenCalled();
+  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 
-  fireEvent.click(silButton); // confirm() true donuyor -> silinmeli
-  expect(onDelete).toHaveBeenCalledWith(1);
-
-  confirmSpy.mockRestore();
+  fireEvent.click(silButton);
+  const modal = await screen.findByRole("alertdialog");
+  fireEvent.click(within(modal).getByRole("button", { name: "Sil" })); // onayla -> silinmeli
+  await waitFor(() => expect(onDelete).toHaveBeenCalledWith(1));
 });

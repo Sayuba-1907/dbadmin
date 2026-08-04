@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { KullanicilarPanel } from "./KullanicilarPanel";
 import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
 import { Kullanici } from "../api/kullanicilar";
+import { ConfirmProvider } from "../notifications/ConfirmProvider";
 
 const KULLANICILAR: Kullanici[] = [
   { id: 1, kullaniciAdi: "admin", rol: "ADMIN" },
@@ -31,9 +32,11 @@ function renderPanel(
     onDelete: jest.fn(),
   };
   return render(
-    <AuthContext.Provider value={auth}>
-      <KullanicilarPanel {...defaultProps} {...props} />
-    </AuthContext.Provider>
+    <ConfirmProvider>
+      <AuthContext.Provider value={auth}>
+        <KullanicilarPanel {...defaultProps} {...props} />
+      </AuthContext.Provider>
+    </ConfirmProvider>
   );
 }
 
@@ -79,27 +82,30 @@ test("rol dropdown'i degistirmek onChangeRol'u dogru id ve rolle cagirir", () =>
   expect(onChangeRol).toHaveBeenCalledWith(2, "EDITOR");
 });
 
-test("Sil'e basip onaylayinca onDelete dogru id ile cagirilir", () => {
+test("Sil'e basip onaylayinca onDelete dogru id ile cagirilir", async () => {
   const onDelete = jest.fn();
-  const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(true);
   renderPanel({ onDelete });
 
   fireEvent.click(within(row("ayse")).getByText("Sil"));
 
-  expect(confirmSpy).toHaveBeenCalled();
-  expect(onDelete).toHaveBeenCalledWith(2);
-  confirmSpy.mockRestore();
+  // window.confirm yerine ConfirmProvider'in Promise tabanli ozel modali — modal icindeki
+  // onay butonunu satirdakinden ayirt etmek icin within(modal) kullaniliyor.
+  const modal = await screen.findByRole("alertdialog");
+  fireEvent.click(within(modal).getByRole("button", { name: "Sil" }));
+
+  await waitFor(() => expect(onDelete).toHaveBeenCalledWith(2));
 });
 
-test("onaylanmazsa onDelete cagrilmaz", () => {
+test("onaylanmazsa onDelete cagrilmaz", async () => {
   const onDelete = jest.fn();
-  const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
   renderPanel({ onDelete });
 
   fireEvent.click(within(row("ayse")).getByText("Sil"));
 
+  const modal = await screen.findByRole("alertdialog");
+  fireEvent.click(within(modal).getByRole("button", { name: "Vazgeç" }));
+
   expect(onDelete).not.toHaveBeenCalled();
-  confirmSpy.mockRestore();
 });
 
 test("yeni kullanici formu dogru degerlerle onCreate'i cagirir ve alanlari temizler", async () => {

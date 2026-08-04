@@ -139,7 +139,7 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
               {expanded && (
                 <div className="tagler-usage">
                   {loading && (
-                    <div aria-busy="true" aria-label={t("tagler.loadingUsage")}>
+                    <div role="status" aria-busy="true" aria-label={t("tagler.loadingUsage")}>
                       {[0, 1, 2].map((i) => (
                         <div
                           key={i}

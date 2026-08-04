@@ -6,6 +6,7 @@ import "../i18n";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Dashboard } from "./Dashboard";
 import { NotificationProvider } from "../notifications/NotificationProvider";
+import { ConfirmProvider } from "../notifications/ConfirmProvider";
 import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
 
 afterEach(() => {
@@ -207,9 +208,11 @@ const EDITOR_AUTH: AuthContextValue = {
 function renderDashboard(auth: AuthContextValue = EDITOR_AUTH) {
   return render(
     <NotificationProvider>
-      <AuthContext.Provider value={auth}>
-        <Dashboard />
-      </AuthContext.Provider>
+      <ConfirmProvider>
+        <AuthContext.Provider value={auth}>
+          <Dashboard />
+        </AuthContext.Provider>
+      </ConfirmProvider>
     </NotificationProvider>
   );
 }
@@ -374,17 +377,17 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
   );
 });
 
-test("VIEWER rolunde yazma butonlari devre disi kalir", async () => {
+test("VIEWER rolunde yazma butonlari hic gosterilmez", async () => {
   createFakeBackend({ schemalar: [{ id: 1, name: "kayitlar" }] });
 
   renderDashboard({ ...EDITOR_AUTH, rol: "VIEWER", canWrite: false });
 
   await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
-  // Butonlar hala GORUNUYOR (VIEWER ne yapabilecegini gorebilsin) ama tiklanamaz durumda —
-  // backend zaten 403 doner (SecurityConfig), bu sadece bosuna bir istek atilmasini onluyor.
-  expect(screen.getByText("+ Yeni Tablo")).toBeDisabled();
-  expect(screen.getByText("+ Yeni Schema")).toBeDisabled();
+  // VIEWER zaten yapamayacagi bir aksiyonu gorup "neden tiklanmiyor" diye ugrasmasin diye
+  // bu butonlar gri/disabled degil, DOM'da hic yok (bkz. TabloSidebar.tsx).
+  expect(screen.queryByText("+ Yeni Tablo")).not.toBeInTheDocument();
+  expect(screen.queryByText("+ Yeni Schema")).not.toBeInTheDocument();
 });
 
 test("ADMIN, Kullanicilar sekmesine girince kullanici listesi cekilir ve gosterilir", async () => {
