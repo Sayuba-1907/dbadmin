@@ -68,7 +68,8 @@
   color: var(--color-text-secondary);
 }
 
-.language-switcher {
+.language-switcher,
+.theme-switcher {
   display: flex;
   gap: 4px;
 }
@@ -213,7 +214,8 @@ select:disabled {
   margin-top: var(--space-1);
 }
 
-.language-switcher-btn {
+.language-switcher-btn,
+.theme-switcher-btn {
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -224,11 +226,13 @@ select:disabled {
   transition: border-color var(--transition-fast);
 }
 
-.language-switcher-btn:hover {
+.language-switcher-btn:hover,
+.theme-switcher-btn:hover {
   border-color: var(--color-border-strong);
 }
 
-.language-switcher-btn.active {
+.language-switcher-btn.active,
+.theme-switcher-btn.active {
   background-color: var(--color-accent-strong);
   border-color: var(--color-accent-strong);
   color: var(--color-on-accent);

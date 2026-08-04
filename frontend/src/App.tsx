@@ -7,6 +7,8 @@ import { NotificationProvider } from "./notifications/NotificationProvider";
 import { ConfirmProvider } from "./notifications/ConfirmProvider";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { ThemeSwitcher } from "./components/ThemeSwitcher";
+import { ThemeProvider } from "./theme/ThemeProvider";
 import { Logo } from "./components/Logo";
 import "./App.css";
 
@@ -56,6 +58,7 @@ function AppContent() {
           <button className="btn btn-link" onClick={logout}>
             {t("auth.logout")}
           </button>
+          <ThemeSwitcher />
           <LanguageSwitcher />
         </div>
       </header>
@@ -75,15 +78,17 @@ function AppContent() {
  */
 function App() {
   return (
-    <PrimeReactProvider value={{ unstyled: true }}>
-      <NotificationProvider>
-        <ConfirmProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </ConfirmProvider>
-      </NotificationProvider>
-    </PrimeReactProvider>
+    <ThemeProvider>
+      <PrimeReactProvider value={{ unstyled: true }}>
+        <NotificationProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </ConfirmProvider>
+        </NotificationProvider>
+      </PrimeReactProvider>
+    </ThemeProvider>
   );
 }
 

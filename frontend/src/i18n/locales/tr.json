@@ -11,6 +11,11 @@
     "tagler": "Etiketler",
     "kullanicilar": "Kullanıcılar"
   },
+  "theme": {
+    "switcherLabel": "Tema seçici",
+    "dark": "Koyu",
+    "light": "Açık"
+  },
   "auth": {
     "username": "Kullanıcı adı",
     "password": "Parola",

@@ -9,12 +9,36 @@
       name="description"
       content="DBAdmin - a lightweight database admin panel"
     />
-    <!-- index.css yuklenmeden once tarayicinin beyaz zemini gostermemesi icin: koyu tema
-         rengi burada tekrarlanip donuk sekilde ilk boyada uygulaniyor (FOUC onlemi). -->
+    <!-- Tema secimini (localStorage tercihi, yoksa isletim sisteminin prefers-color-scheme
+         ayari) React hic yuklenmeden, sayfa ilk boyanmadan once <html> uzerine yaziyoruz —
+         aksi halde her zaman koyu temayla baslayip React mount olduktan sonra acik temaya
+         zipliyor olurduk (goze batan bir FOUC). ThemeProvider (src/theme/ThemeProvider.tsx)
+         React tarafinda ayni degeri ikinci kez HESAPLAMAZ, sadece burada yazilan attribute'u
+         okur — tek dogruluk kaynagi burasi. -->
+    <script>
+      (function () {
+        var stored = localStorage.getItem("dbadmin-theme");
+        var theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <!-- index.css yuklenmeden once tarayicinin beyaz zemini gostermemesi icin: yukaridaki
+         script'in yazdigi data-theme'e gore dogru zemin rengi burada donuk sekilde ilk
+         boyada uygulaniyor (FOUC onlemi). -->
     <style>
       html,
       body {
         background-color: #0f172a;
+      }
+
+      html[data-theme="light"],
+      html[data-theme="light"] body {
+        background-color: #f8fafc;
       }
     </style>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />

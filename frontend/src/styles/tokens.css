@@ -90,6 +90,27 @@
   --transition-base: 180ms ease;
 }
 
+/* Acik tema: sadece arkaplan/yuzey/kenarlik/metin ve golge degiskenleri degisiyor — accent
+   (yesil), tip/tag/rol rozetleri ve pk/danger renkleri KASITLI olarak tekrar tanimlanmiyor,
+   cunku onlarin arkaplani zaten kendi sabit rengi (ör. yesil buton), sayfa temasina gore
+   degismiyor. `data-theme` attribute'u ThemeProvider tarafindan <html> uzerine yazilir (bkz.
+   theme/ThemeProvider.tsx) — index.html'deki inline script ilk boyadan once ayni degeri
+   yazarak FOUC'u (once koyu, sonra acik'a zipla) onler. */
+:root[data-theme="light"] {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f1f5f9;
+  --color-border: #cbd5e1;
+  --color-border-strong: #94a3b8;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-disabled: #94a3b8;
+
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.12);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.18);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

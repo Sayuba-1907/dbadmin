@@ -11,6 +11,11 @@
     "tagler": "Tags",
     "kullanicilar": "Users"
   },
+  "theme": {
+    "switcherLabel": "Theme selector",
+    "dark": "Dark",
+    "light": "Light"
+  },
   "auth": {
     "username": "Username",
     "password": "Password",
