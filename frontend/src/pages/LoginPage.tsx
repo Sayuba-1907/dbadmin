@@ -40,15 +40,16 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login-page">
-      <form className="login-form" onSubmit={handleSubmit}>
+    <div className="login-page flex align-items-center justify-content-center">
+      <form className="login-form flex flex-column" onSubmit={handleSubmit}>
         <h1>
-          <Logo className="brand-mark" />
+          <Logo className="brand-mark inline-block" />
           DBAdmin
         </h1>
         <label className="login-field">
           <span>{t("auth.username")}</span>
           <InputText
+            className="w-full"
             autoComplete="username"
             value={kullaniciAdi}
             onChange={(e) => setKullaniciAdi(e.target.value)}
@@ -64,7 +65,7 @@ export function LoginPage() {
               ise sadece bir buton (overlay degil), goz ikonuyla goster/gizle bedavaya geliyor. */}
           <Password
             inputId="login-parola"
-            className="login-password"
+            className="login-password block w-full relative"
             autoComplete="current-password"
             value={parola}
             onChange={(e) => setParola(e.target.value)}

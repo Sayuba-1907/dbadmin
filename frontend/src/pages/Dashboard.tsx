@@ -611,7 +611,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
+    <div className="dashboard flex flex-1">
       <WorkspaceNav active={activeView} onChange={handleChangeActiveView} />
 
       {activeView === "tagler" && (
@@ -666,8 +666,8 @@ export function Dashboard() {
               onCreateTag={handleCreateTag}
             />
           ) : (
-            <section className="detail-panel">
-              <div className="empty-state">
+            <section className="detail-panel fadeinup animation-duration-200">
+              <div className="empty-state flex align-items-center justify-content-center h-full">
                 <p className="empty-state-line">
                   <span className="empty-state-comment">-- </span>
                   {t("dashboard.selectTable")}

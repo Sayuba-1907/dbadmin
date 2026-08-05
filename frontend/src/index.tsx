@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
+import "primeflex/primeflex.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 // i18n kurulumu App'ten once, en tepede import edilmeli — App ilk render oldugunda

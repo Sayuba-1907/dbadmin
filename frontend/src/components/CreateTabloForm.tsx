@@ -64,11 +64,11 @@ export function CreateTabloForm({ schemalar, onSubmit, onClose }: CreateTabloFor
   // secenek de yok: bos bir dropdown'la calismayan form yerine ne yapmasi gerektigini soyluyoruz.
   if (schemalar.length === 0) {
     return (
-      <div className="modal-overlay">
+      <div className="modal-overlay fixed flex align-items-center justify-content-center">
         <div className="modal create-tablo-form">
           <h2>{t("createTabloForm.title")}</h2>
           <p>{t("createTabloForm.noSchemaHint")}</p>
-          <div className="modal-actions">
+          <div className="modal-actions flex justify-content-end">
             <Button type="button" className="btn" onClick={onClose} label={t("common.cancel")} />
           </div>
         </div>
@@ -77,7 +77,7 @@ export function CreateTabloForm({ schemalar, onSubmit, onClose }: CreateTabloFor
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay fixed flex align-items-center justify-content-center">
       <form className="modal create-tablo-form" onSubmit={handleSubmit}>
         <h2>{t("createTabloForm.title")}</h2>
 

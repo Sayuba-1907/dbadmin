@@ -31,7 +31,7 @@ function AppContent() {
     // sonra Dashboard) goruntusu yasatilirdi. Tam ekran ortalanmis, App'in kendi koyu zemininde
     // gosteriliyor ki index.html'deki FOUC-onleme rengiyle kesintisiz devam etsin.
     return (
-      <div className="app-loading">
+      <div className="app-loading flex flex-column align-items-center justify-content-center">
         <span className="spinner" aria-hidden="true" />
         <span>{t("dashboard.loading")}</span>
       </div>
@@ -43,15 +43,15 @@ function AppContent() {
   }
 
   return (
-    <div className="App">
-      <header className="app-header">
+    <div className="App flex flex-column min-h-screen">
+      <header className="app-header flex align-items-center justify-content-between">
         <h1>
-          <button className="brand-button" onClick={() => setHomeKey((k) => k + 1)}>
-            <Logo className="brand-mark" />
+          <button className="brand-button cursor-pointer" onClick={() => setHomeKey((k) => k + 1)}>
+            <Logo className="brand-mark inline-block" />
             DBAdmin
           </button>
         </h1>
-        <div className="app-header-right">
+        <div className="app-header-right flex align-items-center">
           <span className="current-user">
             {kullaniciAdi} · {rol}
           </span>

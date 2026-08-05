@@ -69,7 +69,7 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
   }
 
   return (
-    <section className="tagler-panel">
+    <section className="tagler-panel fadeinup animation-duration-200">
       <h2>{t("tagler.title")}</h2>
       <ul className="tagler-list">
         {tags.map((tag) => {
@@ -82,7 +82,7 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
               <div className="tagler-item-row">
                 {isEditing ? (
                   <form
-                    className="inline-edit-form"
+                    className="inline-edit-form inline-flex"
                     onSubmit={(e) => handleRenameSubmit(e, tag.id)}
                   >
                     <input
@@ -108,7 +108,7 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
                         satirin bu alanina) tiklayinca aciliyor/kapaniyor — bkz. TabloSidebar'daki
                         schema baslik satiriyla ayni desen. */}
                     <span
-                      className="tagler-name"
+                      className="tagler-name inline-block overflow-hidden text-overflow-ellipsis white-space-nowrap cursor-pointer"
                       role="button"
                       tabIndex={0}
                       onClick={() => handleToggleDetail(tag.id)}
@@ -121,7 +121,7 @@ export function TaglerPanel({ tags, onLoadUsage, onRename, onDelete }: TaglerPan
                     >
                       {tag.name}
                     </span>
-                    <div className="tagler-item-actions">
+                    <div className="tagler-item-actions flex justify-content-end">
                       {canWrite && (
                         <button
                           className="btn btn-link"

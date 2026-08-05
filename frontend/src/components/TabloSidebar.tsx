@@ -279,7 +279,7 @@ export function TabloSidebar({
   }
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar fadeinup animation-duration-200">
       {canWrite && (
         <div className="sidebar-actions">
           <button className="btn btn-primary" onClick={onCreateClick}>
@@ -294,17 +294,17 @@ export function TabloSidebar({
         <div className="sidebar-search-row">
           <InputText
             type="text"
-            className="sidebar-search"
+            className="sidebar-search block"
             placeholder={t("sidebar.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <div className="sidebar-sort-control" title={t("sidebar.sortLabel")}>
-            <span className="sidebar-sort-icon" aria-hidden="true">
+          <div className="sidebar-sort-control relative" title={t("sidebar.sortLabel")}>
+            <span className="sidebar-sort-icon absolute" aria-hidden="true">
               &#8645;
             </span>
             <select
-              className="sidebar-sort"
+              className="sidebar-sort cursor-pointer"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "name" | "kolonCount")}
               aria-label={t("sidebar.sortLabel")}
@@ -353,8 +353,10 @@ export function TabloSidebar({
             if (data.type === "kolon") {
               const kolon = data.kolon;
               return (
-                <span className="sidebar-kolon-item">
-                  <span className="mono">{kolon.name}</span>
+                <span className="sidebar-kolon-item w-full">
+                  <span className="mono overflow-hidden text-overflow-ellipsis white-space-nowrap">
+                    {kolon.name}
+                  </span>
                   <span className={`type-badge type-badge-${kolon.type}`}>{kolon.type}</span>
                   {kolon.primaryKey && <span className="pk-badge">PK</span>}
                 </span>
@@ -365,7 +367,7 @@ export function TabloSidebar({
               const tablo = data.tablo;
               return (
                 <button
-                  className={`tablo-list-item${tablo.id === selectedId ? " selected" : ""}${
+                  className={`tablo-list-item w-full text-left${tablo.id === selectedId ? " selected" : ""}${
                     draggedTabloId === tablo.id ? " dragging" : ""
                   }`}
                   onClick={() => onSelect(tablo.id)}
@@ -391,7 +393,9 @@ export function TabloSidebar({
                   }}
                   title={t("sidebar.dragToMoveHint")}
                 >
-                  <span className="tablo-name">{tablo.name}</span>
+                  <span className="tablo-name overflow-hidden text-overflow-ellipsis white-space-nowrap">
+                    {tablo.name}
+                  </span>
                   <span className="kolon-count">{tablo.kolonSayisi}</span>
                 </button>
               );
@@ -403,7 +407,7 @@ export function TabloSidebar({
             if (isEditing) {
               return (
                 <form
-                  className="inline-edit-form"
+                  className="inline-edit-form inline-flex"
                   onSubmit={(e) => handleRenameSubmit(e, schema.id)}
                 >
                   <input
@@ -443,7 +447,7 @@ export function TabloSidebar({
                 onDrop={(e) => handleDropOnSchema(e, schema.id)}
               >
                 <span
-                  className="schema-header"
+                  className="schema-header cursor-pointer"
                   role="button"
                   tabIndex={0}
                   onClick={() => toggleSchema(schema.id)}
@@ -459,7 +463,9 @@ export function TabloSidebar({
                     style={{ backgroundColor: schemaColor(schema.name) }}
                     aria-hidden="true"
                   />
-                  <span className="mono">{schema.name}</span>
+                  <span className="mono overflow-hidden text-overflow-ellipsis white-space-nowrap">
+                    {schema.name}
+                  </span>
                   <span className="kolon-count">{schema.tabloSayisi}</span>
                 </span>
                 {canWrite && (

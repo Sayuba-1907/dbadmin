@@ -1,15 +1,9 @@
 .App {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
 }
 
 .app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-surface);
@@ -29,7 +23,6 @@
   border-radius: var(--radius-sm);
   background: none;
   color: var(--color-text-primary);
-  cursor: pointer;
   font-size: var(--text-xl);
   font-weight: 600;
   font-family: inherit;
@@ -50,7 +43,6 @@
 }
 
 .brand-mark {
-  display: inline-block;
   width: 22px;
   height: 22px;
   color: var(--color-accent);
@@ -58,8 +50,6 @@
 }
 
 .app-header-right {
-  display: flex;
-  align-items: center;
   gap: var(--space-3);
 }
 
@@ -115,16 +105,11 @@ select:disabled {
 }
 
 .login-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex: 1;
   min-height: 100vh;
 }
 
 .login-form {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-3);
   width: 280px;
   padding: var(--space-6);
@@ -160,7 +145,6 @@ select:disabled {
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   font-size: var(--text-base);
-  width: 100%;
   box-sizing: border-box;
 }
 
@@ -171,16 +155,6 @@ select:disabled {
    kurallari da hic eklenmiyor (bkz. App.css'teki diger unstyled notlari) — goz ikonunun
    input'un icinde, sagda durmasini saglayan position:relative/absolute cifti burada elle
    kuruluyor. */
-.login-password {
-  display: block;
-  width: 100%;
-}
-
-.login-password,
-.kullanici-password {
-  position: relative;
-}
-
 .login-password input,
 .kullanici-password input {
   padding-right: 34px;
@@ -221,7 +195,6 @@ select:disabled {
   border-radius: var(--radius-sm);
   background-color: var(--color-surface-raised);
   color: var(--color-text-primary);
-  cursor: pointer;
   font-size: var(--text-sm);
   transition: border-color var(--transition-fast);
 }
@@ -239,14 +212,7 @@ select:disabled {
   cursor: default;
 }
 
-.dashboard {
-  display: flex;
-  flex: 1;
-}
-
 .workspace-nav {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-1);
   width: 96px;
   padding: var(--space-3) var(--space-2);
@@ -263,9 +229,7 @@ select:disabled {
   border-radius: var(--radius-sm);
   background: none;
   color: var(--color-text-primary);
-  cursor: pointer;
   font-size: var(--text-sm);
-  text-align: left;
   transition:
     background-color var(--transition-fast),
     transform var(--transition-fast);
@@ -296,7 +260,6 @@ select:disabled {
   border-right: 1px solid var(--color-border);
   padding: var(--space-3);
   background-color: var(--color-surface);
-  animation: view-fade var(--transition-base) ease;
 }
 
 .sidebar-search-row {
@@ -307,7 +270,6 @@ select:disabled {
 }
 
 .sidebar-search {
-  display: block;
   flex: 1;
   min-width: 0;
   padding: var(--space-2) var(--space-3);
@@ -328,12 +290,10 @@ select:disabled {
 /* Sitelerde alisik oldugumuz "sirala" ikonlu secim kutusu: ikonu select'in ustune bindiriyoruz
    (position: absolute), select'in kendisinin sol padding'ini ikona yer acacak kadar genisletiyoruz. */
 .sidebar-sort-control {
-  position: relative;
   flex-shrink: 0;
 }
 
 .sidebar-sort-icon {
-  position: absolute;
   left: 7px;
   top: 50%;
   transform: translateY(-50%) rotate(90deg);
@@ -354,7 +314,6 @@ select:disabled {
   font-size: var(--text-sm);
   color: var(--color-text-primary);
   background-color: var(--color-surface-raised);
-  cursor: pointer;
   box-sizing: border-box;
 }
 
@@ -446,13 +405,9 @@ select:disabled {
   padding: 5px var(--space-2);
   font-size: var(--text-sm);
   min-width: 0;
-  width: 100%;
 }
 
 .sidebar-kolon-item .mono {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   min-width: 0;
   flex-shrink: 1;
 }
@@ -498,7 +453,6 @@ select:disabled {
   min-width: 0;
   padding: 7px var(--space-2);
   border-radius: var(--radius-md);
-  cursor: pointer;
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--color-text-primary);
@@ -518,12 +472,6 @@ select:disabled {
   height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
-}
-
-.schema-header span:not(.kolon-count) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Bir tablo suruklenirken uzerine gelinen schema'nin baslik satirini vurgular — eskiden
@@ -556,14 +504,12 @@ select:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
   min-width: 0;
   padding: 7px 10px;
   border: none;
   background: none;
   border-radius: var(--radius-md);
   border-left: 3px solid transparent;
-  text-align: left;
   cursor: grab;
   font-family: var(--font-mono);
   font-size: var(--text-base);
@@ -575,9 +521,6 @@ select:disabled {
 }
 
 .tablo-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   min-width: 0;
 }
 
@@ -611,21 +554,14 @@ select:disabled {
 .detail-panel {
   flex: 1;
   padding: var(--space-5);
-  animation: view-fade var(--transition-base) ease;
 }
 
 .detail-header {
-  display: flex;
-  align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
 
 .empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
   min-height: 320px;
 }
 
@@ -659,9 +595,7 @@ select:disabled {
 }
 
 .detail-header-actions {
-  display: flex;
   gap: var(--space-2);
-  margin-left: auto;
 }
 
 .tablo-name-input {
@@ -703,7 +637,6 @@ select:disabled {
 }
 
 .kolon-table {
-  width: 100%;
   border-collapse: collapse;
   margin-bottom: var(--space-4);
 }
@@ -771,7 +704,6 @@ select:disabled {
   border: 1px solid transparent;
   background-color: var(--color-surface-raised);
   color: var(--color-text-secondary);
-  cursor: pointer;
   transition:
     background-color var(--transition-fast),
     color var(--transition-fast);
@@ -804,14 +736,11 @@ select:disabled {
 
 .add-kolon-form,
 .add-tag-form {
-  display: flex;
   gap: 8px;
   margin-bottom: 8px;
-  align-items: center;
 }
 
 .inline-edit-form {
-  display: inline-flex;
   gap: 4px;
   align-items: center;
   /* .tagler-item-row grid'inin tek cocugu oldugunda tum satiri kaplasin diye (grid disi
@@ -887,10 +816,6 @@ select:disabled {
 }
 
 .app-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   gap: var(--space-3);
   min-height: 100vh;
   color: var(--color-text-secondary);
@@ -920,10 +845,6 @@ select:disabled {
   background-color: var(--color-surface-raised);
   border-radius: var(--radius-sm);
   animation: skeleton-pulse 1.4s ease-in-out infinite;
-}
-
-.skeleton-block {
-  width: 100%;
 }
 
 .skeleton-nav-btn {
@@ -962,17 +883,6 @@ select:disabled {
   }
 }
 
-@keyframes view-fade {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes skeleton-pulse {
   0%,
   100% {
@@ -987,11 +897,9 @@ select:disabled {
 .kullanicilar-panel {
   flex: 1;
   padding: var(--space-5);
-  animation: view-fade var(--transition-base) ease;
 }
 
 .kullanici-table {
-  width: 100%;
   max-width: 480px;
   border-collapse: collapse;
   margin-bottom: var(--space-4);
@@ -1023,7 +931,6 @@ select:disabled {
 }
 
 .role-badge {
-  display: inline-block;
   margin-right: var(--space-2);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
@@ -1047,9 +954,7 @@ select:disabled {
 }
 
 .create-kullanici-form {
-  display: flex;
   gap: var(--space-2);
-  align-items: center;
 }
 
 .tagler-list {
@@ -1080,25 +985,18 @@ select:disabled {
    butonlar kac tane olursa olsun hep sag kenarda durur, 286px'lik hucre genisligi de (3 buton +
    2 bosluk) tum satirlarin ayni x konumunda hizalanmasini garanti eder. */
 .tagler-item-actions {
-  display: flex;
-  justify-content: flex-end;
   gap: var(--space-2);
 }
 
 /* Tiklanip ayrinti panelini ac/kapa yapiyor (bkz. TaglerPanel.tsx) — schema-header'daki ayni
    desen: ayri bir "Ayrıntı" butonu yerine isme tiklamak yeterli. */
 .tagler-name {
-  display: inline-block;
   font-family: var(--font-mono);
   font-weight: 500;
   color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   border-radius: var(--radius-sm);
   padding: 2px 6px;
   margin: -2px -6px;
-  cursor: pointer;
 }
 
 .tagler-name:hover {
@@ -1129,12 +1027,8 @@ select:disabled {
 }
 
 .modal-overlay {
-  position: fixed;
   inset: 0;
   background-color: rgba(4, 6, 10, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .modal {
@@ -1240,7 +1134,5 @@ label.checkbox-label {
 }
 
 .modal-actions {
-  display: flex;
-  justify-content: flex-end;
   gap: var(--space-2);
 }

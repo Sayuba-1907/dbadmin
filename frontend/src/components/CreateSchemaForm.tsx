@@ -26,7 +26,7 @@ export function CreateSchemaForm({ onSubmit, onClose }: CreateSchemaFormProps) {
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay fixed flex align-items-center justify-content-center">
       <form className="modal create-schema-form" onSubmit={handleSubmit}>
         <h2>{t("createSchemaForm.title")}</h2>
 
@@ -45,7 +45,7 @@ export function CreateSchemaForm({ onSubmit, onClose }: CreateSchemaFormProps) {
           />
         </label>
 
-        <div className="modal-actions">
+        <div className="modal-actions flex justify-content-end">
           <Button type="button" className="btn" onClick={onClose} label={t("common.cancel")} />
           <Button
             type="submit"

@@ -91,14 +91,14 @@ export function TabloDetail({
   }
 
   return (
-    <section className="detail-panel">
+    <section className="detail-panel fadeinup animation-duration-200">
       {/* VIEWER rolu icin tum yazma kontrollerini tek yerden kapatir — fieldset'in disabled'i
           DOM derinligi fark etmeksizin her input/select/button torununa uygulanir, yani
           DataTable'in kolon body'lerindeki tekil kontrollere ayrica dokunmaya gerek yok. Backend zaten
           403 donuyor (bkz. SecurityConfig); bu sadece kullanicinin yapamayacagi bir seyi
           denemesini engelleyen bir UX katmani. */}
       <fieldset className="unstyled-fieldset" disabled={!canWrite}>
-        <div className="detail-header">
+        <div className="detail-header flex align-items-center">
           <input
             type="text"
             className="tablo-name-input"
@@ -110,7 +110,7 @@ export function TabloDetail({
               {t("tabloDetail.pendingSchemaMove", { schema: pendingSchemaName })}
             </span>
           )}
-          <div className="detail-header-actions">
+          <div className="detail-header-actions flex ml-auto">
             {isDirty && (
               <>
                 <button className="btn btn-link" onClick={onDiscard} disabled={saving}>
@@ -140,7 +140,7 @@ export function TabloDetail({
           {draft.kolonlar.length > 0 && (
             <input
               type="text"
-              className="sidebar-search"
+              className="sidebar-search block"
               style={{ marginBottom: "var(--space-2)", maxWidth: 240 }}
               placeholder={t("tabloDetail.columnSearchPlaceholder")}
               value={kolonSearch}
@@ -150,7 +150,7 @@ export function TabloDetail({
           <DataTable
             value={draft.kolonlar}
             dataKey="id"
-            className="kolon-table"
+            className="kolon-table w-full"
             emptyMessage={t("tabloDetail.emptyColumns")}
             globalFilter={kolonSearch}
             globalFilterFields={["name"]}
@@ -206,7 +206,7 @@ export function TabloDetail({
                 const selectedTag = tags.find((tag) => tag.id === kolon.tagId);
                 return (
                   <select
-                    className="tag-select"
+                    className="tag-select cursor-pointer"
                     style={selectedTag ? tagColorStyle(selectedTag.name) : undefined}
                     value={kolon.tagId ?? ""}
                     disabled={kolon.silinecek}
@@ -239,7 +239,10 @@ export function TabloDetail({
           </DataTable>
 
           {canWrite && (
-            <form className="add-kolon-form" onSubmit={handleAddKolonSubmit}>
+            <form
+              className="add-kolon-form flex align-items-center"
+              onSubmit={handleAddKolonSubmit}
+            >
               <InputText
                 type="text"
                 placeholder={t("tabloDetail.columnNamePlaceholder")}
@@ -270,7 +273,7 @@ export function TabloDetail({
           )}
 
           {canWrite && (
-            <form className="add-tag-form" onSubmit={handleCreateTagSubmit}>
+            <form className="add-tag-form flex align-items-center" onSubmit={handleCreateTagSubmit}>
               <InputText
                 type="text"
                 placeholder={t("tabloDetail.tagNamePlaceholder")}

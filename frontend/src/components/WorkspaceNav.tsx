@@ -22,9 +22,9 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
   const { t } = useTranslation();
   const { isAdmin } = useAuth();
   return (
-    <nav className="workspace-nav">
+    <nav className="workspace-nav flex flex-column">
       <button
-        className={`workspace-nav-btn${active === "schemalar" ? " active" : ""}`}
+        className={`workspace-nav-btn cursor-pointer text-left${active === "schemalar" ? " active" : ""}`}
         onClick={() => onChange("schemalar")}
       >
         <span className="nav-icon" aria-hidden="true">
@@ -33,7 +33,7 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
         {t("nav.schemalar")}
       </button>
       <button
-        className={`workspace-nav-btn${active === "tagler" ? " active" : ""}`}
+        className={`workspace-nav-btn cursor-pointer text-left${active === "tagler" ? " active" : ""}`}
         onClick={() => onChange("tagler")}
       >
         <span className="nav-icon" aria-hidden="true">
@@ -43,7 +43,7 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
       </button>
       {isAdmin && (
         <button
-          className={`workspace-nav-btn${active === "kullanicilar" ? " active" : ""}`}
+          className={`workspace-nav-btn cursor-pointer text-left${active === "kullanicilar" ? " active" : ""}`}
           onClick={() => onChange("kullanicilar")}
         >
           <span className="nav-icon" aria-hidden="true">

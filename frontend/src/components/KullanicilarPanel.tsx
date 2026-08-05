@@ -50,12 +50,12 @@ export function KullanicilarPanel({
   }
 
   return (
-    <section className="kullanicilar-panel">
+    <section className="kullanicilar-panel fadeinup animation-duration-200">
       <h2>{t("kullanicilar.title")}</h2>
       <DataTable
         value={kullanicilar}
         dataKey="id"
-        className="kullanici-table"
+        className="kullanici-table w-full"
         emptyMessage={t("kullanicilar.empty")}
       >
         <Column
@@ -77,7 +77,7 @@ export function KullanicilarPanel({
           sortable
           body={(kullanici: Kullanici) => (
             <>
-              <span className={`role-badge role-badge-${kullanici.rol.toLowerCase()}`}>
+              <span className={`role-badge inline-block role-badge-${kullanici.rol.toLowerCase()}`}>
                 {kullanici.rol}
               </span>
               <select
@@ -111,7 +111,7 @@ export function KullanicilarPanel({
         />
       </DataTable>
 
-      <form className="create-kullanici-form" onSubmit={handleCreateSubmit}>
+      <form className="create-kullanici-form flex align-items-center" onSubmit={handleCreateSubmit}>
         <InputText
           type="text"
           placeholder={t("kullanicilar.usernamePlaceholder")}
@@ -124,7 +124,7 @@ export function KullanicilarPanel({
           required
         />
         <Password
-          className="kullanici-password"
+          className="kullanici-password relative"
           placeholder={t("kullanicilar.passwordPlaceholder")}
           value={parola}
           onChange={(e) => {

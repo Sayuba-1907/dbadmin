@@ -22,7 +22,7 @@ export function LanguageSwitcher() {
         <button
           key={lang}
           type="button"
-          className={`language-switcher-btn${i18n.language === lang ? " active" : ""}`}
+          className={`language-switcher-btn cursor-pointer${i18n.language === lang ? " active" : ""}`}
           onClick={() => changeLanguage(lang)}
           disabled={i18n.language === lang}
         >

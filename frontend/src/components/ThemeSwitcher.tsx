@@ -15,7 +15,7 @@ export function ThemeSwitcher() {
     <div className="theme-switcher" role="group" aria-label={t("theme.switcherLabel")}>
       <button
         type="button"
-        className={`theme-switcher-btn${theme === "dark" ? " active" : ""}`}
+        className={`theme-switcher-btn cursor-pointer${theme === "dark" ? " active" : ""}`}
         onClick={() => theme !== "dark" && toggleTheme()}
         disabled={theme === "dark"}
       >
@@ -23,7 +23,7 @@ export function ThemeSwitcher() {
       </button>
       <button
         type="button"
-        className={`theme-switcher-btn${theme === "light" ? " active" : ""}`}
+        className={`theme-switcher-btn cursor-pointer${theme === "light" ? " active" : ""}`}
         onClick={() => theme !== "light" && toggleTheme()}
         disabled={theme === "light"}
       >
