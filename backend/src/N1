@@ -119,3 +119,23 @@ http://localhost:3001/?orgId=1&from=now-6h&to=now&timezone=browser
   Bizim projede kim üretiyor: son çare genel Exception handler'ı
   Bizim code'larımız: INTERNAL_ERROR
 
+
+5)Redis için ekstra şeyler yapılabilir belki
+1. JWT Logout / Token Blacklist
+
+  Ne: Şu an logout endpoint'i yok — kullanıcı çıkış yapsa bile token süresi dolana kadar geçerli kalıyor. Redis'e token:blacklist:<jti> key'i, TTL = token'ın kalan ömrü kadar konur. JwtAuthenticationFilter her
+  istekte bu key'i kontrol eder.
+  Neden Redis: TTL otomatik temizlik yapıyor (Postgres'te tutsan cron ile silmen gerekirdi).
+  Zorluk/öğrenme değeri: Düşük-orta. Mevcut KullaniciRolCacheService'ten farklı bir desen: sadece TTL, evict yok — "gerçek bir güvenlik eksiğini kapatan" somut bir örnek.
+
+  2. Workspace/Schema Ağacı Cache'i
+
+  Ne: getWorkspace() (schema+tablo ağacı) her "Şemalar" sekmesine girişte DB'ye gidiyor. Bu veri sık değişmiyor; Redis'te cache'lenip create/rename/delete tablo/schema işlemlerinde evict edilebilir.
+  Neden Redis: Mevcut rol cache'iyle birebir aynı desen (get/put/evict + TTL güvenlik ağı) tekrarlanmış olur — pekiştirme amaçlı iyi ama "yeni bir şey öğrenme" açısından zayıf.
+  Risk: Cache invalidation'ı DDL executor'la senkron tutmak gerekiyor (dual-write mimarisinde üçüncü bir yazma noktası daha).
+
+  3. Rate Limiting (login denemeleri)
+
+  Ne: /api/auth/login'e Redis tabanlı bir sayaç (login:attempts:<username>, TTL'li) koyup art arda başarısız girişten sonra geçici kilitleme.
+  Neden Redis: Atomik INCR + EXPIRE ile klasik ve öğretici bir Redis pattern'i (brute-force koruması).
+  Öğrenme değeri: Yüksek — atomik operasyonlar, EXPIRE, farklı bir kullanım alanı (güvenlik/throttling) gösteriyor.
