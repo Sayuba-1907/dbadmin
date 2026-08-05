@@ -1,5 +1,6 @@
 package dbadmin.backend.service;
 
+import dbadmin.backend.aop.BusinessLog;
 import dbadmin.backend.ddl.SchemaDdlExecutor;
 import dbadmin.backend.dto.SchemaResponseDTO;
 import dbadmin.backend.dto.TableSummaryDTO;
@@ -10,6 +11,7 @@ import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.SchemaRepository;
 import dbadmin.backend.repository.TabloRepository;
+import dbadmin.backend.tracing.SpanRunner;
 import dbadmin.backend.validation.NameValidator;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -47,14 +49,16 @@ public class SchemaService {
     private final SchemaRepository schemaRepository;
     private final TabloRepository tabloRepository;
     private final SchemaDdlExecutor ddlExecutor;
+    private final SpanRunner spanRunner;
     private final Counter schemasCreatedCounter;
     private final Counter schemasDeletedCounter;
 
     public SchemaService(SchemaRepository schemaRepository, TabloRepository tabloRepository,
-            SchemaDdlExecutor ddlExecutor, MeterRegistry meterRegistry) {
+            SchemaDdlExecutor ddlExecutor, SpanRunner spanRunner, MeterRegistry meterRegistry) {
         this.schemaRepository = schemaRepository;
         this.tabloRepository = tabloRepository;
         this.ddlExecutor = ddlExecutor;
+        this.spanRunner = spanRunner;
         // "creations"/"deletions" kullaniyoruz, "created" degil — bkz. TabloService'teki ayni
         // isimlendirmedeki not (Prometheus'ta "_created" rezerve bir sonek, Micrometer siliyor).
         this.schemasCreatedCounter = meterRegistry.counter("dbadmin.schemas.creations");
@@ -170,6 +174,7 @@ public class SchemaService {
                         "NOT_FOUND_SCHEMA", "schema not found: " + id, Map.of("id", String.valueOf(id))));
     }
 
+    @BusinessLog("schema-olusturuldu")
     @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Schema createSchema(String name) {
@@ -187,8 +192,8 @@ public class SchemaService {
                     Map.of("name", name));
         }
 
-        Schema saved = schemaRepository.save(new Schema(name));
-        ddlExecutor.createSchema(saved.getName());
+        Schema saved = spanRunner.inSpan("metadata-write", () -> schemaRepository.save(new Schema(name)));
+        spanRunner.inSpan("ddl-execute", "db.schema.name", saved.getName(), () -> ddlExecutor.createSchema(saved.getName()));
         schemasCreatedCounter.increment();
         return saved;
     }
@@ -233,6 +238,7 @@ public class SchemaService {
      * {@code CASCADE} ile gercek tablolari fiziksel siliyor; metadata'yi da ayni yonde
      * temizlemezsek DBAdmin arayuzunde artik var olmayan "hayalet" tablolar gorunurdu.
      */
+    @BusinessLog("schema-silindi")
     @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public void deleteSchema(Long id) {
@@ -240,9 +246,11 @@ public class SchemaService {
         Schema schema = getSchema(id);
         String name = schema.getName();
         List<Tablo> tablolarInSchema = tabloRepository.findBySchemaIdOrderByNameAsc(schema.getId());
-        tabloRepository.deleteAll(tablolarInSchema);
-        schemaRepository.delete(schema);
-        ddlExecutor.dropSchema(name);
+        spanRunner.inSpan("metadata-write", () -> {
+            tabloRepository.deleteAll(tablolarInSchema);
+            schemaRepository.delete(schema);
+        });
+        spanRunner.inSpan("ddl-execute", "db.schema.name", name, () -> ddlExecutor.dropSchema(name));
         schemasDeletedCounter.increment();
     }
 }

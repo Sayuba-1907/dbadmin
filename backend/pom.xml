@@ -54,6 +54,42 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- Trace icin: Micrometer'in span API'sini OTel SDK'sina baglar, span'leri OTLP ile
+             Tempo'ya gonderir. Java agent (-javaagent) KULLANILMIYOR (bkz. DECISIONS.md
+             "mekanizma gorunur olsun" tercihi) — span'ler Spring'in kendi enstrumentasyonu ve
+             elle acilan Tracer cagrilariyla uretiliyor.
+             Not: Spring Boot 4.x'te tracing autoconfigurasyonu spring-boot-actuator-autoconfigure'dan
+             ayri, kendi modullerine tasindi (eskiden tek jar'daydi) — bu yuzden
+             io.micrometer:micrometer-tracing-bridge-otel yerine org.springframework.boot'un
+             kendi tracing modulleri kullaniliyor. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-micrometer-tracing</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-micrometer-tracing-opentelemetry</artifactId>
+        </dependency>
+        <!-- spring-boot-micrometer-tracing-opentelemetry Spring'in kendi OTel autoconfig'ini
+             getiriyor ama Micrometer'in gercek koprusunu (OtelTracer sinifi) transitive
+             cekmiyor — bu yuzden ayrica elle eklenmesi gerekiyor. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+        </dependency>
+        <!-- Loglari Loki'ye gonderen logback appender (bkz. logback-spring.xml). Ayri bir
+             Collector/agent kullanmiyoruz — Tempo'ya da dogrudan OTLP ile yazdigimiz gibi (bkz.
+             DECISIONS.md "mekanizma gorunur olsun"), buradaki HTTP push hedefi de config dosyasinda
+             acikca goruluyor. -->
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+            <version>1.5.2</version>
+        </dependency>
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>

@@ -1,5 +1,6 @@
 package dbadmin.backend.service;
 
+import dbadmin.backend.aop.BusinessLog;
 import dbadmin.backend.ddl.ColumnType;
 import dbadmin.backend.ddl.TableDdlExecutor;
 import dbadmin.backend.entity.Kolon;
@@ -13,6 +14,7 @@ import dbadmin.backend.repository.KolonRepository;
 import dbadmin.backend.repository.SchemaRepository;
 import dbadmin.backend.repository.TabloRepository;
 import dbadmin.backend.repository.TagRepository;
+import dbadmin.backend.tracing.SpanRunner;
 import dbadmin.backend.validation.NameValidator;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -40,6 +42,7 @@ public class TabloService {
     private final TagRepository tagRepository;
     private final SchemaRepository schemaRepository;
     private final TableDdlExecutor ddlExecutor;
+    private final SpanRunner spanRunner;
 
     // Is olaylarini sayan kumulatif sayaclar (Prometheus'ta _total soneki alir) — "kac tablo
     // olusturuldu" gibi sorular icin. Anlik durum ("su an kac tablo var") icin ise Gauge
@@ -50,12 +53,13 @@ public class TabloService {
 
     public TabloService(TabloRepository tabloRepository, KolonRepository kolonRepository,
             TagRepository tagRepository, SchemaRepository schemaRepository, TableDdlExecutor ddlExecutor,
-            MeterRegistry meterRegistry) {
+            SpanRunner spanRunner, MeterRegistry meterRegistry) {
         this.tabloRepository = tabloRepository;
         this.kolonRepository = kolonRepository;
         this.tagRepository = tagRepository;
         this.schemaRepository = schemaRepository;
         this.ddlExecutor = ddlExecutor;
+        this.spanRunner = spanRunner;
         // Dikkat: isim ".created" ile bitmesin — Prometheus/OpenMetrics'te "_created" ayri bir
         // anlam tasiyan (sayacin olusturulma zaman damgasi) rezerve bir sonek; Micrometer bunu
         // fark edip "created" kelimesini sessizce siliyor (ör. "dbadmin.tables.created" ->
@@ -106,6 +110,7 @@ public class TabloService {
      * {@link SchemaService#RESERVED_SCHEMA_NAME}) boyle bir tablo olusturuldugu anda arayuzde
      * gorunmez olurdu — o yuzden sessiz varsayilan yerine hata veriyoruz.
      */
+    @BusinessLog("tablo-olusturuldu")
     @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Tablo createTablo(String name, Long schemaId, List<KolonTanimi> kolonTanimlari) {
@@ -147,11 +152,12 @@ public class TabloService {
             }
         }
 
-        Tablo saved = tabloRepository.save(tablo);
+        Tablo saved = spanRunner.inSpan("metadata-write", () -> tabloRepository.save(tablo));
         // PK isaretli kolonlar CREATE TABLE'in kendi icinde veriliyor (ayri bir ALTER TABLE ile
         // degil): boylece gercek tablo tek ifadede, elle yazilmis bir
         // "CREATE TABLE ... PRIMARY KEY (col1, col2)" ile birebir ayni sekilde olusuyor.
-        ddlExecutor.createTable(schema.getName(), saved.getName(), ddlColumns, primaryKeyColumnNames);
+        spanRunner.inSpan("ddl-execute", "db.table.name", saved.getName(),
+                () -> ddlExecutor.createTable(schema.getName(), saved.getName(), ddlColumns, primaryKeyColumnNames));
         tablesCreatedCounter.increment();
         columnsCreatedCounter.increment(ddlColumns.size());
         return saved;
@@ -220,14 +226,15 @@ public class TabloService {
     }
 
     /** Tablo silinince {@code tabloRepository.delete} JPA cascade sayesinde altindaki tum Kolon satirlarini da siler; sonra gercek tablo da drop edilir. */
+    @BusinessLog("tablo-silindi")
     @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public void deleteTablo(Long id) {
         Tablo tablo = getTablo(id);
         String name = tablo.getName();
         String schemaName = tablo.getSchema().getName();
-        tabloRepository.delete(tablo);
-        ddlExecutor.dropTable(schemaName, name);
+        spanRunner.inSpan("metadata-write", () -> tabloRepository.delete(tablo));
+        spanRunner.inSpan("ddl-execute", "db.table.name", name, () -> ddlExecutor.dropTable(schemaName, name));
         tablesDeletedCounter.increment();
     }
 

@@ -3,6 +3,8 @@ package dbadmin.backend.security;
 import dbadmin.backend.entity.Rol;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -46,17 +48,33 @@ public class KullaniciRolCacheService {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final Duration ttl;
+    private final Tracer tracer;
     private final Counter cacheHitCounter;
     private final Counter cacheMissCounter;
 
     public KullaniciRolCacheService(
             RedisTemplate<String, String> redisTemplate,
             @Value("${app.cache.kullanici-rol.ttl-dakika}") long ttlDakika,
+            Tracer tracer,
             MeterRegistry meterRegistry) {
         this.redisTemplate = redisTemplate;
         this.ttl = Duration.ofMinutes(ttlDakika);
+        this.tracer = tracer;
         this.cacheHitCounter = meterRegistry.counter("dbadmin.cache.rol.hits");
         this.cacheMissCounter = meterRegistry.counter("dbadmin.cache.rol.misses");
+    }
+
+    /**
+     * Redis hatasini yutmadan once aktif span'i (varsa) "error" olarak isaretler — davranis
+     * (fail-open, hatayi yukari firlatmama) hic degismiyor, sadece trace'e "burada bir sorun
+     * oldu ama akis devam etti" bilgisi ekleniyor (Req-2.4). Aktif span yoksa (ör. testlerde
+     * Tracer'in noop implementasyonuyla) sessizce hicbir sey yapmaz.
+     */
+    private void markCurrentSpanAsError(Exception ex) {
+        Span currentSpan = tracer.currentSpan();
+        if (currentSpan != null) {
+            currentSpan.error(ex);
+        }
     }
 
     public record OnbellekliKullanici(Long id, Rol rol) {
@@ -79,6 +97,7 @@ public class KullaniciRolCacheService {
             cacheHitCounter.increment();
             return Optional.of(new OnbellekliKullanici(id, rol));
         } catch (Exception ex) {
+            markCurrentSpanAsError(ex);
             log.warn("redis'ten kullanici rolu okunamadi, DB'ye dusuluyor: {}", ex.getMessage());
             cacheMissCounter.increment();
             return Optional.empty();
@@ -92,6 +111,7 @@ public class KullaniciRolCacheService {
                     Map.of(ALAN_ID, String.valueOf(id), ALAN_ROL, rol.name()));
             redisTemplate.expire(anahtar, ttl);
         } catch (Exception ex) {
+            markCurrentSpanAsError(ex);
             log.warn("kullanici rolu redis'e yazilamadi, cache atlanip devam ediliyor: {}", ex.getMessage());
         }
     }
@@ -101,6 +121,7 @@ public class KullaniciRolCacheService {
         try {
             redisTemplate.delete(anahtar(kullaniciAdi));
         } catch (Exception ex) {
+            markCurrentSpanAsError(ex);
             log.warn("kullanici rolu redis'ten silinemedi (TTL sonunda kendiliginden duser): {}",
                     ex.getMessage());
         }

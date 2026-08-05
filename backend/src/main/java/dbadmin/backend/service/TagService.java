@@ -1,5 +1,6 @@
 package dbadmin.backend.service;
 
+import dbadmin.backend.aop.BusinessLog;
 import dbadmin.backend.entity.Kolon;
 import dbadmin.backend.entity.Tag;
 import dbadmin.backend.exception.ConflictException;
@@ -55,6 +56,7 @@ public class TagService {
         return kolonRepository.findByTagId(tagId);
     }
 
+    @BusinessLog("tag-olusturuldu")
     @CacheEvict(cacheNames = "tags", allEntries = true)
     @Transactional
     public Tag createTag(String name) {
@@ -87,6 +89,7 @@ public class TagService {
      * tum kolonlarin tag referansini once null'a cekiyoruz (etiketsiz kalirlar, kolonun kendisi
      * silinmez), sonra tag satirini siliyoruz — hepsi tek transaction'da.
      */
+    @BusinessLog("tag-silindi")
     @CacheEvict(cacheNames = "tags", allEntries = true)
     @Transactional
     public void deleteTag(Long id) {
