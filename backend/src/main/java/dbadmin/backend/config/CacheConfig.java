@@ -68,7 +68,11 @@ public class CacheConfig implements CachingConfigurer {
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new GenericJackson2JsonRedisSerializer()));
 
-        return RedisCacheManager.builder(connectionFactory)
+        // RedisCacheManager.builder(connectionFactory) yerine ozel bir RedisCacheWriter
+        // kullaniliyor -- bkz. TracingAwareRedisCacheWriter javadoc'u: varsayilan writer
+        // baglantiyi RedisConnectionUtils uzerinden almadigi icin @Cacheable/@CacheEvict'in
+        // Redis komutlari trace'e (Tempo) parent'siz, kopuk span olarak dusuyordu.
+        return RedisCacheManager.builder(new TracingAwareRedisCacheWriter(connectionFactory))
                 .cacheDefaults(config)
                 .build();
     }
