@@ -1,43 +1,15 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Schema,
-  TabloSummary,
-  createSchema,
-  deleteSchema,
-  getSchemalar,
-  getWorkspace,
-  renameSchema,
-} from "../api/schemas";
+import { TabloSummary, deleteSchema, getWorkspace } from "../api/schemas";
 import {
   CreateKolonInput,
   DraftKolon,
-  Tablo,
   TabloDraft,
-  applyTabloChanges,
   buildTabloDraft,
-  changeTabloSchema,
-  createTablo,
-  deleteTablo,
   getTablo,
 } from "../api/tablolar";
-import {
-  KolonUsage,
-  Tag,
-  createTag,
-  deleteTag,
-  getTagUsage,
-  getTags,
-  renameTag,
-} from "../api/tags";
+import { KolonUsage, getTagUsage } from "../api/tags";
 import { Rol } from "../api/auth";
-import {
-  Kullanici,
-  changeKullaniciRol,
-  createKullanici,
-  deleteKullanici,
-  getKullanicilar,
-} from "../api/kullanicilar";
 import { CreateSchemaForm } from "../components/CreateSchemaForm";
 import { CreateTabloForm } from "../components/CreateTabloForm";
 import { DashboardSkeleton } from "../components/DashboardSkeleton";
@@ -47,6 +19,10 @@ import { TabloSidebar } from "../components/TabloSidebar";
 import { TaglerPanel } from "../components/TaglerPanel";
 import { WorkspaceNav, WorkspaceView } from "../components/WorkspaceNav";
 import { useAuth } from "../auth/AuthProvider";
+import { useSchemalar } from "../hooks/useSchemalar";
+import { useTablolar } from "../hooks/useTablolar";
+import { useTags } from "../hooks/useTags";
+import { useKullanicilar } from "../hooks/useKullanicilar";
 import {
   NOTIFICATION_DURATION_MS,
   notifyFromError,
@@ -72,18 +48,53 @@ let nextDraftKolonId = -1;
  * yapmiyoruz; her mutasyondan sonra backend'den taze veri cekmek daha basit ve garanti dogru.
  */
 export function Dashboard() {
-  const [schemalar, setSchemalar] = useState<Schema[]>([]);
+  // Sema domain'inin okuma+yazma sorumlulugu useSchemalar hook'una tasindi (bkz.
+  // requirement-react-custom-hooks.md). setSchemalarOptimistic SADECE handleDeleteSchema'daki
+  // "geri al" akisi icin var — bkz. o fonksiyondaki aciklama ve hook'un kendi javadoc'u.
+  const {
+    schemalar,
+    createSchema: createSchemaHook,
+    renameSchema: renameSchemaHook,
+    yenile: yenileSchemalar,
+    setSchemalarOptimistic,
+  } = useSchemalar();
   // Her schema'nin altindaki tablolarin ozeti (sadece id/name/kolonSayisi) — schema id'sine gore.
   // Bir tablonun ko"lonlarinin tam listesi burada YOK; bir tabloya tiklaninca ayrica id'siyle
   // (GET /api/tablo"lar/{id}, bkz. selectTablo) cekilir.
   const [tabloSummariesBySchema, setTabloSummariesBySchema] = useState<
     Record<number, TabloSummary[]>
   >({});
-  // Su an secili tablonun TAM detayi (kolonlar dahil) — draft'in "orijinal" karsilastirma
-  // kaynagi budur.
-  const [selectedTablo, setSelectedTablo] = useState<Tablo | null>(null);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [kullanicilar, setKullanicilar] = useState<Kullanici[]>([]);
+  // Tablo domain'inin okuma+yazma sorumlulugu useTablolar hook'una tasindi (bkz.
+  // requirement-react-custom-hooks.md Faz 2).
+  const {
+    selectedTablo,
+    select: selectTabloHook,
+    clearSelection: clearTabloSelection,
+    create: createTabloHook,
+    applyChanges: applyTabloChangesHook,
+    deleteTablo: deleteTabloHook,
+    changeSchema: changeTabloSchemaHook,
+  } = useTablolar();
+  // Tag domain'inin okuma+yazma sorumlulugu useTags hook'una tasindi (bkz.
+  // requirement-react-custom-hooks.md Faz 2). Otomatik mount-cekme YOK (bkz. hook'un javadoc'u).
+  const {
+    tags,
+    createTag: createTagHook,
+    renameTag: renameTagHook,
+    deleteTag: deleteTagHook,
+    yenile: yenileTags,
+    setTagsOptimistic,
+  } = useTags();
+  // Kullanici domain'inin okuma+yazma sorumlulugu useKullanicilar hook'una tasindi (bkz.
+  // requirement-react-custom-hooks.md Faz 2). Otomatik mount-cekme YOK.
+  const {
+    kullanicilar,
+    createKullanici: createKullaniciHook,
+    changeKullaniciRol: changeKullaniciRolHook,
+    deleteKullanici: deleteKullaniciHook,
+    yenile: yenileKullanicilar,
+    setKullanicilarOptimistic,
+  } = useKullanicilar();
   const { isAdmin } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,26 +110,18 @@ export function Dashboard() {
   const notify = useNotify();
   const { t } = useTranslation();
 
-  async function refreshSchemalar() {
-    const data = await getSchemalar();
-    setSchemalar(data);
-    return data;
-  }
-
   /**
-   * Sidebar'in ihtiyac duydugu her seyi (schema listesi + her birinin tablo ozeti) TEK istekte
-   * tazeler — GET /api/schemalar/schemaList, schema+tablo agacini backend'de tek sorguda
-   * birlestirip donuyor. Eskiden schema listesi + her schema icin ayri istek (N+1) atiliyordu.
+   * Sidebar'in tablo ozetlerini (tabloSummariesBySchema) tek istekte tazeler — GET
+   * /api/schemalar/schemaList, schema+tablo agacini backend'de tek sorguda birlestirip
+   * donuyor. Eskiden schema listesi + her schema icin ayri istek (N+1) atiliyordu.
+   * <p>
+   * Schema listesinin kendisi ({@code schemalar}) artik useSchemalar hook'undan geliyor, burada
+   * setlenmiyor — ama sema sayilari (tabloSayisi) tablo olusturma/silmeyle degistigi icin, bu
+   * fonksiyon her cagrildiginda hook'un kendi verisini de ({@code yenileSchemalar}) birlikte
+   * tazeliyor; boylece iki kaynak (workspace agaci + sema listesi) senkron kalir.
    */
   async function refreshWorkspace() {
     const workspace = await getWorkspace();
-    setSchemalar(
-      workspace.map((s) => ({
-        id: s.schemaId,
-        name: s.schemaName,
-        tabloSayisi: s.tableResponseList.length,
-      }))
-    );
     setTabloSummariesBySchema(
       Object.fromEntries(
         workspace.map((s) => [
@@ -127,38 +130,26 @@ export function Dashboard() {
         ])
       )
     );
-  }
-
-  async function refreshTags() {
-    const data = await getTags();
-    setTags(data);
-    return data;
-  }
-
-  async function refreshKullanicilar() {
-    const data = await getKullanicilar();
-    setKullanicilar(data);
-    return data;
+    await yenileSchemalar();
   }
 
   /** Bir tabloyu secip TAM detayini (kolonlar dahil) id'siyle ceker ve duzenleme taslagini kurar. */
   async function selectTablo(id: number) {
     setSelectedId(id);
     try {
-      const tablo = await getTablo(id);
-      setSelectedTablo(tablo);
+      const tablo = await selectTabloHook(id);
       setDraft(buildTabloDraft(tablo));
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.loadFailed"));
       setSelectedId(null);
-      setSelectedTablo(null);
+      clearTabloSelection();
       setDraft(null);
     }
   }
 
   function clearSelection() {
     setSelectedId(null);
-    setSelectedTablo(null);
+    clearTabloSelection();
     setDraft(null);
   }
 
@@ -235,9 +226,9 @@ export function Dashboard() {
         notifyFromError(notify, t, err, t("notifications.loadFailed"))
       );
     } else if (view === "tagler") {
-      refreshTags().catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")));
+      yenileTags().catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")));
     } else if (view === "kullanicilar" && isAdmin) {
-      refreshKullanicilar().catch((err) =>
+      yenileKullanicilar().catch((err) =>
         notifyFromError(notify, t, err, t("notifications.loadFailed"))
       );
     }
@@ -332,7 +323,7 @@ export function Dashboard() {
     const orijinal = selectedTablo;
     setSaving(true);
     try {
-      const guncel = await applyTabloChanges(draft.tabloId, {
+      const guncel = await applyTabloChangesHook(draft.tabloId, {
         yeniIsim: draft.name !== orijinal.name ? draft.name : null,
         yeniSchemaId: draft.schemaId !== orijinal.schemaId ? draft.schemaId : null,
         silinecekKolonIdler: draft.kolonlar.filter((k) => !k.isNew && k.silinecek).map((k) => k.id),
@@ -354,7 +345,6 @@ export function Dashboard() {
             yeniPrimaryKey: k.primaryKey,
           })),
       });
-      setSelectedTablo(guncel);
       setDraft(buildTabloDraft(guncel));
       await refreshWorkspace();
       notify(200, t("notifications.tableChangesSaved"));
@@ -367,10 +357,9 @@ export function Dashboard() {
 
   async function handleCreate(name: string, kolonlar: CreateKolonInput[], schemaId: number) {
     try {
-      const created = await createTablo(name, kolonlar, schemaId);
+      const created = await createTabloHook(name, kolonlar, schemaId);
       await refreshWorkspace();
       setSelectedId(created.id);
-      setSelectedTablo(created);
       setDraft(buildTabloDraft(created));
       setShowCreateForm(false);
       notify(201, t("notifications.tableCreated", { name: created.name }));
@@ -381,8 +370,7 @@ export function Dashboard() {
 
   async function handleCreateSchema(name: string) {
     try {
-      const created = await createSchema(name);
-      await refreshWorkspace();
+      const created = await createSchemaHook(name);
       setShowCreateSchemaForm(false);
       notify(201, t("notifications.schemaCreated", { name: created.name }));
     } catch (err) {
@@ -392,8 +380,7 @@ export function Dashboard() {
 
   async function handleRenameSchema(id: number, name: string) {
     try {
-      await renameSchema(id, name);
-      await refreshSchemalar();
+      await renameSchemaHook(id, name);
       notify(200, t("notifications.schemaRenamed"));
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.schemaRenameFailed"));
@@ -409,7 +396,7 @@ export function Dashboard() {
    */
   function handleDeleteSchema(id: number) {
     const tableIdsInSchema = new Set((tabloSummariesBySchema[id] ?? []).map((tbl) => tbl.id));
-    setSchemalar((prev) => prev.filter((s) => s.id !== id));
+    setSchemalarOptimistic((prev) => prev.filter((s) => s.id !== id));
     setTabloSummariesBySchema((prev) => {
       const next = { ...prev };
       delete next[id];
@@ -463,7 +450,7 @@ export function Dashboard() {
 
     const timerId = window.setTimeout(async () => {
       try {
-        await deleteTablo(id);
+        await deleteTabloHook(id);
       } catch (err) {
         notifyFromError(notify, t, err, t("notifications.tableDeleteFailed"));
       } finally {
@@ -492,7 +479,7 @@ export function Dashboard() {
       return;
     }
     try {
-      await changeTabloSchema(id, schemaId);
+      await changeTabloSchemaHook(id, schemaId);
       await refreshWorkspace();
       notify(200, t("notifications.tableSchemaChanged"));
     } catch (err) {
@@ -502,8 +489,8 @@ export function Dashboard() {
 
   async function handleCreateTag(name: string) {
     try {
-      const created = await createTag(name);
-      await refreshTags();
+      const created = await createTagHook(name);
+      await yenileTags();
       notify(201, t("notifications.tagCreated", { name: created.name }));
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.tagCreateFailed"));
@@ -526,8 +513,8 @@ export function Dashboard() {
 
   async function handleRenameTag(id: number, name: string) {
     try {
-      await renameTag(id, name);
-      await refreshTags();
+      await renameTagHook(id, name);
+      await yenileTags();
       notify(200, t("notifications.tagRenamed"));
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.tagRenameFailed"));
@@ -540,15 +527,15 @@ export function Dashboard() {
    * ayni "Geri Al" penceresine cekildi.
    */
   function handleDeleteTag(id: number) {
-    setTags((prev) => prev.filter((tag) => tag.id !== id));
+    setTagsOptimistic((prev) => prev.filter((tag) => tag.id !== id));
 
     const timerId = window.setTimeout(async () => {
       try {
-        await deleteTag(id);
+        await deleteTagHook(id);
       } catch (err) {
         notifyFromError(notify, t, err, t("notifications.tagDeleteFailed"));
       } finally {
-        await refreshTags();
+        await yenileTags();
       }
     }, NOTIFICATION_DURATION_MS);
 
@@ -556,15 +543,15 @@ export function Dashboard() {
       label: t("common.undo"),
       onClick: () => {
         window.clearTimeout(timerId);
-        refreshTags();
+        yenileTags();
       },
     });
   }
 
   async function handleCreateKullanici(kullaniciAdi: string, parola: string, rol: Rol) {
     try {
-      const created = await createKullanici(kullaniciAdi, parola, rol);
-      await refreshKullanicilar();
+      const created = await createKullaniciHook(kullaniciAdi, parola, rol);
+      await yenileKullanicilar();
       notify(201, t("notifications.kullaniciCreated", { name: created.kullaniciAdi }));
     } catch (err) {
       notifyFromError(notify, t, err, t("notifications.kullaniciCreateFailed"));
@@ -573,8 +560,8 @@ export function Dashboard() {
 
   async function handleChangeKullaniciRol(id: number, rol: Rol) {
     try {
-      await changeKullaniciRol(id, rol);
-      await refreshKullanicilar();
+      await changeKullaniciRolHook(id, rol);
+      await yenileKullanicilar();
       notify(200, t("notifications.kullaniciRolChanged"));
     } catch (err) {
       // Basarisiz olursa (ör. CONFLICT_LAST_ADMIN) listeyi YENIDEN CEKMIYORUZ — kullanicilar
@@ -585,15 +572,15 @@ export function Dashboard() {
   }
 
   function handleDeleteKullanici(id: number) {
-    setKullanicilar((prev) => prev.filter((kullanici) => kullanici.id !== id));
+    setKullanicilarOptimistic((prev) => prev.filter((kullanici) => kullanici.id !== id));
 
     const timerId = window.setTimeout(async () => {
       try {
-        await deleteKullanici(id);
+        await deleteKullaniciHook(id);
       } catch (err) {
         notifyFromError(notify, t, err, t("notifications.kullaniciDeleteFailed"));
       } finally {
-        await refreshKullanicilar();
+        await yenileKullanicilar();
       }
     }, NOTIFICATION_DURATION_MS);
 
@@ -601,7 +588,7 @@ export function Dashboard() {
       label: t("common.undo"),
       onClick: () => {
         window.clearTimeout(timerId);
-        refreshKullanicilar();
+        yenileKullanicilar();
       },
     });
   }
@@ -644,6 +631,8 @@ export function Dashboard() {
             onRenameSchema={handleRenameSchema}
             onDeleteSchema={handleDeleteSchema}
             onChangeTabloSchema={handleChangeTabloSchema}
+            // TabloSidebar'in kendi lazy-yukleme onbellegi (kolonlarByTabloId) icin — useTablolar
+            // hook'unun selectedTablo state'iyle ilgisi yok, bilerek dogrudan api fonksiyonu.
             onLoadKolonlar={getTablo}
           />
 
