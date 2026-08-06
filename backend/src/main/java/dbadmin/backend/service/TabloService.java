@@ -3,6 +3,8 @@ package dbadmin.backend.service;
 import dbadmin.backend.aop.BusinessLog;
 import dbadmin.backend.ddl.ColumnType;
 import dbadmin.backend.ddl.TableDdlExecutor;
+import dbadmin.backend.entity.HedefTip;
+import dbadmin.backend.entity.IslemTipi;
 import dbadmin.backend.entity.Kolon;
 import dbadmin.backend.entity.Schema;
 import dbadmin.backend.entity.Tablo;
@@ -43,6 +45,7 @@ public class TabloService {
     private final SchemaRepository schemaRepository;
     private final TableDdlExecutor ddlExecutor;
     private final SpanRunner spanRunner;
+    private final AuditLogService auditLogService;
 
     // Is olaylarini sayan kumulatif sayaclar (Prometheus'ta _total soneki alir) — "kac tablo
     // olusturuldu" gibi sorular icin. Anlik durum ("su an kac tablo var") icin ise Gauge
@@ -53,13 +56,14 @@ public class TabloService {
 
     public TabloService(TabloRepository tabloRepository, KolonRepository kolonRepository,
             TagRepository tagRepository, SchemaRepository schemaRepository, TableDdlExecutor ddlExecutor,
-            SpanRunner spanRunner, MeterRegistry meterRegistry) {
+            SpanRunner spanRunner, AuditLogService auditLogService, MeterRegistry meterRegistry) {
         this.tabloRepository = tabloRepository;
         this.kolonRepository = kolonRepository;
         this.tagRepository = tagRepository;
         this.schemaRepository = schemaRepository;
         this.ddlExecutor = ddlExecutor;
         this.spanRunner = spanRunner;
+        this.auditLogService = auditLogService;
         // Dikkat: isim ".created" ile bitmesin — Prometheus/OpenMetrics'te "_created" ayri bir
         // anlam tasiyan (sayacin olusturulma zaman damgasi) rezerve bir sonek; Micrometer bunu
         // fark edip "created" kelimesini sessizce siliyor (ör. "dbadmin.tables.created" ->
@@ -160,6 +164,8 @@ public class TabloService {
                 () -> ddlExecutor.createTable(schema.getName(), saved.getName(), ddlColumns, primaryKeyColumnNames));
         tablesCreatedCounter.increment();
         columnsCreatedCounter.increment(ddlColumns.size());
+        auditLogService.kaydet(IslemTipi.TABLO_OLUSTURULDU, HedefTip.TABLO, saved.getId(),
+                "tablo olusturuldu: " + saved.getName() + " (schema=" + schema.getName() + ")");
         return saved;
     }
 
@@ -187,6 +193,16 @@ public class TabloService {
     @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Tablo changeSchema(Long tabloId, Long newSchemaId) {
+        String eskiSchemaAdi = getTablo(tabloId).getSchema().getName();
+        Tablo tablo = changeSchemaCore(tabloId, newSchemaId);
+        if (!eskiSchemaAdi.equals(tablo.getSchema().getName())) {
+            auditLogService.kaydet(IslemTipi.TABLO_SEMASI_DEGISTIRILDI, HedefTip.TABLO, tabloId,
+                    "schema degisti: " + eskiSchemaAdi + " -> " + tablo.getSchema().getName());
+        }
+        return tablo;
+    }
+
+    private Tablo changeSchemaCore(Long tabloId, Long newSchemaId) {
         Tablo tablo = getTablo(tabloId);
         Schema newSchema = resolveSchema(newSchemaId);
         Schema currentSchema = tablo.getSchema();
@@ -203,6 +219,16 @@ public class TabloService {
     @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Tablo renameTablo(Long id, String newName) {
+        String eskiAd = getTablo(id).getName();
+        Tablo tablo = renameTabloCore(id, newName);
+        if (!eskiAd.equals(tablo.getName())) {
+            auditLogService.kaydet(IslemTipi.TABLO_YENIDEN_ADLANDIRILDI, HedefTip.TABLO, id,
+                    "isim degisti: " + eskiAd + " -> " + tablo.getName());
+        }
+        return tablo;
+    }
+
+    private Tablo renameTabloCore(Long id, String newName) {
         Tablo tablo = getTablo(id);
         NameValidator.validate("table name", "VALIDATION_INVALID_TABLE_NAME", newName);
         if (tablo.getName().equals(newName)) {
@@ -236,12 +262,20 @@ public class TabloService {
         spanRunner.inSpan("metadata-write", () -> tabloRepository.delete(tablo));
         spanRunner.inSpan("ddl-execute", "db.table.name", name, () -> ddlExecutor.dropTable(schemaName, name));
         tablesDeletedCounter.increment();
+        auditLogService.kaydet(IslemTipi.TABLO_SILINDI, HedefTip.TABLO, id, "tablo silindi: " + name);
     }
 
     /** Mevcut bir tabloya yeni kolon ekler; metadata + gercek {@code ALTER TABLE ADD COLUMN} birlikte gider. */
     @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public Kolon addKolon(Long tabloId, KolonTanimi tanim) {
+        Kolon kolon = addKolonCore(tabloId, tanim);
+        auditLogService.kaydet(IslemTipi.KOLON_EKLENDI, HedefTip.KOLON, kolon.getId(),
+                "kolon eklendi: " + kolon.getName() + " (tablo=" + tabloId + ")");
+        return kolon;
+    }
+
+    private Kolon addKolonCore(Long tabloId, KolonTanimi tanim) {
         Tablo tablo = getTablo(tabloId);
         NameValidator.validate("column name", "VALIDATION_INVALID_COLUMN_NAME", tanim.name());
         if (kolonRepository.existsByTabloAndName(tablo, tanim.name())) {
@@ -277,6 +311,13 @@ public class TabloService {
     @CacheEvict(cacheNames = "schemaWorkspace", allEntries = true)
     @Transactional
     public void deleteKolon(Long tabloId, Long kolonId) {
+        String columnName = findKolonInTablo(getTablo(tabloId), kolonId).getName();
+        deleteKolonCore(tabloId, kolonId);
+        auditLogService.kaydet(IslemTipi.KOLON_SILINDI, HedefTip.KOLON, kolonId,
+                "kolon silindi: " + columnName + " (tablo=" + tabloId + ")");
+    }
+
+    private void deleteKolonCore(Long tabloId, Long kolonId) {
         Tablo tablo = getTablo(tabloId);
         Kolon kolon = findKolonInTablo(tablo, kolonId);
         String columnName = kolon.getName();
@@ -323,6 +364,16 @@ public class TabloService {
     /** Kolonun sadece adini degistirir — tipi olusturulduktan sonra hic degistirilemez (bkz. Kolon.type, updatable=false). */
     @Transactional
     public Kolon renameKolon(Long tabloId, Long kolonId, String newName) {
+        String eskiAd = findKolonInTablo(getTablo(tabloId), kolonId).getName();
+        Kolon kolon = renameKolonCore(tabloId, kolonId, newName);
+        if (!eskiAd.equals(kolon.getName())) {
+            auditLogService.kaydet(IslemTipi.KOLON_YENIDEN_ADLANDIRILDI, HedefTip.KOLON, kolonId,
+                    "kolon adi degisti: " + eskiAd + " -> " + kolon.getName());
+        }
+        return kolon;
+    }
+
+    private Kolon renameKolonCore(Long tabloId, Long kolonId, String newName) {
         Tablo tablo = getTablo(tabloId);
         Kolon kolon = findKolonInTablo(tablo, kolonId);
         NameValidator.validate("column name", "VALIDATION_INVALID_COLUMN_NAME", newName);
@@ -360,6 +411,16 @@ public class TabloService {
      */
     @Transactional
     public Kolon changeKolonPrimaryKey(Long tabloId, Long kolonId, boolean primaryKey) {
+        boolean eskiDeger = findKolonInTablo(getTablo(tabloId), kolonId).isPrimaryKey();
+        Kolon kolon = changeKolonPrimaryKeyCore(tabloId, kolonId, primaryKey);
+        if (eskiDeger != kolon.isPrimaryKey()) {
+            auditLogService.kaydet(IslemTipi.KOLON_PRIMARY_KEY_DEGISTIRILDI, HedefTip.KOLON, kolonId,
+                    "primary key " + (kolon.isPrimaryKey() ? "eklendi" : "kaldirildi") + ": " + kolon.getName());
+        }
+        return kolon;
+    }
+
+    private Kolon changeKolonPrimaryKeyCore(Long tabloId, Long kolonId, boolean primaryKey) {
         Tablo tablo = getTablo(tabloId);
         Kolon kolon = findKolonInTablo(tablo, kolonId);
         if (kolon.isPrimaryKey() == primaryKey) {
@@ -375,6 +436,13 @@ public class TabloService {
     /** Tag'in gercek DB semasinda hic karsiligi yok (sadece metadata) — o yuzden burada ddlExecutor cagrisi yok, sade bir entity guncellemesi. */
     @Transactional
     public Kolon changeKolonTag(Long tabloId, Long kolonId, Long tagId) {
+        Kolon kolon = changeKolonTagCore(tabloId, kolonId, tagId);
+        auditLogService.kaydet(IslemTipi.KOLON_TAG_DEGISTIRILDI, HedefTip.KOLON, kolonId,
+                "tag degisti: kolon=" + kolon.getName() + " tagId=" + tagId);
+        return kolon;
+    }
+
+    private Kolon changeKolonTagCore(Long tabloId, Long kolonId, Long tagId) {
         Tablo tablo = getTablo(tabloId);
         Kolon kolon = findKolonInTablo(tablo, kolonId);
         kolon.setTag(resolveTag(tagId));
@@ -387,15 +455,19 @@ public class TabloService {
      * TUM degisiklikleri (isim, schema, silinen/eklenen/guncellenen kolonlar) tek seferde uygular.
      * <p>
      * Dikkat cekici implementasyon detayi: burada DDL'i yeniden yazmiyoruz, sadece yukaridaki
-     * (zaten test edilmis) {@code renameTablo}/{@code changeSchema}/{@code deleteKolon}/
-     * {@code renameKolon}/{@code changeKolonTag}/{@code changeKolonPrimaryKey}/{@code addKolon}
-     * metodlarini sirayla {@code this.} uzerinden cagiriyoruz. Bu metodlar da {@code @Transactional}
-     * ama Spring'in proxy-tabanli AOP'si self-invocation'da (ayni sinifin kendi icinden {@code
-     * this.metod()} cagirmak) devreye girmez — yani bu cagrilar kendi ayri transaction'larini
-     * ACMAZ, hepsi bu metodun disaridan (controller'dan) tetiklenirken acilmis TEK transaction'a
-     * katilir. Sonuc: N alt-islemden biri patlarsa (ör. bir kolonu PK yapmak NULL degerler yuzunden
-     * reddedilirse), o ana kadar uygulanmis olan hicbir sey (rename, silinen kolonlar, eklenen
-     * kolonlar) da kalici olmaz — hepsi ya da hicbiri.
+     * (zaten test edilmis) metodlarin audit'siz *Core varyantlarini ({@code renameTabloCore}/
+     * {@code changeSchemaCore}/{@code deleteKolonCore}/{@code renameKolonCore}/
+     * {@code changeKolonTagCore}/{@code changeKolonPrimaryKeyCore}/{@code addKolonCore}) sirayla
+     * {@code this.} uzerinden cagiriyoruz — public (audit'li) versiyonlari degil, cunku aksi
+     * halde tek bir "Kaydet" tiklamasi N ayri audit satirina bolunurdu (bkz. AuditLogService); bu
+     * metod, yapilanlarin tek bir ozetini en sonda tek satir olarak yazar. *Core metodlar da
+     * {@code @Transactional} ama Spring'in proxy-tabanli AOP'si self-invocation'da (ayni sinifin
+     * kendi icinden {@code this.metod()} cagirmak) devreye girmez — yani bu cagrilar kendi ayri
+     * transaction'larini ACMAZ, hepsi bu metodun disaridan (controller'dan) tetiklenirken acilmis
+     * TEK transaction'a katilir. Sonuc: N alt-islemden biri patlarsa (ör. bir kolonu PK yapmak
+     * NULL degerler yuzunden reddedilirse), o ana kadar uygulanmis olan hicbir sey (rename,
+     * silinen kolonlar, eklenen kolonlar, henuz yazilmamis audit ozeti) de kalici olmaz — hepsi
+     * ya da hicbiri.
      * <p>
      * Sira: rename -> schema tasi -> sil -> guncelle -> ekle. Sirayla PK degisen her kolon kendi
      * {@code syncPrimaryKeyConstraint} cagrisini tetikler (N kolon degisirse constraint N kez
@@ -407,24 +479,45 @@ public class TabloService {
     public Tablo applyChanges(Long tabloId, String yeniIsim, Long yeniSchemaId,
             List<Long> silinecekKolonIdler, List<KolonTanimi> eklenecekKolonlar,
             List<KolonGuncelleme> guncellenecekKolonlar) {
+        // Alt-islemler icin *Core metodlar cagriliyor (public renameTablo/addKolon/... degil) —
+        // her biri kendi audit satirini yazsaydi, tek bir "Kaydet" tiklamasi N adet audit satirina
+        // bolunurdu. Bunun yerine burada tek bir ozet toplanip en sonda TEK satir yaziliyor.
+        List<String> degisiklikler = new ArrayList<>();
         if (yeniIsim != null) {
-            renameTablo(tabloId, yeniIsim);
+            String eskiAd = getTablo(tabloId).getName();
+            Tablo sonra = renameTabloCore(tabloId, yeniIsim);
+            if (!eskiAd.equals(sonra.getName())) {
+                degisiklikler.add("isim: " + eskiAd + " -> " + sonra.getName());
+            }
         }
         if (yeniSchemaId != null) {
-            changeSchema(tabloId, yeniSchemaId);
+            String eskiSchema = getTablo(tabloId).getSchema().getName();
+            Tablo sonra = changeSchemaCore(tabloId, yeniSchemaId);
+            if (!eskiSchema.equals(sonra.getSchema().getName())) {
+                degisiklikler.add("schema: " + eskiSchema + " -> " + sonra.getSchema().getName());
+            }
         }
         for (Long kolonId : silinecekKolonIdler) {
-            deleteKolon(tabloId, kolonId);
+            String columnName = findKolonInTablo(getTablo(tabloId), kolonId).getName();
+            deleteKolonCore(tabloId, kolonId);
+            degisiklikler.add("kolon silindi: " + columnName);
         }
         for (KolonGuncelleme guncelleme : guncellenecekKolonlar) {
-            renameKolon(tabloId, guncelleme.kolonId(), guncelleme.yeniIsim());
-            changeKolonTag(tabloId, guncelleme.kolonId(), guncelleme.yeniTagId());
-            changeKolonPrimaryKey(tabloId, guncelleme.kolonId(), guncelleme.yeniPrimaryKey());
+            renameKolonCore(tabloId, guncelleme.kolonId(), guncelleme.yeniIsim());
+            changeKolonTagCore(tabloId, guncelleme.kolonId(), guncelleme.yeniTagId());
+            changeKolonPrimaryKeyCore(tabloId, guncelleme.kolonId(), guncelleme.yeniPrimaryKey());
+            degisiklikler.add("kolon guncellendi: id=" + guncelleme.kolonId());
         }
         for (KolonTanimi yeni : eklenecekKolonlar) {
-            addKolon(tabloId, yeni);
+            Kolon eklenen = addKolonCore(tabloId, yeni);
+            degisiklikler.add("kolon eklendi: " + eklenen.getName());
         }
-        return getTablo(tabloId);
+        Tablo sonucTablo = getTablo(tabloId);
+        if (!degisiklikler.isEmpty()) {
+            auditLogService.kaydet(IslemTipi.TABLO_GUNCELLENDI, HedefTip.TABLO, tabloId,
+                    String.join("; ", degisiklikler));
+        }
+        return sonucTablo;
     }
 
     /** Kolonu, tablonun zaten yuklu {@code kolonlar} listesi icinde arar (ekstra sorgu atmadan) — kolon bu tabloya ait degilse 404 doner. */

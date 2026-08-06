@@ -17,9 +17,15 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 
 // TabloServiceIntegrationTest ile ayni mantik: gercek Testcontainers Postgres'e karsi
 // calisir, hem metadata (Schema satiri) hem gercek DB (information_schema.schemata) kontrol edilir.
+//
+// @WithMockUser: bu test tabloService.createTablo(...) da cagiriyor, o da artik AuditLogService
+// uzerinden SecurityContext'ten "kim yapti" bilgisini okuyor (bkz. TabloServiceIntegrationTest'teki
+// ayni gerekce).
+@WithMockUser(username = "admin", roles = "ADMIN")
 class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired

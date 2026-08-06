@@ -40,7 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * calistiriyor.
  */
 @AutoConfigureMockMvc
-@WithMockUser(roles = "ADMIN")
+@WithMockUser(username = "admin", roles = "ADMIN")
 @TestPropertySource(properties = "management.tracing.export.otlp.enabled=false")
 @Import(InMemorySpanExporterTestConfig.class)
 class CacheableRedisTracingIntegrationTest extends AbstractIntegrationTest {

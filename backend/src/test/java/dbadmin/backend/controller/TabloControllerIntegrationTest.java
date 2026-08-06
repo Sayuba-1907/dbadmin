@@ -38,7 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 // baglamina hazir bir kullanici koyar (gercek bir token uretmeye gerek kalmaz); ADMIN
 // secildi cunku bu siniflarin derdi yetki degil, uclarin kendi davranisi. Yetki
 // kurallarinin kendisi ayrica SecurityRulesIntegrationTest'te sinaniyor.
-@WithMockUser(roles = "ADMIN")
+@WithMockUser(username = "admin", roles = "ADMIN")
 class TabloControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired

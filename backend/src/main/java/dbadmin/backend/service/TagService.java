@@ -1,6 +1,8 @@
 package dbadmin.backend.service;
 
 import dbadmin.backend.aop.BusinessLog;
+import dbadmin.backend.entity.HedefTip;
+import dbadmin.backend.entity.IslemTipi;
 import dbadmin.backend.entity.Kolon;
 import dbadmin.backend.entity.Tag;
 import dbadmin.backend.exception.ConflictException;
@@ -21,10 +23,13 @@ public class TagService {
 
     private final TagRepository tagRepository;
     private final KolonRepository kolonRepository;
+    private final AuditLogService auditLogService;
 
-    public TagService(TagRepository tagRepository, KolonRepository kolonRepository) {
+    public TagService(TagRepository tagRepository, KolonRepository kolonRepository,
+            AuditLogService auditLogService) {
         this.tagRepository = tagRepository;
         this.kolonRepository = kolonRepository;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -65,7 +70,10 @@ public class TagService {
             throw new ConflictException(
                     "CONFLICT_DUPLICATE_TAG_NAME", "a tag named '" + name + "' already exists", Map.of("name", name));
         }
-        return tagRepository.save(new Tag(name));
+        Tag saved = tagRepository.save(new Tag(name));
+        auditLogService.kaydet(IslemTipi.TAG_OLUSTURULDU, HedefTip.TAG, saved.getId(),
+                "tag olusturuldu: " + saved.getName());
+        return saved;
     }
 
     /** Sadece ismi degistirir — Tag'in gercek Postgres semasinda karsiligi olmadigi icin DDL calismaz. */
@@ -78,8 +86,14 @@ public class TagService {
             throw new ConflictException(
                     "CONFLICT_DUPLICATE_TAG_NAME", "a tag named '" + name + "' already exists", Map.of("name", name));
         }
+        String oldName = tag.getName();
         tag.setName(name);
-        return tagRepository.save(tag);
+        Tag saved = tagRepository.save(tag);
+        if (!oldName.equals(name)) {
+            auditLogService.kaydet(IslemTipi.TAG_YENIDEN_ADLANDIRILDI, HedefTip.TAG, id,
+                    "isim degisti: " + oldName + " -> " + name);
+        }
+        return saved;
     }
 
     /**
@@ -98,5 +112,6 @@ public class TagService {
         kullananKolonlar.forEach(kolon -> kolon.setTag(null));
         kolonRepository.saveAll(kullananKolonlar);
         tagRepository.delete(tag);
+        auditLogService.kaydet(IslemTipi.TAG_SILINDI, HedefTip.TAG, id, "tag silindi: " + tag.getName());
     }
 }

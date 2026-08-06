@@ -21,12 +21,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 
 // Every test here goes through the real service, which in turn runs real
 // CREATE/ALTER/DROP TABLE against the Testcontainers Postgres. Assertions
 // check both the metadata (Tablo/Kolon rows) and the physical database
 // (information_schema), so a test only passes if the real table actually
 // matches what the metadata claims.
+//
+// @WithMockUser: TabloService artik her mutasyonda AuditLogService uzerinden "kim yapti"
+// bilgisini SecurityContext'ten okuyor (bkz. requirement-audit-log.md) — gercek kullanimda
+// (controller uzerinden) bu context JWT filtresiyle hep dolu olur, ama bu testler servisi
+// dogrudan cagirdigi icin (HTTP katmanini atlayarak) elle doldurulmasi gerekiyor. Kullanici adi
+// "admin": KullaniciSeeder'in DB bossa olusturdugu ilk kullanici, testin ayrica bir kullanici
+// yaratmasina gerek kalmiyor.
+@WithMockUser(username = "admin", roles = "ADMIN")
 class TabloServiceIntegrationTest extends AbstractIntegrationTest {
 
     /**

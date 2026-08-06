@@ -1,6 +1,8 @@
 package dbadmin.backend.service;
 
 import dbadmin.backend.dto.KullaniciResponse;
+import dbadmin.backend.entity.HedefTip;
+import dbadmin.backend.entity.IslemTipi;
 import dbadmin.backend.entity.Kullanici;
 import dbadmin.backend.entity.Rol;
 import dbadmin.backend.exception.ConflictException;
@@ -31,14 +33,17 @@ public class KullaniciService {
     private final KullaniciRepository kullaniciRepository;
     private final PasswordEncoder passwordEncoder;
     private final KullaniciRolCacheService kullaniciRolCacheService;
+    private final AuditLogService auditLogService;
 
     public KullaniciService(
             KullaniciRepository kullaniciRepository,
             PasswordEncoder passwordEncoder,
-            KullaniciRolCacheService kullaniciRolCacheService) {
+            KullaniciRolCacheService kullaniciRolCacheService,
+            AuditLogService auditLogService) {
         this.kullaniciRepository = kullaniciRepository;
         this.passwordEncoder = passwordEncoder;
         this.kullaniciRolCacheService = kullaniciRolCacheService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -89,8 +94,11 @@ public class KullaniciService {
         }
 
         Rol atanacak = rol == null ? Rol.VIEWER : rol;
-        return kullaniciRepository.save(
+        Kullanici saved = kullaniciRepository.save(
                 new Kullanici(kullaniciAdi, passwordEncoder.encode(parola), atanacak));
+        auditLogService.kaydet(IslemTipi.KULLANICI_OLUSTURULDU, HedefTip.KULLANICI, saved.getId(),
+                "kullanici olusturuldu: " + saved.getKullaniciAdi() + " (rol=" + atanacak + ")");
+        return saved;
     }
 
     /**
@@ -108,8 +116,13 @@ public class KullaniciService {
         }
         Kullanici kullanici = getKullanici(id);
         sonAdminKorumasi(kullanici, yeniRol);
+        Rol eskiRol = kullanici.getRol();
         kullanici.setRol(yeniRol);
         kullaniciRolCacheService.evict(kullanici.getKullaniciAdi());
+        if (eskiRol != yeniRol) {
+            auditLogService.kaydet(IslemTipi.KULLANICI_ROLU_DEGISTIRILDI, HedefTip.KULLANICI, id,
+                    "rol degisti: " + eskiRol + " -> " + yeniRol + " (kullanici=" + kullanici.getKullaniciAdi() + ")");
+        }
         return kullanici;
     }
 
@@ -118,8 +131,11 @@ public class KullaniciService {
     public void deleteKullanici(Long id) {
         Kullanici kullanici = getKullanici(id);
         sonAdminKorumasi(kullanici, null);
+        String kullaniciAdi = kullanici.getKullaniciAdi();
         kullaniciRepository.delete(kullanici);
-        kullaniciRolCacheService.evict(kullanici.getKullaniciAdi());
+        kullaniciRolCacheService.evict(kullaniciAdi);
+        auditLogService.kaydet(IslemTipi.KULLANICI_SILINDI, HedefTip.KULLANICI, id,
+                "kullanici silindi: " + kullaniciAdi);
     }
 
     /**

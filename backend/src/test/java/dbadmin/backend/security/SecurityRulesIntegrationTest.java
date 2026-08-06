@@ -63,13 +63,13 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     // --- VIEWER: okuyabilir, yazamaz -----------------------------------------
 
     @Test
-    @WithMockUser(roles = "VIEWER")
+    @WithMockUser(username = "admin", roles = "VIEWER")
     void viewer_okuyabilir() throws Exception {
         mockMvc.perform(get("/api/tablolar")).andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(roles = "VIEWER")
+    @WithMockUser(username = "admin", roles = "VIEWER")
     void viewer_yazamaz_403Doner() throws Exception {
         mockMvc.perform(post("/api/tags")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -79,9 +79,17 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "VIEWER")
+    @WithMockUser(username = "admin", roles = "VIEWER")
     void viewer_kullaniciYonetimineGiremez() throws Exception {
         mockMvc.perform(get("/api/kullanicilar"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_auditLoglaraGiremez() throws Exception {
+        mockMvc.perform(get("/api/audit-loglar"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
@@ -89,7 +97,7 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     // --- EDITOR: yazabilir, kullanici yonetemez ------------------------------
 
     @Test
-    @WithMockUser(roles = "EDITOR")
+    @WithMockUser(username = "admin", roles = "EDITOR")
     void editor_yazabilir() throws Exception {
         mockMvc.perform(post("/api/tags")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,9 +110,17 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
      * {@code GET /api/**} kuralindan once gelmezse, EDITOR bu ucu okuyabilir hale gelirdi.
      */
     @Test
-    @WithMockUser(roles = "EDITOR")
+    @WithMockUser(username = "admin", roles = "EDITOR")
     void editor_kullaniciYonetimineGiremez() throws Exception {
         mockMvc.perform(get("/api/kullanicilar"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "EDITOR")
+    void editor_auditLoglaraGiremez() throws Exception {
+        mockMvc.perform(get("/api/audit-loglar"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
@@ -112,9 +128,15 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     // --- ADMIN ----------------------------------------------------------------
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void admin_kullaniciYonetiminiGorebilir() throws Exception {
         mockMvc.perform(get("/api/kullanicilar")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void admin_auditLoglariGorebilir() throws Exception {
+        mockMvc.perform(get("/api/audit-loglar")).andExpect(status().isOk());
     }
 
     // --- Kimliksiz kalmasi GEREKEN uclar -------------------------------------

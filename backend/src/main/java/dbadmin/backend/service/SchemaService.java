@@ -4,6 +4,8 @@ import dbadmin.backend.aop.BusinessLog;
 import dbadmin.backend.ddl.SchemaDdlExecutor;
 import dbadmin.backend.dto.SchemaResponseDTO;
 import dbadmin.backend.dto.TableSummaryDTO;
+import dbadmin.backend.entity.HedefTip;
+import dbadmin.backend.entity.IslemTipi;
 import dbadmin.backend.entity.Schema;
 import dbadmin.backend.entity.Tablo;
 import dbadmin.backend.exception.ConflictException;
@@ -50,15 +52,18 @@ public class SchemaService {
     private final TabloRepository tabloRepository;
     private final SchemaDdlExecutor ddlExecutor;
     private final SpanRunner spanRunner;
+    private final AuditLogService auditLogService;
     private final Counter schemasCreatedCounter;
     private final Counter schemasDeletedCounter;
 
     public SchemaService(SchemaRepository schemaRepository, TabloRepository tabloRepository,
-            SchemaDdlExecutor ddlExecutor, SpanRunner spanRunner, MeterRegistry meterRegistry) {
+            SchemaDdlExecutor ddlExecutor, SpanRunner spanRunner, AuditLogService auditLogService,
+            MeterRegistry meterRegistry) {
         this.schemaRepository = schemaRepository;
         this.tabloRepository = tabloRepository;
         this.ddlExecutor = ddlExecutor;
         this.spanRunner = spanRunner;
+        this.auditLogService = auditLogService;
         // "creations"/"deletions" kullaniyoruz, "created" degil — bkz. TabloService'teki ayni
         // isimlendirmedeki not (Prometheus'ta "_created" rezerve bir sonek, Micrometer siliyor).
         this.schemasCreatedCounter = meterRegistry.counter("dbadmin.schemas.creations");
@@ -195,6 +200,8 @@ public class SchemaService {
         Schema saved = spanRunner.inSpan("metadata-write", () -> schemaRepository.save(new Schema(name)));
         spanRunner.inSpan("ddl-execute", "db.schema.name", saved.getName(), () -> ddlExecutor.createSchema(saved.getName()));
         schemasCreatedCounter.increment();
+        auditLogService.kaydet(IslemTipi.SCHEMA_OLUSTURULDU, HedefTip.SCHEMA, saved.getId(),
+                "schema olusturuldu: " + saved.getName());
         return saved;
     }
 
@@ -228,6 +235,8 @@ public class SchemaService {
         String oldName = schema.getName();
         schema.setName(newName);
         ddlExecutor.renameSchema(oldName, newName);
+        auditLogService.kaydet(IslemTipi.SCHEMA_YENIDEN_ADLANDIRILDI, HedefTip.SCHEMA, id,
+                "isim degisti: " + oldName + " -> " + newName);
         return schema;
     }
 
@@ -252,5 +261,6 @@ public class SchemaService {
         });
         spanRunner.inSpan("ddl-execute", "db.schema.name", name, () -> ddlExecutor.dropSchema(name));
         schemasDeletedCounter.increment();
+        auditLogService.kaydet(IslemTipi.SCHEMA_SILINDI, HedefTip.SCHEMA, id, "schema silindi: " + name);
     }
 }
