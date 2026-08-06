@@ -81,6 +81,13 @@
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-exporter-otlp</artifactId>
         </dependency>
+        <!-- Testlerde gercek Tempo'ya ihtiyac duymadan span uretimini dogrulamak icin
+             (InMemorySpanExporter), bkz. SpanRunnerIntegrationTest. -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Loglari Loki'ye gonderen logback appender (bkz. logback-spring.xml). Ayri bir
              Collector/agent kullanmiyoruz — Tempo'ya da dogrudan OTLP ile yazdigimiz gibi (bkz.
              DECISIONS.md "mekanizma gorunur olsun"), buradaki HTTP push hedefi de config dosyasinda
