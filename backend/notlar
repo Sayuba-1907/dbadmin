@@ -87,18 +87,18 @@ Ağustos 3
 
     ufuk.sungu@interprobe.com.tr
 
- Ağustos 5:
+Ağustos 5:
      --> Bunların implementasyonundan önce içindeki teknolojileri veya kavramları öğren.
     1)OTel
     2)audit log
     3)scheduler
     4)react-hook
-    5)websocket/notification
+    5)websocket/notification => iki farklı ekrandan işlemleri karsılastıracağım birinde yapılan güncelleme admin panelinden gözüksün dedi.
     6)Bug
     7)Playwright =>Ekranda gördüğün her butona tıkla. Bug var mı?
     8)Pageable(backend implementasyon onu öne aktar)
- Okuma:
-    SpringBoot -> Autowired, dependecy of injection, inversion of control -> öğren
+Okuma:
+    SpringBoot -> Autowired, dependecy of injection, inversion of control -> öğren=>https://www.baeldung.com/inversion-control-and-dependency-injection-in-spring
     Hibernate -> Bir objenin lifecycle'ını öğren. transient, persist vs. -> Hibernate Lifecycle
     Testcontainer -> Fikir oluşması için.
 

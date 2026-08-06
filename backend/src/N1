@@ -139,3 +139,97 @@ http://localhost:3001/?orgId=1&from=now-6h&to=now&timezone=browser
   Ne: /api/auth/login'e Redis tabanlı bir sayaç (login:attempts:<username>, TTL'li) koyup art arda başarısız girişten sonra geçici kilitleme.
   Neden Redis: Atomik INCR + EXPIRE ile klasik ve öğretici bir Redis pattern'i (brute-force koruması).
   Öğrenme değeri: Yüksek — atomik operasyonlar, EXPIRE, farklı bir kullanım alanı (güvenlik/throttling) gösteriyor.
+
+
+
+
+OTel:
+    Hangi sql komutu neryee bağlı eskiden bilmiyorduk simdi istediğimiz veriyi Trace ıd ile o isteğe ait tüm loglar birbirine bağlandı.
+    Fail Open Mantığı:Trace ve log toplama arka plandaki backend'i (Tempo/Loki) çökse bile ana uygulama isteklere cevap vermeye devam eder (fail-open).
+    Yani gözlemlenebilirlik araçları ana sistemini bozamaz.
+    Metric=>saniyede kaç istek gidiyor diye baktığımız ölçümlerdir. Prometheus ve grafana üzerinde var olduğu için dokunmadık.
+    Log=>olan bitine kayıt altına aldık ama bu kalıcı değil, Loki'de sadece 48 saat duruyor, amacı debug. Kalıcı olan ayrı bir şey: Audit Log (Postgres'te, sınırsız süre).
+    Trace=>bir isteğin yolculuğu boyunca(controller,service,veritabanı,redis) hangi adımlardan geçtiğini ve her adımın kaç milisaniye sürdüğünü gösteriyor.
+    Eklenen araçlar:
+    OTel collector => EKLEMEDİK. Planda vardı ama bilerek eklenmedi, backend Tempo'ya ve Loki'ye dogrudan yaziyor. Tek bir trace/log backend'i oldugu icin (baska bir sisteme gecis yok) Collector'in asil faydasi bu projede ise yaramiyordu, gereksiz bir container/hata noktasi olurdu.
+    Tempo=> Sadece Traceleri saklyan veri tabanı
+    Loki=>Sadece logları saklyan veri tabanı
+Audit Log:
+    6ay önce bu tabloyu kim sildi gibi geçmişten kalan sorulara tam ceavp veriyor.Otel çökse bile yasamya devam eder.
+    Sistemin tüm yazma silme ve güncellleme işlemlerinin kim tarafından , ne zaman ,hangi hedefe yapıldıpının kalıcı kaydını tutar. veri okur.
+    Fail Closed: OTel in tam tersi olarak , eğer teknik bir sorundan dolayı autditlog veritabanına yazılmazsa, o logun ait olduğu işlem de tamamen iptal olur.
+    Kalıcı bir işlem denetimsiz kalamaz.
+    Değiştirlemezlik(Immutabillty) : yapılan her şey kaydeddildiği için her işlem kayıt altına alınır ve eski kayıtlar silinemez.
+    Entity ve Veritabanı Tablosu=> Auditlog adında yeni bir entity miz var dersek , bu varlık işlemi yapan kişinin ıd si silinse bile okunabilmesi şçşn kullanıcı
+        adını,işlem tipini ,hedefin tipini zaman damgasını ve detayları tutuyor.
+    Okuma ucu(API)=> verileri süzerek audit-loglar adında bir uç nokta tasarlandı. Tsarlanan bu uç nokta kullanıcıya ,
+        hedef tipe  veya tarih aralığına göre filtreleme ve sayfalama yapar.
+
+    test için swagger da sunu yaz: AUTH POST api/auth/login
+    {"kullaniciAdi":"admin","parola":"admin123"}
+Scheduler:
+    Belirlenen zaman çizelgesine göre arka planda çalışan bir programdır. Spring Boot'ta @Scheduled
+    anotasyonuyla bir metodu isaretleyip "her saat basi/her gun bunu calistir" diyoruz, Spring o
+    metodu kendi ayri bir thread'inde otomatik cagiriyor.
+    Spring Boot, varsayılan olarak tüm @Scheduled islemler için tek bir thread kullanır.
+    Eğer çalısan görevlerden biri (mesela agir bir DB sorgusu veya dıs bir sisteme baglanma) uzun
+    sürerse, arkaya bekleyen diğer zamanlanmıs görevler sıraya girip o işin bitmesini bekler ve
+    gecikir
+    Bizim projede ne yaptik (saatlik rapor maili):
+    - Amac: admin'e her saat basi, sistemin o anki durumunu (kac sema/tablo/kolon var) ve son 1
+      saatte audit log'a dusen islemleri ozetleyen bir mail atmak.
+    - RaporScheduler'daki @Scheduled metodu KENDISI @Async DEGIL -- zaten Spring'in kendi ayri
+      scheduler thread'inde calisiyor. Asil yavas/bekleyen kisim mail sunucusuna (SMTP) baglanip
+      mail atmak, o yuzden sadece o kismi (RaporService.raporGonder) @Async yaptik. Rapor
+      icerigini olusturma (DB sorgulari) senkron kaldi, cunku zaten hizli.
+    - Neden ayri bir thread havuzu (ThreadPoolTaskExecutor) tanimladik, Spring'in varsayilanini
+      kullanmadik: @Async icin elle bir havuz belirtilmezse Spring her cagrida yeni bir thread
+      acan (havuzlamayan) SimpleAsyncTaskExecutor'i kullanir -- bunun yerine kucuk, sabit boyutlu
+      bir havuz (core=1, max=2) tanimladik, ayni "varsayilani sorgulamadan kullanma" mantigi
+      Redis'teki 60sn timeout sorununda da vardi.
+    - Fail-open: SMTP'ye erisilemezse veya mail gonderimi basarisiz olursa uygulama çökmez, hata
+      sadece loglanir -- rapor bir bagimlilik degil bir ek ozellik (Redis cache'teki fail-open ile
+      ayni felsefe).
+    - Saat basini beklemeden manuel tetikleme icin bir uc da eklendi: POST /api/raporlar/gonder
+      (sadece ADMIN). Ayni RaporService'i cagirir, scheduler ile ayni kod yolu.
+    - Bu ozellik audit log'a bagimliydi: raporun "son 1 saatte ne oldu" kismi audit_log tablosundan
+      okunuyor, audit log olmadan yazilamazdi.
+OKUMA:
+1-)SpringBoot -> Autowired, dependecy of injection, inversion of control
+    Inversion of Control (IoC):
+    Kodlama aracı değil yazılım prensibidir.
+    IOC=Kontrolün tersine çevrilmesi.
+    Geleneksel programlamada , bir sınıfın baska bir sınıfa ihtiyacı varsa onu kendisi yapar. kontrol yazılımcıdadır.
+    IOC prensibinde ise Nesneleri olusturma ve yönetme işini sen yapma, bunu bir merkeze (spring Framework) bırak.
+    Dependency Injection (DI):
+    IOC felsefesini gerçeğe dönüştüren tasarım desenidir=> Design Pattern.
+    DI=Bağımlılık enjeksiyonu
+    IOC nin olusturdğu nesneleri koda ulaştırmak için kullanıyoruz.Dışarıdan hazır bir şekilde koda yerleştirmiş oluyoruz.
+    @Autowired - Araç:
+    Spring e Dı işlemini yapmasını söyleyen anotasyondur.
+    Spring'e benim bir nesneye ihtiyacım var, sepetinde (Container) varsa onu bana bağla komutunu @Autowired ile veriyoruz.
+    özetle Spring Boot a new kelimesini ne kadar az kullanıyorsak IOC ve DI mantığını okadar doğru uyguluyoruz demektir.
+2)Hibernate -> Bir objenin lifecycle'ını öğren. transient, persist vs. -> Hibernate Lifecycle
+    Hibernate: veritabano ile nesnelerin arasındaki köprüdür(orm). Ancak hibernate bir nesneyi veritabanına kaydederken veya güncellerken ,
+    o nesneye sadece bir veri olarak bakmaz; nesnenin bir yaşam döngüsü(Lifecycle)olduğuna inanir.
+    Hibernate Lifecycle'ın 4 temel durumu:
+    1-transient(Geçici/yeni doğan)
+    Yeni bir nesne olusturduğumuz zaman , bu nesnenin veri tabanında bir karsılığı yoktur(ID). Hibernate bu ıd den habesizdir.
+    Eğer bu nesne silinirse veya kaybolursa veritabanı bunu bilemez.
+    Basit Örnekle: Hastanede yeni doğan bebek henüz nufus müdürlüğüne bildirilmemiş ve kimliğinin olmaması durumudur.
+    2-Persistend/Managed(Kalıcı/Yönetilen)
+    Nesne artık Hibernate Session ile ilişkilendirdik.
+    Artık ID si var ve Hibernate bunu görebiliyor ve takip ediyor(Dirty Checking). Eğer bu nesnenin bir özeliğini değiştirisek,
+    tekrardan save etmemize gerek yoktur. Hibernate bunu ototmatik yapar.(Transaction bitince).
+    Basit örnek:Bebeğin kimliğini aldık ve adres değişikliğinde devletin bunu sisteme otomatik girmesidir.
+    3-Detached(Kopuk/Bağımsız)
+    Nesne veri tabanında ID si var ama Hibernatein Session u kapandı veya nesne sessiondan cıkarıldığı zaman olusur.
+    Nesnede yapılan değişiklikler veritabanına otomatik yansımaz. Tekrar takip edilmesi için nesneyi tekrardan session a bağlamak (merge-update) gerekir.
+    Basit örnek: vatandas yurt dısına cıktı kimliği duruyor ama adres değişikliğini devlet artık takip etmiyor.
+    4-Removed
+    Nesnenin veritabanından silinmesi için hibernatee talimat verme durumudur.
+    Nesne hala RAM'de duruyor olabilir ama Hibernate bu nesneyi silinecekler lsitesine aldı. Transaction tamamlandığında veri tabanından kalıcı olarak silinir.
+    Basit örnek: Ölüm belgesi çıkartılmıs bir kişiyi devletin artık takip etmeyi bırakması.
+3)Testcontainer
+    Test kütüphanesidir. Arka planda Docker il konusur. Sahte veri tabanlarıyla gelme durumlarının önüne geçmeye çalısır.
+    Testi çalıstıdığımız anda Yeni bir ortam kurulur ve işimiz bitince bu ortamı çöpe atarız.

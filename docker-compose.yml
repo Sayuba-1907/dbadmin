@@ -109,6 +109,13 @@ services:
       # Veritabani bossa acilista olusturulacak ilk ADMIN (bkz. config/KullaniciSeeder).
       APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-admin123}
+      # Saatlik rapor maili (bkz. requirement-scheduler-report.md). Gmail app password
+      # kullanilir, normal sifre degil — .env'den gelmeli, sabit yazilmamali.
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      APP_REPORT_ADMIN_EMAIL: ${APP_REPORT_ADMIN_EMAIL:-}
     depends_on:
       db:
         condition: service_healthy

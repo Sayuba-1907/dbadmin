@@ -31,8 +31,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <li>GET {@code /api/**} → giris yapmis <b>herkes</b> (VIEWER dahil) okuyabilir.
  *   <li>Diger metodlar {@code /api/**} → EDITOR veya ADMIN ("kimisi update edebilsin kimisi
  *       edemesin").
- *   <li>{@code /api/kullanicilar/**} ve {@code /api/audit-loglar/**} → sadece ADMIN. Bu kurallar
- *       digerlerinden <b>once</b> yazilmalidir: kurallar sirayla degerlendirilir, ilk eslesen kazanir.
+ *   <li>{@code /api/kullanicilar/**}, {@code /api/audit-loglar/**} ve {@code /api/raporlar/**} →
+ *       sadece ADMIN. Bu kurallar digerlerinden <b>once</b> yazilmalidir: kurallar sirayla
+ *       degerlendirilir, ilk eslesen kazanir.
  * </ul>
  *
  * <h2>Neden stateless / CSRF kapali</h2>
@@ -73,9 +74,10 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // Tarayici preflight istegi kimlik tasimaz; reddedilirse asil istek hic atilmaz.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Kullanici yonetimi ve audit log sadece ADMIN — genel /api/** kuralindan ONCE gelmeli.
+                        // Kullanici yonetimi, audit log ve rapor tetikleme sadece ADMIN — genel /api/** kuralindan ONCE gelmeli.
                         .requestMatchers("/api/kullanicilar/**").hasRole(Rol.ADMIN.name())
                         .requestMatchers("/api/audit-loglar/**").hasRole(Rol.ADMIN.name())
+                        .requestMatchers("/api/raporlar/**").hasRole(Rol.ADMIN.name())
                         .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                         .requestMatchers("/api/**").hasAnyRole(Rol.EDITOR.name(), Rol.ADMIN.name())
                         .anyRequest().authenticated())

@@ -94,6 +94,14 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
 
+    @Test
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_raporTetikleyemez() throws Exception {
+        mockMvc.perform(post("/api/raporlar/gonder"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
     // --- EDITOR: yazabilir, kullanici yonetemez ------------------------------
 
     @Test
@@ -125,6 +133,14 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
 
+    @Test
+    @WithMockUser(username = "admin", roles = "EDITOR")
+    void editor_raporTetikleyemez() throws Exception {
+        mockMvc.perform(post("/api/raporlar/gonder"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
     // --- ADMIN ----------------------------------------------------------------
 
     @Test
@@ -137,6 +153,13 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     @WithMockUser(username = "admin", roles = "ADMIN")
     void admin_auditLoglariGorebilir() throws Exception {
         mockMvc.perform(get("/api/audit-loglar")).andExpect(status().isOk());
+    }
+
+    /** app.report.admin-email test ortaminda bos oldugu icin raporGonder gercek SMTP'ye hic gitmez (bkz. RaporService). */
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void admin_raporTetikleyebilir() throws Exception {
+        mockMvc.perform(post("/api/raporlar/gonder")).andExpect(status().isAccepted());
     }
 
     // --- Kimliksiz kalmasi GEREKEN uclar -------------------------------------
