@@ -1,0 +1,107 @@
+.notification-bell {
+  position: relative;
+}
+
+.notification-bell-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+}
+
+.notification-bell-btn:hover {
+  background-color: var(--color-surface-raised);
+}
+
+.notification-bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background-color: var(--color-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 340px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 40;
+  overflow: hidden;
+}
+
+.notification-panel-header {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.notification-panel-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.notification-panel-mark-all {
+  font-size: var(--text-sm, 13px);
+}
+
+.notification-panel-list {
+  overflow-y: auto;
+}
+
+.notification-panel-empty {
+  padding: var(--space-4);
+  color: var(--color-text-secondary);
+  text-align: center;
+  font-size: var(--text-sm, 13px);
+}
+
+.notification-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-primary);
+}
+
+.notification-item:hover {
+  background-color: var(--color-surface-raised);
+}
+
+.notification-item.unread {
+  background-color: var(--color-accent-soft);
+}
+
+.notification-item-message {
+  font-size: var(--text-base, 14px);
+}
+
+.notification-item-meta {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}

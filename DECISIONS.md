@@ -369,3 +369,139 @@ One line per notable decision: what was chosen, what was ruled out, why.
 
 - **Bu turda bulunan/duzeltilen bir Hibernate `ddl-auto=update` sinirlamasi (dokunulmadi, sadece dev DB'de elle onarildi): `IslemTipi` enum'una `TABLO_GUNCELLENDI` eklenmesi, zaten var olan `audit_log` tablosunun `audit_log_islem_tipi_check` CHECK constraint'ini otomatik guncellemedi.**
   Neden ortaya cikti: `ddl-auto=update` sadece EKSIK tablo/kolonlari ekler, var olan bir CHECK constraint'i yeni enum degerini icerecek sekilde yeniden yazmaz. Sonuc: `useTablolar` (React hook Faz 2) pilot testi sirasinda `PATCH /api/tablolar/{id}/degisiklikler` (applyChanges, TABLO_GUNCELLENDI audit satiri yazan tek yer) her zaman 409 `CONFLICT_COLUMN_NOT_UNIQUE` donuyordu — hata mesaji yaniltici (gercek sebep PK degil, `audit_log` INSERT'inin CHECK constraint'e takilmasiydi, `GlobalExceptionHandler`'in `DataIntegrityViolationException`'i genel bir "veri celismesi" koduna eslemesi yuzunden). Log'daki gercek `ConstraintViolationException`'i okuyarak teshis edildi. Kalici kod degisikligi gerekmiyor (yeni bir `docker compose down -v` ile tablo sifirdan doğru constraint'le kurulur); bu ortamda `ALTER TABLE ... DROP/ADD CONSTRAINT` ile elle senkronize edildi. Ders: bu proje `ddl-auto=update` kullandigi surece, bir enum'a (audit `IslemTipi`, `HedefTip` gibi CHECK constraint'e donusen alanlar) yeni deger eklendiginde, degisen surecin devam eden bir Docker ortaminda calisan gelistirici `docker compose down -v` yapmadikca ayni hatayi tekrar yasayabilir.
+
+## Kod tabaninin tamamen Ingilizce'ye cevrilmesi (2026-08-07)
+
+- **Tum kod isimlendirmesi (entity/DTO/servis/repository/controller siniflari, metotlar,
+  degiskenler, DB tablo/kolon adlari, REST path'leri, frontend api/hook/component isimleri)
+  Turkce'den Ingilizce'ye cevrildi** — `Tablo`→`DataTable`, `Kolon`→`DataColumn`,
+  `Kullanici`→`User`, `Bildirim`→`Notification`, `/api/tablolar`→`/api/tables` vb.
+  Ruled out: mevcut karisik kural (Turkce domain terimleri + Ingilizce altyapi terimleri).
+  Why: kullanicinin acik talebi — "tum proje (backend + frontend, her yer), entity/DTO/degisken
+  isimleri de dahil, her sey Ingilizce". Onceki karisik-dil kurali bilinçli bir tercihti (bkz.
+  CLAUDE.md'nin eski "Naming" bolumu) ama kullanici bu karari geri aldi.
+
+- **Yorum satirlari (Javadoc/inline comment) VE `tr.json`/`en.json` ceviri degerleri ile i18n
+  JSON key'leri kapsam DISINDA birakildi** — sadece kod isimleri (sinif/metot/degisken/DB/API)
+  degisti.
+  Ruled out: butun proje metnini (yorumlar dahil) Ingilizce'ye cevirmek.
+  Why: kullanici kod-icerigi (yorumlar, UI metni) ile kod-kimligini (isimler) acikca ayirdi —
+  yorumlar projenin *neden* boyle yazildigini anlatan Turkce dokumantasyon, degistirilmesi saf
+  gurultu+risk (bir sonraki AI oturumunun yanlislikla yorum ICERIGINI de çevirmeye devam etmesi
+  riski gercek oldu, bkz. asagidaki "Ders" notu).
+
+- **DB verisi korunarak (data-preserving) migrate edildi** — `docker compose down -v` DEGIL, calisan
+  Postgres'e karsi SQL `ALTER TABLE/COLUMN RENAME` + CHECK constraint drop/re-add + enum-string
+  `UPDATE ... CASE` ile. Migrasyon oncesi/sonrasi satir sayilari (15 tablo, 51 kolon, 6 kullanici,
+  6 schema, 10 notification, 49 audit_log) birebir dogrulandi.
+  Ruled out: veritabanini sifirlayip yeniden kurmak.
+  Why: kullanicinin acik talebi ("Veri korunsun, SQL ile kolon/tablo adlari yeniden adlandirilsin").
+
+- **Iki isim carpismasi bilerek plandaki "birebir Ingilizce karsilik" kuralindan sapildi:**
+  `Kolon`→`Column` yerine `DataColumn`, `Tablo`→`Table` yerine `DataTable`. Sebep: Java'da ayni
+  dosyada hem entity sinifi hem de `jakarta.persistence.Column`/`Table` **annotation'i** ayni ada
+  sahip olamaz/kafa karistirir. Ayrica `dbadmin.backend.entity.User` (yeni) ile
+  `org.springframework.security.core.userdetails.User` (Spring) çakismasi, Spring'in `User`'ini
+  unqualified birakip uygulamanin kendi `User`'ini kullanildigi tek yerde fully-qualified yazarak
+  cozuldu (`JwtAuthenticationFilter`, `UserDetailsServiceImpl` — bu sinif da carpismayi
+  aciklamak icin `KullaniciDetailsService`'ten yeniden adlandirildi).
+
+- **Ders (bu turda iki kez tekrar eden hata sinifi): kelime-sinirli (`\b...\b`) toplu `perl`
+  regex ile isim degistirme, ayni kelimeyi CSS class string'i / template literal / hardcoded
+  test-assertion metni icinde de kelimesi kelimesine yakaladigi icin, kod-disi icerigi de
+  yanlislikla degistirdi** — iki somut örnek: (1) `TableSidebar.tsx`'teki template literal
+  interpolasyonlari (`` `tablo-${id}-loading` `` gibi) bir toplu-degistirme turunda kirildi
+  (`${id}` kismi kayboldu), elle duzeltildi; (2) frontend test dosyalarindaki Turkce UI-metni
+  beklentileri ("+ Yeni Tablo" gibi, tr.json'daki gercek render edilen metinle karsilastiran
+  `screen.getByText(...)` cagrilari) "Tablo"→"Table" donusumune yakalanip "+ Yeni Table" gibi
+  anlamsiz karisik bir stringe donustu, testler kirilana kadar fark edilmedi. Ikisi de elle
+  bulunup duzeltildi (bkz. `git log` bu tarihte). Bir sonraki benzer toplu-rename isleminde:
+  regex'i sadece `.java`/`.ts`/`.tsx` KOD dosyalarina uygulamadan once, CSS class string'i,
+  template literal interpolasyonu ve test-assertion string literal'i olan satirlari ayri
+  incelemek/haric tutmak gerekir — kor bir "her yerde ayni kelime" varsayimi guvenli degil.
+
+## Rename sonrasi bug taramasi (2026-08-07, ayni gun devam)
+
+Kullanicinin "bug var mı kontrol et" talebiyle, rename'in kendisinin degil **davranisin**
+dogrulandigi ikinci bir gecis yapildi — gercek admin hesabiyla tarayicida giris denenince
+ortaya cikti, sonra sistematik olarak benzerleri arandi.
+
+- **`api/auth.ts login()` ve `api/users.ts createUser()`, backend'in `LoginRequest`/
+  `CreateUserRequest` DTO'larindaki `parola`→`password` alan adi degisikligini frontend'e
+  yansitmamisti** — hala `{ username, parola }` gonderiyorlardi, backend'in JSON'da beklemedigi
+  bir alan adiyla `password` her zaman `null` okunuyor, gecerli sifreyle bile
+  `AUTH_INVALID_CREDENTIALS` donuyordu.
+  Nasil bulundu: gercek admin hesabiyla giris denendi, kullanici "şifre admin123, neden
+  giremiyorum" dedi — `curl` ile backend'e dogrudan `parola`/`password` denenince fark bulundu.
+  Ders: toplu isim-degistirme JSON body alanlarini (TypeScript'te sadece obje literal key'i,
+  tip kontrolunden GECMEZ — `{ username, parola }` TypeScript acisindan gecerlidir) yakalamiyor.
+  Duzeltme sonrasi hem `auth.test.ts` hem `users.test.ts`'e gonderilen body'yi dogrudan
+  dogrulayan testler eklendi.
+
+- **`api/tables.ts addColumn()` ve `api/schemas.ts getSchemaTables()`, bir onceki toplu
+  regex geciminde template literal'lerindeki `${tableId}`/`${schemaId}` interpolasyonunu
+  kaybetmisti** (`` `/api/tables//columns` `` gibi cift-slash'li gecersiz URL'ler kaldi).
+  Nasil bulundu: her `api/*.ts` dosyasindaki HTTP cagrisi backend DTO'suyla tek tek elle
+  karsilastirilirken. Canli uygulamayi ETKİLEMEDİ cunku ikisi de UI'dan hic cagrilmiyor
+  ("kolon ekle" hep draft+applyChanges akisindan gecer) — otomatik testler de bunlari
+  dogrudan sinamiyordu, bu yuzden sessizce bozuk kalmislardi. `tables.test.ts`/
+  `schemas.test.ts` eklenerek URL'lerin dogrulugu artik test ediliyor.
+
+- **Ders (genel)**: bu buyuklukte bir rename'de en riskli nokta, TypeScript'in tip sistemi
+  DISINDA kalan yerler — JSON body alan adlari (obje literal'i, string key), URL string'leri/
+  template literal'leri, CSS class string'leri. `tsc --noEmit` hicbirini yakalamiyor;
+  sadece calisan testler (ya da gercek tarayici + gercek backend) yakalar. Bu tur bir
+  refactor'den sonra mutlaka: (1) her API fonksiyonunun gonderdigi body'yi backend DTO'suyla
+  satir satir karsilastir, (2) gercek kullaniciyla/gercek DB'yle uctan uca en az bir kez
+  tarayicida dene — otomatik test yesili tek basina yeterli degil.
+
+## Playwright + kapsamli tiklama testi (2026-08-07, ayni gun devam)
+
+Kullanicinin "ekranda gördüğün her butona tıkla, bug var mı kontrol et" talebiyle yapilan
+kapsamli manuel/otomatik tiklama testi.
+
+- **`e2e/table-lifecycle.spec.ts`**, bir onceki rename'den kalma stale bir CSS selector
+  iceriyordu (`.tablo-name-input`, `.table-name-input` olarak degismisti) — duzeltildi,
+  `npx playwright test` yesile dondu (gercek Docker frontend + gercek backend + gercek DB'ye
+  karsi).
+
+- **`.inline-edit-form` (TableSidebar'daki schema yeniden adlandirma formu) 240px'lik sabit
+  genislikli `.sidebar` kutusunu tasiyordu** — `display: inline-flex` varsayilan olarak
+  sarmadigi (flex-wrap: nowrap) icin input+Kaydet+Vazgeç butonlari yan yana sigmayinca tasan
+  kisim (Vazgeç butonu) sag paneldeki icerigin GORUNURDE ustunde kaliyor ama gercekte
+  tiklamalari o alamiyordu (pointer-events tasan degil, altta kalan panelin oluyordu) — yani
+  buton gozle gorunuyor ama tiklanamiyordu. `git diff` ile dogrulandi: bu benim rename
+  degisikliklerimden degil, ONCEDEN VAR olan bir bug (muhtemelen sidebar 240px'e sabitlenirken
+  hic fark edilmemis). `flex-wrap: wrap` + input'a `flex: 1 1 100%` eklenerek duzeltildi —
+  artik butonlar tasmiyor, ikinci satira dusuyor.
+  Ders: pointer-events acisindan "gorunuyor" ile "tiklanabilir" ayni sey degil — bunu ancak
+  gercek bir tiklama denemesiyle (screenshot'a bakmak yetmez) yakalayabildik.
+
+- **CIDDI KAZA: otomatik tiklama testi sirasinda gercek `admin` hesabinin rolu yanlislikla
+  ADMIN'den VIEWER'a dusuruldu.** Native `<select>` (rol dropdown'u) uzerinde koordinat-tabanli
+  tiklama denemeleri guvenilir calismadi (native select'ler OS-seviyesinde render edilen bir
+  popup actigi icin, sayfa DOM'undaki koordinatlarla eslesmiyor) — bu yuzden bir noktada
+  yanlislikla `bugtest_user` (test icin olusturulan gecici kullanici) yerine gercek `admin`
+  hesabinin rolu degisti (bkz. `audit_log`: `USER_ROLE_CHANGED ADMIN -> VIEWER, kullanici=admin`,
+  2026-08-07 12:51 UTC). Sonuc: `admin` hesabi ADMIN'e ozel uclara (Kullanicilar sayfasi,
+  audit log, raporlar) 403 almaya basladi — JWT hala eski (ADMIN) rolu tasidigi icin frontend
+  hala "admin · ADMIN" gosteriyordu ama backend'in canli yetki kontrolu (DB + Redis
+  `user:role:admin` cache) artik VIEWER diyordu, bu da tutarsizligin nedeniydi.
+  **Duzeltme**: `UPDATE users SET role='ADMIN' WHERE username='admin'` + Redis'teki
+  `user:role:admin` cache anahtari silindi (uygulamanin kendi `UserService.changeRole`
+  akisinin yaptigi ile birebir ayni iki adim). Baska hicbir kullanici/veri etkilenmedi
+  (dogrulandi: `select * from users` once/sonra karsilastirildi).
+  Ders (kritik, gelecekteki otomasyon icin): **native `<select>` elementlerinde asla
+  koordinat-tabanli (screenshot pixel) tiklama kullanma** — acilan seçenekler sayfa DOM'unun
+  disinda render edilir, tiklama nereye giderse gitsin ongorulemez ve YANLIS BIR SATIRA
+  denk gelebilir. Bunun yerine: elemani odakla (click) sonra klavye (`ArrowDown`/`Enter`) ile
+  sec, ya da mumkunse `<select>` yerine (uygulama kodu degismeyecekse) native select event'ini
+  JS'den `element.value = ...; element.dispatchEvent(new Event('change'))` ile tetikle.
+  Ayni ders: ekran goruntusu al -> tikla dongusunde, ARADA sayfa DUZENI degisirse (ör. bir
+  agac dugumu genisletildi, bir liste filtrelendi) eski koordinatlar baska bir elemana denk
+  gelebilir — HER tiklamadan hemen once TAZE bir ekran goruntusu almak sart, "birkac tiklama
+  onceki" bir goruntuye guvenmek gercek veri kaybina yol acabiliyor (bu olayda oldugu gibi).
+
+- Bunlarin disinda (bildirim zili, tema/dil degistirici, arama/sirala, schema/table/column CRUD,
+  drag-drop yerine PATCH akisi, tag kullanim detayi, kullanici olustur/rol degistir/sil) hepsi
+  ayrintili tiklanarak dogrulandi, baska bug bulunmadi.

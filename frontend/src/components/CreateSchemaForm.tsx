@@ -9,7 +9,7 @@ interface CreateSchemaFormProps {
   onClose: () => void;
 }
 
-/** "Yeni Schema" modal formu — CreateTabloForm ile ayni yapi, sadece tek bir isim alani var. */
+/** "Yeni Schema" modal formu — CreateTableForm ile ayni yapi, sadece tek bir isim alani var. */
 export function CreateSchemaForm({ onSubmit, onClose }: CreateSchemaFormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState("");

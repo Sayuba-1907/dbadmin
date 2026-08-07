@@ -6,11 +6,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
- * {@code PasswordEncoder} eskiden {@code SecurityConfig} icindeydi. {@code KullaniciService}
+ * {@code PasswordEncoder} eskiden {@code SecurityConfig} icindeydi. {@code UserService}
  * (parola hash'lemek icin buna ihtiyac duyar) {@code JwtAuthenticationFilter} tarafindan
- * kullanilmaya baslayinca ({@code KullaniciRolCacheService} miss'inde DB'den taze rol okumak
+ * kullanilmaya baslayinca ({@code UserRoleCacheService} miss'inde DB'den taze rol okumak
  * icin), su donguyu olusturuyordu: {@code SecurityConfig -> JwtAuthenticationFilter ->
- * KullaniciService -> PasswordEncoder (SecurityConfig'in bean'i) -> SecurityConfig}. Bean'i
+ * UserService -> PasswordEncoder (SecurityConfig'in bean'i) -> SecurityConfig}. Bean'i
  * SecurityConfig'ten bagimsiz bu sinifa tasimak donguyu kirdi.
  */
 @Configuration

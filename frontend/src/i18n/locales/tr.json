@@ -102,6 +102,13 @@
     "passwordPlaceholder": "parola",
     "create": "Kullanıcı Oluştur"
   },
+  "notificationBell": {
+    "buttonLabel": "Bildirimler",
+    "title": "Bildirimler",
+    "empty": "Henüz bildiriminiz yok",
+    "markAllRead": "Tümünü okundu işaretle",
+    "newNotificationToast": "{{user}}: {{message}}"
+  },
   "notifications": {
     "loadFailed": "Veriler yüklenemedi",
     "tableCreated": "\"{{name}}\" tablosu oluşturuldu",
@@ -172,6 +179,7 @@
     "VALIDATION_WEAK_PASSWORD": "Parola en az {{min}} karakter olmalı",
     "VALIDATION_MISSING_ROLE": "Bir rol belirtilmeli",
     "NOT_FOUND_USER": "Kullanıcı bulunamadı (id: {{id}})",
+    "NOT_FOUND_NOTIFICATION": "Bildirim bulunamadı (id: {{id}})",
     "CONFLICT_DUPLICATE_USERNAME": "\"{{name}}\" adında bir kullanıcı zaten var",
     "CONFLICT_LAST_ADMIN": "Sistemdeki son yönetici silinemez ya da yetkisi düşürülemez",
     "NOT_FOUND_ENDPOINT": "Bu yolda bir uç nokta yok: {{path}}",

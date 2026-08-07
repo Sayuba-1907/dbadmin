@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthProvider";
 
 /** Dashboard'un su an gosterdigi ana alan: schema/tablo agaci mi, etiket listesi mi, yoksa kullanici yonetimi mi. */
-export type WorkspaceView = "schemalar" | "tagler" | "kullanicilar";
+export type WorkspaceView = "schemas" | "tags" | "users";
 
 interface WorkspaceNavProps {
   active: WorkspaceView;
@@ -24,8 +24,8 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
   return (
     <nav className="workspace-nav flex flex-column">
       <button
-        className={`workspace-nav-btn cursor-pointer text-left${active === "schemalar" ? " active" : ""}`}
-        onClick={() => onChange("schemalar")}
+        className={`workspace-nav-btn cursor-pointer text-left${active === "schemas" ? " active" : ""}`}
+        onClick={() => onChange("schemas")}
       >
         <span className="nav-icon" aria-hidden="true">
           ▦
@@ -33,8 +33,8 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
         {t("nav.schemalar")}
       </button>
       <button
-        className={`workspace-nav-btn cursor-pointer text-left${active === "tagler" ? " active" : ""}`}
-        onClick={() => onChange("tagler")}
+        className={`workspace-nav-btn cursor-pointer text-left${active === "tags" ? " active" : ""}`}
+        onClick={() => onChange("tags")}
       >
         <span className="nav-icon" aria-hidden="true">
           ◈
@@ -43,8 +43,8 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
       </button>
       {isAdmin && (
         <button
-          className={`workspace-nav-btn cursor-pointer text-left${active === "kullanicilar" ? " active" : ""}`}
-          onClick={() => onChange("kullanicilar")}
+          className={`workspace-nav-btn cursor-pointer text-left${active === "users" ? " active" : ""}`}
+          onClick={() => onChange("users")}
         >
           <span className="nav-icon" aria-hidden="true">
             ◉

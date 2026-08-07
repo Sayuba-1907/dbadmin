@@ -1,9 +1,9 @@
 package dbadmin.backend.controller;
 
+import dbadmin.backend.dto.ColumnUsageResponse;
 import dbadmin.backend.dto.CreateTagRequest;
 import dbadmin.backend.dto.ErrorExamples;
 import dbadmin.backend.dto.ErrorResponse;
-import dbadmin.backend.dto.KolonUsageResponse;
 import dbadmin.backend.dto.RenameRequest;
 import dbadmin.backend.dto.TagResponse;
 import dbadmin.backend.service.TagService;
@@ -16,6 +16,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Tag endpoint'leri — TabloController'a benzer ince bir katman, is mantigi {@link TagService}'te. */
+/** Tag endpoint'leri — TableController'a benzer ince bir katman, is mantigi {@link TagService}'te. */
 @RestController
 @RequestMapping("/api/tags")
 @Tag(name = "Tagler", description = "Kolonlara baglanabilen etiketleri yonetir. Tag'lerin gercek Postgres "
@@ -42,17 +44,18 @@ public class TagController {
         this.tagService = tagService;
     }
 
-    /** GET /api/tags — tum etiketlerin listesi. */
-    @Operation(summary = "Tum etiketleri listele", description = "Sistemdeki tum etiketleri doner.")
-    @ApiResponse(responseCode = "200", description = "Etiket listesi (bos olabilir).")
+    /** GET /api/tags — tum etiketlerin sayfalanmis listesi. */
+    @Operation(summary = "Tum etiketleri sayfalanmis olarak listele", description = "Sistemdeki tum etiketleri "
+            + "sayfalanmis olarak doner. Standart Spring parametreleri gecerlidir: page, size, sort.")
+    @ApiResponse(responseCode = "200", description = "Etiket sayfasi (icerik bos olabilir).")
     @GetMapping
-    public List<TagResponse> list() {
-        return tagService.listTags().stream().map(TagResponse::from).toList();
+    public Page<TagResponse> list(Pageable pageable) {
+        return tagService.listTags(pageable).map(TagResponse::from);
     }
 
     /** POST /api/tags — yeni etiket olusturur, 201 Created doner. */
     @Operation(summary = "Yeni etiket olustur", description = "Verilen isimle yeni bir etiket olusturur. "
-            + "Bu etiket daha sonra kolonlara (bkz. PATCH /api/tablolar/{id}/kolonlar/{kolonId}/tag) "
+            + "Bu etiket daha sonra kolonlara (bkz. PATCH /api/tables/{id}/columns/{columnId}/tag) "
             + "baglanabilir.")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Etiket olusturuldu."),
@@ -75,7 +78,7 @@ public class TagController {
         return TagResponse.from(tagService.createTag(request.name()));
     }
 
-    /** GET /api/tags/{id}/kolonlar — bu tag'i tasiyan tum kolonlari, tablo/schema bilgisiyle birlikte doner. */
+    /** GET /api/tags/{id}/columns — bu tag'i tasiyan tum kolonlari, tablo/schema bilgisiyle birlikte doner. */
     @Operation(summary = "Bir etiketin kullanildigi kolonlari listele",
             description = "Verilen etiketi tasiyan tum kolonlari, hangi tabloda ve hangi schema'da "
                     + "olduklariyla birlikte doner. Sol menudeki 'Tagler' gorunumunde bir etiketin "
@@ -91,10 +94,10 @@ public class TagController {
                                 summary = "Etiket bulunamadi",
                                 value = ErrorExamples.NOT_FOUND_TAG)))
     })
-    @GetMapping("/{id}/kolonlar")
-    public List<KolonUsageResponse> listUsage(
+    @GetMapping("/{id}/columns")
+    public List<ColumnUsageResponse> listUsage(
             @Parameter(description = "Etiketin id'si.", example = "1") @PathVariable Long id) {
-        return tagService.getTagUsage(id).stream().map(KolonUsageResponse::from).toList();
+        return tagService.getTagUsage(id).stream().map(ColumnUsageResponse::from).toList();
     }
 
     /** PATCH /api/tags/{id} — sadece ismi degistirir (bkz. TagService.renameTag). */

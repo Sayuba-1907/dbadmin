@@ -45,6 +45,7 @@ public final class ErrorCodeRegistry {
             Map.entry("NOT_FOUND_TAG", 40404),
             Map.entry("NOT_FOUND_USER", 40405),
             Map.entry("NOT_FOUND_ENDPOINT", 40406),
+            Map.entry("NOT_FOUND_NOTIFICATION", 40407),
             // 405
             Map.entry("VALIDATION_METHOD_NOT_ALLOWED", 40501),
             // 409

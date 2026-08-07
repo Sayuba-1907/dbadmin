@@ -8,9 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dbadmin.backend.AbstractIntegrationTest;
-import dbadmin.backend.dto.CreateKolonRequest;
+import dbadmin.backend.dto.CreateColumnRequest;
 import dbadmin.backend.dto.CreateSchemaRequest;
-import dbadmin.backend.dto.CreateTabloRequest;
+import dbadmin.backend.dto.CreateTableRequest;
 import dbadmin.backend.dto.CreateTagRequest;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +26,7 @@ import tools.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 // Bu testler uclara HTTP uzerinden gidiyor, yani artik Spring Security'nin filtre
 // zincirinden de geciyorlar — kimliksiz her istek 401 donerdi. @WithMockUser guvenlik
-// baglamina hazir bir kullanici koyar (gercek bir token uretmeye gerek kalmaz); ADMIN
+// baglamina hazir bir user koyar (gercek bir token uretmeye gerek kalmaz); ADMIN
 // secildi cunku bu siniflarin derdi yetki degil, uclarin kendi davranisi. Yetki
 // kurallarinin kendisi ayrica SecurityRulesIntegrationTest'te sinaniyor.
 @WithMockUser(username = "admin", roles = "ADMIN")
@@ -38,7 +38,7 @@ class TagControllerIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    /** Testlerin tablo kurdugu schema — "public" gecerli bir hedef degil. */
+    /** Testlerin table kurdugu schema — "public" gecerli bir hedef degil. */
     private static final String TEST_SCHEMA = "tag_usage_sema";
 
     private Long testSchemaId;
@@ -49,15 +49,19 @@ class TagControllerIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void ensureTestSchema() throws Exception {
-        String listResponse = mockMvc.perform(get("/api/schemalar"))
+        // GET /api/schemas artik sayfalanmis ({@code Page<SchemaResponse>}) doner — satirlar
+        // artik JSON'un koku degil, "content" alaninin altinda (bkz. TableController#list
+        // javadoc'undaki ayni not). Buyuk bir size, paylasilan test DB'sinde biriken tum
+        // schema'lar arasinda test schema'sini kacirmamak icin.
+        String listResponse = mockMvc.perform(get("/api/schemas").param("size", "1000"))
                 .andReturn().getResponse().getContentAsString();
-        for (JsonNode schema : objectMapper.readTree(listResponse)) {
+        for (JsonNode schema : objectMapper.readTree(listResponse).get("content")) {
             if (TEST_SCHEMA.equals(schema.get("name").asString())) {
                 testSchemaId = schema.get("id").asLong();
                 return;
             }
         }
-        String createResponse = mockMvc.perform(post("/api/schemalar")
+        String createResponse = mockMvc.perform(post("/api/schemas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(new CreateSchemaRequest(TEST_SCHEMA))))
                 .andReturn().getResponse().getContentAsString();
@@ -103,7 +107,7 @@ class TagControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void usage_unknownTag_returns404() throws Exception {
-        mockMvc.perform(get("/api/tags/999999/kolonlar"))
+        mockMvc.perform(get("/api/tags/999999/columns"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code", is("NOT_FOUND_TAG")));
     }
@@ -116,7 +120,7 @@ class TagControllerIntegrationTest extends AbstractIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         long tagId = objectMapper.readTree(tagResponse).get("id").asLong();
 
-        mockMvc.perform(get("/api/tags/{id}/kolonlar", tagId))
+        mockMvc.perform(get("/api/tags/{id}/columns", tagId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
@@ -129,22 +133,22 @@ class TagControllerIntegrationTest extends AbstractIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         long tagId = objectMapper.readTree(tagResponse).get("id").asLong();
 
-        CreateTabloRequest createTablo = new CreateTabloRequest("tag_usage_tablo", testSchemaId,
-                List.of(new CreateKolonRequest("tc_no", "text", tagId)));
-        String tabloResponse = mockMvc.perform(post("/api/tablolar")
+        CreateTableRequest createTable = new CreateTableRequest("tag_usage_tablo", testSchemaId,
+                List.of(new CreateColumnRequest("tc_no", "text", tagId)));
+        String tabloResponse = mockMvc.perform(post("/api/tables")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(createTablo)))
+                        .content(json(createTable)))
                 .andReturn().getResponse().getContentAsString();
-        JsonNode tablo = objectMapper.readTree(tabloResponse);
-        long kolonId = tablo.get("kolonlar").get(0).get("id").asLong();
+        JsonNode table = objectMapper.readTree(tabloResponse);
+        long kolonId = table.get("columns").get(0).get("id").asLong();
 
-        mockMvc.perform(get("/api/tags/{id}/kolonlar", tagId))
+        mockMvc.perform(get("/api/tags/{id}/columns", tagId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].kolonId", is((int) kolonId)))
-                .andExpect(jsonPath("$[0].kolonName", is("tc_no")))
-                .andExpect(jsonPath("$[0].tabloId", is(tablo.get("id").asInt())))
-                .andExpect(jsonPath("$[0].tabloName", is("tag_usage_tablo")))
+                .andExpect(jsonPath("$[0].columnId", is((int) kolonId)))
+                .andExpect(jsonPath("$[0].columnName", is("tc_no")))
+                .andExpect(jsonPath("$[0].tableId", is(table.get("id").asInt())))
+                .andExpect(jsonPath("$[0].tableName", is("tag_usage_tablo")))
                 .andExpect(jsonPath("$[0].schemaName", is(TEST_SCHEMA)));
     }
 }

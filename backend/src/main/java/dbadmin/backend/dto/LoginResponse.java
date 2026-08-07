@@ -1,6 +1,6 @@
 package dbadmin.backend.dto;
 
-import dbadmin.backend.entity.Rol;
+import dbadmin.backend.entity.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -14,6 +14,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record LoginResponse(
         @Schema(description = "Imzali JWT. Sonraki isteklerde Authorization basliginda gonderilir.")
                 String token,
-        @Schema(description = "Giris yapan kullanicinin adi.", example = "admin") String kullaniciAdi,
-        @Schema(description = "Kullanicinin rolu.", example = "ADMIN") Rol rol) {
+        @Schema(description = "Giris yapan kullanicinin adi.", example = "admin") String username,
+        @Schema(description = "Kullanicinin rolu.", example = "ADMIN") Role role) {
 }

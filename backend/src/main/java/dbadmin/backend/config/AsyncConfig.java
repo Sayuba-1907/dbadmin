@@ -13,21 +13,21 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * olsa da, "varsayilani sorgulamadan kullanma" ilkesi Redis'teki 60sn timeout gotcha'siyla ayni
  * gerekceye dayaniyor (bkz. DECISIONS.md) — bilerek kucuk, sabit boyutlu bir havuz tanimlandi.
  * <p>
- * Bean'e isim verildi ({@code raporTaskExecutor}) cunku birden fazla {@code TaskExecutor} bean'i
- * varsa Spring hangisini kullanacagini bilemez; {@code @Async("raporTaskExecutor")} ile acikca
- * belirtiliyor (bkz. RaporService).
+ * Bean'e isim verildi ({@code reportTaskExecutor}) cunku birden fazla {@code TaskExecutor} bean'i
+ * varsa Spring hangisini kullanacagini bilemez; {@code @Async("reportTaskExecutor")} ile acikca
+ * belirtiliyor (bkz. ReportService).
  */
 @Configuration
 @EnableAsync
 public class AsyncConfig {
 
-    @Bean("raporTaskExecutor")
-    public Executor raporTaskExecutor() {
+    @Bean("reportTaskExecutor")
+    public Executor reportTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(1);
         executor.setMaxPoolSize(2);
         executor.setQueueCapacity(10);
-        executor.setThreadNamePrefix("rapor-mail-");
+        executor.setThreadNamePrefix("report-mail-");
         executor.initialize();
         return executor;
     }

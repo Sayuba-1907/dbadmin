@@ -1,7 +1,7 @@
 package dbadmin.backend.repository;
 
 import dbadmin.backend.entity.AuditLog;
-import dbadmin.backend.entity.HedefTip;
+import dbadmin.backend.entity.TargetType;
 import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,8 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /**
- * Spring Data JPA repository — {@code GET /api/audit-loglar}'in (Req-2.4) filtreleri hepsi
- * opsiyonel ve birlikte kullanilabilir olmali (ör. "sadece kullaniciId" ya da "kullaniciId +
+ * Spring Data JPA repository — {@code GET /api/audit-logs}'in (Req-2.4) filtreleri hepsi
+ * opsiyonel ve birlikte kullanilabilir olmali (ör. "sadece userId" ya da "userId +
  * tarih araligi"); ayri ayri method-name sorgulari (findByX, findByXAndY, ...) bu kombinasyonlari
  * kapsayamayacagi icin tek, parametreleri {@code IS NULL} ile atlayan bir JPQL sorgusu kullanildi.
  */
@@ -22,15 +22,15 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     // data type of parameter"); acik cast bu belirsizligi kaldiriyor.
     @Query("""
             SELECT a FROM AuditLog a
-            WHERE (:kullaniciId IS NULL OR a.kullaniciId = :kullaniciId)
-              AND (CAST(:hedefTip AS string) IS NULL OR a.hedefTip = :hedefTip)
-              AND (CAST(:bas AS timestamp) IS NULL OR a.olusturulmaZamani >= :bas)
-              AND (CAST(:bit AS timestamp) IS NULL OR a.olusturulmaZamani <= :bit)
+            WHERE (:userId IS NULL OR a.userId = :userId)
+              AND (CAST(:targetType AS string) IS NULL OR a.targetType = :targetType)
+              AND (CAST(:from AS timestamp) IS NULL OR a.createdAt >= :from)
+              AND (CAST(:to AS timestamp) IS NULL OR a.createdAt <= :to)
             """)
-    Page<AuditLog> ara(
-            @Param("kullaniciId") Long kullaniciId,
-            @Param("hedefTip") HedefTip hedefTip,
-            @Param("bas") Instant bas,
-            @Param("bit") Instant bit,
+    Page<AuditLog> search(
+            @Param("userId") Long userId,
+            @Param("targetType") TargetType targetType,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
             Pageable pageable);
 }

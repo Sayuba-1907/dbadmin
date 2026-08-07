@@ -56,6 +56,7 @@ public record ErrorResponse(
                             "VALIDATION_WEAK_PASSWORD",
                             "VALIDATION_MISSING_ROLE",
                             "NOT_FOUND_USER",
+                            "NOT_FOUND_NOTIFICATION",
                             "CONFLICT_DUPLICATE_USERNAME",
                             "CONFLICT_LAST_ADMIN"
                         },

@@ -4,19 +4,19 @@ import { render, screen } from "@testing-library/react";
 import { WorkspaceNav } from "./WorkspaceNav";
 import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
 
-function renderNav(rol: AuthContextValue["rol"]) {
+function renderNav(role: AuthContextValue["role"]) {
   const auth: AuthContextValue = {
     status: "authenticated",
-    kullaniciAdi: "test",
-    rol,
-    canWrite: rol === "EDITOR" || rol === "ADMIN",
-    isAdmin: rol === "ADMIN",
+    username: "test",
+    role,
+    canWrite: role === "EDITOR" || role === "ADMIN",
+    isAdmin: role === "ADMIN",
     login: jest.fn(),
     logout: jest.fn(),
   };
   return render(
     <AuthContext.Provider value={auth}>
-      <WorkspaceNav active="schemalar" onChange={jest.fn()} />
+      <WorkspaceNav active="schemas" onChange={jest.fn()} />
     </AuthContext.Provider>
   );
 }

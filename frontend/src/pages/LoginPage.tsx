@@ -17,18 +17,18 @@ export function LoginPage() {
   const { t } = useTranslation();
   const { login } = useAuth();
   const notify = useNotify();
-  const [kullaniciAdi, setKullaniciAdi] = useState("");
-  const [parola, setParola] = useState("");
+  const [username, setKullaniciAdi] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSubmitting(true);
     try {
-      await login(kullaniciAdi, parola);
+      await login(username, password);
     } catch (err) {
       // AUTH_INVALID_CREDENTIALS icin errors sozlugunde ayri bir metin yok — ApiError.message
-      // zaten backend'in "kullanici adi ya da parola hatali" mesaji, ekstra ceviri gerekmiyor.
+      // zaten backend'in "kullanici adi ya da password hatali" mesaji, ekstra ceviri gerekmiyor.
       if (err instanceof ApiError) {
         notify(err.status, err.message);
       } else {
@@ -51,7 +51,7 @@ export function LoginPage() {
           <InputText
             className="w-full"
             autoComplete="username"
-            value={kullaniciAdi}
+            value={username}
             onChange={(e) => setKullaniciAdi(e.target.value)}
             autoFocus
             required
@@ -59,16 +59,16 @@ export function LoginPage() {
         </label>
         <label className="login-field">
           <span>{t("auth.password")}</span>
-          {/* feedback={false}: PrimeReact'in varsayilan "parola gucu" overlay panelini
+          {/* feedback={false}: PrimeReact'in varsayilan "password gucu" overlay panelini
               kapatiyoruz — o panel icin de ConfirmDialog/Toast'ta oldugu gibi ayri bir
               unstyled-mode reskin ugrasi gerekirdi, kazanci yokken riski var. toggleMask
               ise sadece bir buton (overlay degil), goz ikonuyla goster/gizle bedavaya geliyor. */}
           <Password
-            inputId="login-parola"
+            inputId="login-password"
             className="login-password block w-full relative"
             autoComplete="current-password"
-            value={parola}
-            onChange={(e) => setParola(e.target.value)}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             feedback={false}
             toggleMask
             required

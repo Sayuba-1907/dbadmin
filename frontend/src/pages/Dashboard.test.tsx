@@ -33,7 +33,7 @@ interface FakeTablo {
   name: string;
   schemaId: number;
   schemaName: string;
-  kolonlar: FakeKolon[];
+  columns: FakeKolon[];
 }
 
 interface MockResponse {
@@ -49,7 +49,7 @@ interface MockOverride {
 }
 
 /**
- * Dashboard, schema/tablo agacini mount'ta TEK istekte (GET /api/schemalar/schemaList) cekiyor;
+ * Dashboard, schema/tablo agacini mount'ta TEK istekte (GET /api/schemas/schemaList) cekiyor;
  * tiklanan tablonun tam detayi ayrica id'siyle, tags/kullanicilar ise sadece o sekmeye girilince
  * cekiliyor. Sabit index'li bir mockFetchSequence bu yuzden kirilgan; onun yerine URL/method'a
  * gore yanit ureten, gercek backend gibi davranan (create/PATCH ile kendi state'ini guncelleyen)
@@ -68,19 +68,19 @@ function createFakeBackend(seed: {
   const overrides = seed.overrides ? [...seed.overrides] : [];
   let nextTabloId = tablolar.reduce((max, t) => Math.max(max, t.id), 0) + 1;
   let nextKolonId =
-    tablolar.flatMap((t) => t.kolonlar).reduce((max, k) => Math.max(max, k.id), 0) + 1;
+    tablolar.flatMap((t) => t.columns).reduce((max, k) => Math.max(max, k.id), 0) + 1;
 
   const schemaResponse = (s: FakeSchema) => ({
     id: s.id,
     name: s.name,
-    tabloSayisi: tablolar.filter((t) => t.schemaId === s.id).length,
+    tableCount: tablolar.filter((t) => t.schemaId === s.id).length,
   });
   const tabloSummary = (t: FakeTablo) => ({
     id: t.id,
     name: t.name,
-    kolonSayisi: t.kolonlar.length,
+    columnCount: t.columns.length,
   });
-  /** GET /api/schemalar/schemaList — backend'in SchemaResponseDTO/TableSummaryDTO sekli. */
+  /** GET /api/schemas/schemaList — backend'in SchemaResponseDTO/TableSummaryDTO sekli. */
   const workspaceResponse = () =>
     schemalar.map((s) => ({
       schemaId: s.id,
@@ -90,7 +90,7 @@ function createFakeBackend(seed: {
         .map((t) => ({
           id: t.id,
           name: t.name,
-          columnCount: t.kolonlar.length,
+          columnCount: t.columns.length,
           schemaId: t.schemaId,
         })),
     }));
@@ -99,7 +99,7 @@ function createFakeBackend(seed: {
     name: t.name,
     schemaId: t.schemaId,
     schemaName: t.schemaName,
-    kolonlar: t.kolonlar,
+    columns: t.columns,
     updatedAt: null,
   });
 
@@ -116,14 +116,14 @@ function createFakeBackend(seed: {
       return Promise.resolve(override.response);
     }
 
-    if (method === "GET" && path === "/api/schemalar") {
+    if (method === "GET" && path === "/api/schemas") {
       return Promise.resolve({
         ok: true,
         status: 200,
         json: async () => schemalar.map(schemaResponse),
       });
     }
-    if (method === "GET" && path === "/api/schemalar/schemaList") {
+    if (method === "GET" && path === "/api/schemas/schemaList") {
       return Promise.resolve({
         ok: true,
         status: 200,
@@ -147,10 +147,10 @@ function createFakeBackend(seed: {
     if (method === "GET" && path === "/api/tags") {
       return Promise.resolve({ ok: true, status: 200, json: async () => [] });
     }
-    if (method === "GET" && path === "/api/kullanicilar") {
+    if (method === "GET" && path === "/api/users") {
       return Promise.resolve({ ok: true, status: 200, json: async () => kullanicilar });
     }
-    if (method === "POST" && path === "/api/tablolar") {
+    if (method === "POST" && path === "/api/tables") {
       const body = JSON.parse(options!.body as string);
       const schema = schemalar.find((s) => s.id === body.schemaId)!;
       const created: FakeTablo = {
@@ -158,7 +158,7 @@ function createFakeBackend(seed: {
         name: body.name,
         schemaId: schema.id,
         schemaName: schema.name,
-        kolonlar: (body.kolonlar ?? []).map(
+        columns: (body.columns ?? []).map(
           (k: { name: string; type: string; tagId?: number | null; primaryKey?: boolean }) => ({
             id: nextKolonId++,
             name: k.name,
@@ -191,15 +191,15 @@ function createFakeBackend(seed: {
 
 /**
  * Bu dosyadaki testler yazma islemlerini (tablo olusturma, surukle-birak) sinadigi icin sabit
- * bir EDITOR baglami veriyoruz — gercek AuthProvider'in localStorage okuyup `/api/auth/ben`'e
- * gitmesini beklemek gereksiz bir asenkron adim. Rol bazli gizlemeyi (VIEWER'in yazma
- * butonlarini gormemesi) test etmek istenirse ayri bir testte rol: "VIEWER" ile ayni yardimci
+ * bir EDITOR baglami veriyoruz — gercek AuthProvider'in localStorage okuyup `/api/auth/me`'e
+ * gitmesini beklemek gereksiz bir asenkron adim. Role bazli gizlemeyi (VIEWER'in yazma
+ * butonlarini gormemesi) test etmek istenirse ayri bir testte role: "VIEWER" ile ayni yardimci
  * kullanilabilir.
  */
 const EDITOR_AUTH: AuthContextValue = {
   status: "authenticated",
-  kullaniciAdi: "test_kullanici",
-  rol: "EDITOR",
+  username: "test_kullanici",
+  role: "EDITOR",
   canWrite: true,
   isAdmin: false,
   login: jest.fn(),
@@ -234,7 +234,7 @@ test("tablo olusturunca listeye eklenir ve basari bildirimi gosterilir", async (
   fireEvent.click(screen.getByText("Oluştur"));
 
   await waitFor(() => expect(screen.getByText(/oluşturuldu/i)).toBeInTheDocument());
-  // Tablo adi artik TabloDetail'de duzenlenebilir bir input (text node degil, "value" attribute'u)
+  // Table adi artik TableDetail'de duzenlenebilir bir input (text node degil, "value" attribute'u)
   // — getByText bunu bulamaz, getByDisplayValue input/textarea degerine gore arar.
   await waitFor(() => expect(screen.getByDisplayValue("kullanicilar")).toBeInTheDocument());
 });
@@ -245,7 +245,7 @@ test("backend conflict (409) hatasinda turuncu bildirim gosterir", async () => {
     overrides: [
       {
         method: "POST",
-        path: "/api/tablolar",
+        path: "/api/tables",
         response: {
           ok: false,
           status: 409,
@@ -280,7 +280,7 @@ test("backend'in gonderdigi hata kodu, ham Ingilizce mesaj yerine cevrilmis Turk
     overrides: [
       {
         method: "POST",
-        path: "/api/tablolar",
+        path: "/api/tables",
         response: {
           ok: false,
           status: 409,
@@ -318,7 +318,7 @@ test("taninmayan bir hata kodu gelirse backend'in ham mesajina dusulur", async (
     overrides: [
       {
         method: "POST",
-        path: "/api/tablolar",
+        path: "/api/tables",
         response: {
           ok: false,
           status: 409,
@@ -355,7 +355,7 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
       { id: 1, name: "kayitlar" },
       { id: 2, name: "ogrenciler" },
     ],
-    tablolar: [{ id: 10, name: "kullanicilar", schemaId: 1, schemaName: "kayitlar", kolonlar: [] }],
+    tablolar: [{ id: 10, name: "kullanicilar", schemaId: 1, schemaName: "kayitlar", columns: [] }],
   });
 
   renderDashboard();
@@ -363,7 +363,7 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
   await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
   // Schema varsayilan kapali baslar; icindeki tabloyu gormek icin acmak lazim. Isme tiklamak
-  // artik genisletmiyor (Tree'nin kendi ayri toggler butonu var, bkz. TabloSidebar.tsx) —
+  // artik genisletmiyor (Tree'nin kendi ayri toggler butonu var, bkz. TableSidebar.tsx) —
   // toggler'i "kayitlar" satirinin en yakin treeitem'i icinde arayip ona tikliyoruz.
   const kayitlarNode = screen.getByText("kayitlar").closest('[role="treeitem"]') as HTMLElement;
   // Toggler'in erisilebilir bir adi yok (sadece aria-hidden bir SVG icon), o yuzden role
@@ -371,7 +371,7 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
   fireEvent.click(kayitlarNode.querySelector('[data-pc-section="toggler"]') as HTMLElement);
   const tableItem = await screen.findByText("kullanicilar");
   // Drop handler'lari artik <li> (treeitem) uzerinde degil, onun icindeki schema-header-row
-  // div'inde — bkz. TabloSidebar.tsx'teki nodeTemplate.
+  // div'inde — bkz. TableSidebar.tsx'teki nodeTemplate.
   const targetDropZone = screen.getByText("ogrenciler").closest(".schema-header-row");
   expect(targetDropZone).not.toBeNull();
 
@@ -381,7 +381,7 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
 
   await waitFor(() =>
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/tablolar/10/schema"),
+      expect.stringContaining("/api/tables/10/schema"),
       expect.objectContaining({ method: "PATCH", body: JSON.stringify({ schemaId: 2 }) })
     )
   );
@@ -390,12 +390,12 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
 test("VIEWER rolunde yazma butonlari hic gosterilmez", async () => {
   createFakeBackend({ schemalar: [{ id: 1, name: "kayitlar" }] });
 
-  renderDashboard({ ...EDITOR_AUTH, rol: "VIEWER", canWrite: false });
+  renderDashboard({ ...EDITOR_AUTH, role: "VIEWER", canWrite: false });
 
   await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
   // VIEWER zaten yapamayacagi bir aksiyonu gorup "neden tiklanmiyor" diye ugrasmasin diye
-  // bu butonlar gri/disabled degil, DOM'da hic yok (bkz. TabloSidebar.tsx).
+  // bu butonlar gri/disabled degil, DOM'da hic yok (bkz. TableSidebar.tsx).
   expect(screen.queryByText("+ Yeni Tablo")).not.toBeInTheDocument();
   expect(screen.queryByText("+ Yeni Schema")).not.toBeInTheDocument();
 });
@@ -404,12 +404,12 @@ test("ADMIN, Kullanicilar sekmesine girince kullanici listesi cekilir ve gosteri
   createFakeBackend({
     schemalar: [{ id: 1, name: "kayitlar" }],
     kullanicilar: [
-      { id: 1, kullaniciAdi: "admin", rol: "ADMIN" },
-      { id: 2, kullaniciAdi: "ayse", rol: "VIEWER" },
+      { id: 1, username: "admin", role: "ADMIN" },
+      { id: 2, username: "ayse", role: "VIEWER" },
     ],
   });
 
-  renderDashboard({ ...EDITOR_AUTH, rol: "ADMIN", isAdmin: true });
+  renderDashboard({ ...EDITOR_AUTH, role: "ADMIN", isAdmin: true });
 
   await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 

@@ -1,7 +1,7 @@
 package dbadmin.backend.controller;
 
 import dbadmin.backend.dto.AuditLogResponse;
-import dbadmin.backend.entity.HedefTip;
+import dbadmin.backend.entity.TargetType;
 import dbadmin.backend.service.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Kalici audit kaydinin okuma ucu. Tum uclar <b>sadece ADMIN</b> rolune aciktir — kural
- * {@code SecurityConfig}'te yol bazinda tanimlidir ({@code /api/audit-loglar/**}),
- * {@code /api/kullanicilar/**} ile ayni seviyede.
+ * {@code SecurityConfig}'te yol bazinda tanimlidir ({@code /api/audit-logs/**}),
+ * {@code /api/users/**} ile ayni seviyede.
  */
 @RestController
-@RequestMapping("/api/audit-loglar")
+@RequestMapping("/api/audit-logs")
 @Tag(name = "Audit Log", description = "Kalici audit kaydi (sadece ADMIN)")
 public class AuditLogController {
 
@@ -34,19 +34,19 @@ public class AuditLogController {
             summary = "Audit kayitlarini sayfali listeler",
             description = "Tum filtreler opsiyoneldir ve birlikte kullanilabilir. Sayfalama icin "
                     + "standart Spring parametreleri gecerlidir: page, size, sort (ör. "
-                    + "sort=olusturulmaZamani,desc).")
+                    + "sort=createdAt,desc).")
     @GetMapping
-    public Page<AuditLogResponse> ara(
+    public Page<AuditLogResponse> search(
             @Parameter(description = "Sadece bu kullanicinin islemleri.", example = "1")
-                    @RequestParam(required = false) Long kullaniciId,
-            @Parameter(description = "Sadece bu turden hedeflere yapilan islemler.", example = "TABLO")
-                    @RequestParam(required = false) HedefTip hedefTip,
+                    @RequestParam(required = false) Long userId,
+            @Parameter(description = "Sadece bu turden hedeflere yapilan islemler.", example = "TABLE")
+                    @RequestParam(required = false) TargetType targetType,
             @Parameter(description = "Bu zamandan sonra (dahil).", example = "2026-08-01T00:00:00Z")
-                    @RequestParam(required = false) Instant bas,
+                    @RequestParam(required = false) Instant from,
             @Parameter(description = "Bu zamana kadar (dahil).", example = "2026-08-31T23:59:59Z")
-                    @RequestParam(required = false) Instant bit,
+                    @RequestParam(required = false) Instant to,
             Pageable pageable) {
-        return auditLogService.ara(kullaniciId, hedefTip, bas, bit, pageable)
+        return auditLogService.search(userId, targetType, from, to, pageable)
                 .map(AuditLogResponse::from);
     }
 }

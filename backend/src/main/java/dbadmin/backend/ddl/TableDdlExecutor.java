@@ -139,7 +139,7 @@ public class TableDdlExecutor {
      * isim yerine kullaniyoruz: Postgres'te constraint'in arkasindaki index schema genelinde
      * benzersiz olmak zorunda (tablo bazinda degil) — sabit bir isim ayni schema'daki ikinci
      * tabloda "relation already exists" hatasi verirdi. Tablo adlari uygulama genelinde zaten
-     * benzersiz oldugu icin (bkz. TabloService#createTablo, existsByName) bu turetilen isim de
+     * benzersiz oldugu icin (bkz. TableService#createTable, existsByName) bu turetilen isim de
      * otomatik olarak benzersiz olur.
      * <p>
      * {@code _pkey} soneki Postgres'in primary key'lere kendi verdigi varsayilan isimle ayni —

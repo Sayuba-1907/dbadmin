@@ -16,8 +16,8 @@ import java.time.Instant;
  * semada, digerleri kadar kalici yasar; UPDATE/DELETE uc noktasi yoktur, sadece INSERT edilir
  * (bkz. Req-2.5).
  * <p>
- * {@link #kullaniciId} ve {@link #kullaniciAdi} bilerek ikisi birden tutulur: kullanici daha
- * sonra silinse bile ({@code kullanici} tablosundan gercekten kalkarsa) audit kaydinin "kim
+ * {@link #userId} ve {@link #username} bilerek ikisi birden tutulur: kullanici daha
+ * sonra silinse bile ({@code users} tablosundan gercekten kalkarsa) audit kaydinin "kim
  * yapti" bilgisi kullanici adi uzerinden okunabilir kalsin diye — id tek basina, kullanici
  * silindikten sonra hicbir seye isaret etmeyen bir sayidan ibaret kalirdi.
  */
@@ -29,89 +29,89 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "kullanici_id")
-    private Long kullaniciId;
+    @Column(name = "user_id")
+    private Long userId;
 
-    @Column(name = "kullanici_adi", nullable = false)
-    private String kullaniciAdi;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "islem_tipi", nullable = false)
-    private IslemTipi islemTipi;
+    @Column(name = "username", nullable = false)
+    private String username;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "hedef_tip", nullable = false)
-    private HedefTip hedefTip;
+    @Column(name = "operation_type", nullable = false)
+    private OperationType operationType;
 
-    @Column(name = "hedef_id", nullable = false)
-    private Long hedefId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_type", nullable = false)
+    private TargetType targetType;
 
-    @Column(name = "detay")
-    private String detay;
+    @Column(name = "target_id", nullable = false)
+    private Long targetId;
+
+    @Column(name = "detail")
+    private String detail;
 
     /** OTel implemente edildiyse aktif trace'in id'si; degilse null (bkz. Req-3.6). */
     @Column(name = "trace_id")
     private String traceId;
 
-    @Column(name = "olusturulma_zamani", nullable = false)
-    private Instant olusturulmaZamani;
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
 
     /** JPA/Hibernate'in reflection ile nesne olusturabilmesi icin zorunlu parametresiz constructor. */
     protected AuditLog() {
     }
 
     public AuditLog(
-            Long kullaniciId,
-            String kullaniciAdi,
-            IslemTipi islemTipi,
-            HedefTip hedefTip,
-            Long hedefId,
-            String detay,
+            Long userId,
+            String username,
+            OperationType operationType,
+            TargetType targetType,
+            Long targetId,
+            String detail,
             String traceId) {
-        this.kullaniciId = kullaniciId;
-        this.kullaniciAdi = kullaniciAdi;
-        this.islemTipi = islemTipi;
-        this.hedefTip = hedefTip;
-        this.hedefId = hedefId;
-        this.detay = detay;
+        this.userId = userId;
+        this.username = username;
+        this.operationType = operationType;
+        this.targetType = targetType;
+        this.targetId = targetId;
+        this.detail = detail;
         this.traceId = traceId;
-        this.olusturulmaZamani = Instant.now();
+        this.createdAt = Instant.now();
     }
 
     public Long getId() {
         return id;
     }
 
-    public Long getKullaniciId() {
-        return kullaniciId;
+    public Long getUserId() {
+        return userId;
     }
 
-    public String getKullaniciAdi() {
-        return kullaniciAdi;
+    public String getUsername() {
+        return username;
     }
 
-    public IslemTipi getIslemTipi() {
-        return islemTipi;
+    public OperationType getOperationType() {
+        return operationType;
     }
 
-    public HedefTip getHedefTip() {
-        return hedefTip;
+    public TargetType getTargetType() {
+        return targetType;
     }
 
-    public Long getHedefId() {
-        return hedefId;
+    public Long getTargetId() {
+        return targetId;
     }
 
-    public String getDetay() {
-        return detay;
+    public String getDetail() {
+        return detail;
     }
 
     public String getTraceId() {
         return traceId;
     }
 
-    public Instant getOlusturulmaZamani() {
-        return olusturulmaZamani;
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
     /** Sadece id'ye gore esitlik: kaydedilmemis (id=null) nesneler asla birbirine esit sayilmaz. */

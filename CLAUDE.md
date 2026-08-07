@@ -67,9 +67,21 @@ Services call both, in one `@Transactional` method. Consequences worth rememberi
 
 ### Naming
 
-Domain terms are Turkish, infrastructure is English, and they mix within a class: `Tablo`, `Kolon`,
-`Schema` (entity) → `sema` (DB table), `Tag`. Endpoints follow the Turkish plural:
-`/api/tablolar`, `/api/schemalar`, `/api/tags`. Match the surrounding file rather than normalising.
+All code identifiers (class/entity/DTO names, methods, variables, DB table/column names, REST
+paths) are English: `DataTable`, `DataColumn`, `User`, `Notification`, `Schema`, `Tag`. Endpoints
+follow the English plural: `/api/tables`, `/api/schemas`, `/api/users`, `/api/notifications`,
+`/api/tags`. `DataTable`/`DataColumn` (not `Table`/`Column`) deliberately avoid colliding with the
+`jakarta.persistence.Table`/`Column` annotations imported in the same files.
+
+**Comments and UI text stay Turkish.** Javadoc/inline comments explaining *why* code is written a
+certain way are not translated — only the symbol names they reference are kept in sync when those
+symbols are renamed. `tr.json`/`en.json` translation *values* (and all i18n JSON *keys*, e.g.
+`tabloDetail.columnNamePlaceholder`) are untouched — they are product content and lookup strings,
+not code identifiers, and changing them was explicitly out of scope for the 2026-08-07 rename (see
+DECISIONS.md).
+
+This is a change from the project's earlier convention (Turkish domain terms + English
+infrastructure, mixed within a class) — see DECISIONS.md for when and why this was reversed.
 
 ### Conventions that are easy to break
 

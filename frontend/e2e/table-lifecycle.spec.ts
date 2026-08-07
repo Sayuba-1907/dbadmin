@@ -51,7 +51,7 @@ test("tablo olustur, kolon ekle/sil ve geri al, sonra tabloyu temizle", async ({
   await expect(page.getByText(`"${tableName}" tablosu oluşturuldu`)).toBeVisible();
   // Yeni tablo otomatik secilir; basligin gercekten bu tablo oldugunu dogrula. Baslik bir
   // <h2> degil, duzenlenebilir bir <input> (bkz. TabloDetail.tsx tablo-name-input).
-  await expect(page.locator(".tablo-name-input")).toHaveValue(tableName);
+  await expect(page.locator(".table-name-input")).toHaveValue(tableName);
 
   // 2) Ikinci bir kolon ekle — bu SADECE taslaga ekler, ne toast ne API istegi olur.
   await page.getByPlaceholder("kolon_adi").fill("yas");

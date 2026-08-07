@@ -7,22 +7,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dbadmin.backend.AbstractIntegrationTest;
 import dbadmin.backend.entity.Schema;
-import dbadmin.backend.entity.Tablo;
+import dbadmin.backend.entity.DataTable;
 import dbadmin.backend.exception.ConflictException;
 import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.SchemaRepository;
-import dbadmin.backend.repository.TabloRepository;
+import dbadmin.backend.repository.TableRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 
 // TabloServiceIntegrationTest ile ayni mantik: gercek Testcontainers Postgres'e karsi
 // calisir, hem metadata (Schema satiri) hem gercek DB (information_schema.schemata) kontrol edilir.
 //
-// @WithMockUser: bu test tabloService.createTablo(...) da cagiriyor, o da artik AuditLogService
+// @WithMockUser: bu test tableService.createTable(...) da cagiriyor, o da artik AuditLogService
 // uzerinden SecurityContext'ten "kim yapti" bilgisini okuyor (bkz. TabloServiceIntegrationTest'teki
 // ayni gerekce).
 @WithMockUser(username = "admin", roles = "ADMIN")
@@ -32,10 +33,10 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     private SchemaService schemaService;
 
     @Autowired
-    private TabloService tabloService;
+    private TableService tableService;
 
     @Autowired
-    private TabloRepository tabloRepository;
+    private TableRepository tableRepository;
 
     @Autowired
     private SchemaRepository schemaRepository;
@@ -106,14 +107,14 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     @Test
     void deleteSchema_cascadesTabloMetadataAlongWithRealTables() {
         Schema schema = schemaService.createSchema("arsiv3");
-        Tablo tablo = tabloService.createTablo("arsivli1", schema.getId(),
-                List.of(new KolonTanimi("ad", "text", null)));
+        DataTable table = tableService.createTable("arsivli1", schema.getId(),
+                List.of(new ColumnSpec("ad", "text", null)));
 
         schemaService.deleteSchema(schema.getId());
 
         assertFalse(realSchemaExists("arsiv3"));
-        assertTrue(tabloRepository.findById(tablo.getId()).isEmpty(),
-                "tablo metadata should be gone with its schema, not a ghost entry pointing at a dropped table");
+        assertTrue(tableRepository.findById(table.getId()).isEmpty(),
+                "table metadata should be gone with its schema, not a ghost entry pointing at a dropped table");
     }
 
     @Test
@@ -126,7 +127,7 @@ class SchemaServiceIntegrationTest extends AbstractIntegrationTest {
     void listSchemalar_omitsPublic() {
         Schema legacy = insertLegacyPublicRow();
         try {
-            assertTrue(schemaService.listSchemalar().stream().noneMatch(s -> s.name().equals("public")),
+            assertTrue(schemaService.listSchemas(Pageable.unpaged()).stream().noneMatch(s -> s.name().equals("public")),
                     "'public' listede gorunmemeli");
         } finally {
             schemaRepository.delete(legacy);

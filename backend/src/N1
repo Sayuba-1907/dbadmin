@@ -194,6 +194,55 @@ Scheduler:
       (sadece ADMIN). Ayni RaporService'i cagirir, scheduler ile ayni kod yolu.
     - Bu ozellik audit log'a bagimliydi: raporun "son 1 saatte ne oldu" kismi audit_log tablosundan
       okunuyor, audit log olmadan yazilamazdi.
+React Custom Hooks:
+    Nedir: adı "use" ile başlayan, içinde useState/useEffect kullanan sıradan bir fonksiyon. Yeni bir API değil, var olanı paketlemek.
+    Amaç: bir domain'in (şema/tablo/tag/kullanıcı) okuma+yazma+loading state'ini Dashboard'dan ayırıp kendi dosyasına taşımak.
+    Kural: hata yutulmaz, fırlatılır (throw) — bildirim gösterme işi hep Dashboard'da kalır.
+    Önce 1 tanesini (useSchemalar) yazıp onayladık, sonra diğer 3'e geçtik (pilot yaklaşımı).
+    Saf UI state (taslak kolonlar gibi) hook'a girmez, Dashboard'da kalır.
+    Bulunan istisna: silme işlemlerinde aslında "optimistic update" var (5sn Geri Al penceresi) — bunun için her hook'ta özel bir "optimistic setter" bırakıldı.
+    React Query/SWR bilerek kullanılmadı — amaç o kütüphanelerin çözdüğü sıkıntıyı elle hissetmek.
+
+Web Socket/Notification:
+    Nedir: HTTP'deki "istemci sorar, sunucu cevaplar" modelinden farklı olarak; sunucunun, istemciyi
+    beklemeden kendi inisiyatifiyle kalıcı bir bağlantı üzerinden anlık veri göndermesidir (push).
+    Sunucuya sürekli "yeni bir şey var mı?" diye sormaya (polling) gerek kalmaz.
+
+    Tablo Sahipliği ve Kapsam:
+    Her tablonun bir olusturanKullaniciId (owner) alanı oldu. Biri tabloda değişiklik yaptığında,
+    işlemi yapan kişi tablonun sahibi değilse bildirim üretilir. Kişi kendi tablosunda işlem
+    yaparsa, gereksiz gürültüyü önlemek adına kendine bildirim gitmez.
+
+    Hedefli Mesajlaşma (Targeted):
+    Bildirimleri herkese yayın (broadcast) yapmak yerine, Java tarafında bellekte
+    ConcurrentHashMap tabanlı bir WebSocket Registry oluşturuldu. Bu yapı, kullaniciId ile o anki
+    açık session'ları eşleştirerek mesajın sadece ilgili kullanıcıya gitmesini sağlar.
+
+    Kimlik Doğrulama (Auth):
+    Tarayıcıların native WebSocket API'si özel header'ları desteklemediği için, JWT token'ı
+    bağlantı aşamasında URL'de query parametresi (?token=...) olarak taşınıp doğrulandı.
+
+    Fail-Closed (Kalıcı Kayıt) vs Fail-Open (Anlık Push):
+    Bildirimin PostgreSQL'e Bildirim entity'si olarak yazılması fail-closed bir işlemdir; tıpkı
+    audit log'da olduğu gibi, asıl işlem iptal olursa (rollback) veritabanına bildirim kaydı
+    atılmaz. Ancak WebSocket üzerinden anlık iletim fail-open'dır (best-effort); kullanıcının
+    session'ı yoksa veya hata oluşursa uygulama çökmez, iletim sessizce atlanır.
+
+    En Kritik Mimari (AFTER_COMMIT):
+    Bildirim itme (push) işlemi, Spring'in @TransactionalEventListener(phase = AFTER_COMMIT)
+    yapısı kullanılarak sadece işlem veritabanına kesin olarak yazıldıktan (commit) sonra
+    tetiklenir. Böylece hata alıp geri alınan bir işlem için frontend'e "yalan" bildirim
+    gitmesi engellendi.
+
+    Frontend (React) Hook'ları:
+    useWebSocket ve useBildirimler adında özel hook'lar yazıldı. Sayfa ilk açıldığında sunucudan
+    bildirim sayısı sadece bir kez çekilir. Sonrasında arayüz, yeni gelen WebSocket eventlerini
+    dinleyerek sunucuya tekrar HTTP isteği atmadan yerel sayacı ve listeyi kendi içinde günceller.
+
+    UI (Kullanıcı Arayüzü):
+    Sıfırdan bir toast/popup yazmak yerine, gelen olaylar mevcut NotificationProvider yapısına
+    bağlanarak kod tekrarından kaçınıldı.
+
 OKUMA:
 1-)SpringBoot -> Autowired, dependecy of injection, inversion of control
     Inversion of Control (IoC):
@@ -233,3 +282,4 @@ OKUMA:
 3)Testcontainer
     Test kütüphanesidir. Arka planda Docker il konusur. Sahte veri tabanlarıyla gelme durumlarının önüne geçmeye çalısır.
     Testi çalıstıdığımız anda Yeni bir ortam kurulur ve işimiz bitince bu ortamı çöpe atarız.
+

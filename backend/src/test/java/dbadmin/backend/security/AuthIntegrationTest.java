@@ -10,10 +10,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import dbadmin.backend.AbstractIntegrationTest;
 import dbadmin.backend.dto.LoginRequest;
-import dbadmin.backend.entity.Kullanici;
-import dbadmin.backend.entity.Rol;
-import dbadmin.backend.repository.KullaniciRepository;
-import dbadmin.backend.service.KullaniciService;
+import dbadmin.backend.entity.User;
+import dbadmin.backend.entity.Role;
+import dbadmin.backend.repository.UserRepository;
+import dbadmin.backend.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,16 +39,16 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private KullaniciService kullaniciService;
+    private UserService userService;
 
     @Autowired
-    private KullaniciRepository kullaniciRepository;
+    private UserRepository userRepository;
 
-    /** Postgres testler arasinda paylasildigi icin kullanici zaten varsa yeniden kurulmaz. */
+    /** Postgres testler arasinda paylasildigi icin user zaten varsa yeniden kurulmaz. */
     @BeforeEach
     void ensureKullanici() {
-        if (!kullaniciRepository.existsByKullaniciAdi(KULLANICI)) {
-            kullaniciService.createKullanici(KULLANICI, PAROLA, Rol.EDITOR);
+        if (!userRepository.existsByUsername(KULLANICI)) {
+            userService.createUser(KULLANICI, PAROLA, Role.EDITOR);
         }
     }
 
@@ -59,8 +59,8 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(new LoginRequest(KULLANICI, PAROLA))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.kullaniciAdi", is(KULLANICI)))
-                .andExpect(jsonPath("$.rol", is("EDITOR")));
+                .andExpect(jsonPath("$.username", is(KULLANICI)))
+                .andExpect(jsonPath("$.role", is("EDITOR")));
     }
 
     @Test
@@ -73,8 +73,8 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * Olmayan kullanici ile yanlis parola <b>ayni</b> cevabi vermeli — aksi halde hangi
-     * kullanici adlarinin kayitli oldugu tek tek denenerek ogrenilebilirdi.
+     * Olmayan user ile yanlis parola <b>ayni</b> cevabi vermeli — aksi halde hangi
+     * user adlarinin kayitli oldugu tek tek denenerek ogrenilebilirdi.
      */
     @Test
     void olmayanKullanici_yanlisParolaylaAyniCevabiVerir() throws Exception {
@@ -90,7 +90,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     void alinanToken_korunanUctaCalisir() throws Exception {
         String token = tokenAl();
 
-        mockMvc.perform(get("/api/tablolar").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/tables").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
     }
 
@@ -98,10 +98,10 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     void alinanToken_kimOldugunuDoner() throws Exception {
         String token = tokenAl();
 
-        mockMvc.perform(get("/api/auth/ben").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.kullaniciAdi", is(KULLANICI)))
-                .andExpect(jsonPath("$.rol", is("EDITOR")));
+                .andExpect(jsonPath("$.username", is(KULLANICI)))
+                .andExpect(jsonPath("$.role", is("EDITOR")));
     }
 
     /** EDITOR token'i ADMIN'e ozel uca girememeli — rol token'in icinden okunuyor. */
@@ -109,19 +109,19 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     void editorTokeni_kullaniciYonetimineGiremez() throws Exception {
         String token = tokenAl();
 
-        mockMvc.perform(get("/api/kullanicilar").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/users").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
 
     @Test
     void parola_veritabaninaDuzMetinYazilmaz() {
-        Kullanici kullanici = kullaniciRepository.findByKullaniciAdi(KULLANICI).orElseThrow();
+        User user = userRepository.findByUsername(KULLANICI).orElseThrow();
 
-        assertNotEquals(PAROLA, kullanici.getParolaHash());
+        assertNotEquals(PAROLA, user.getPasswordHash());
         // BCrypt ciktisi her zaman bu onekle baslar; algoritmanin gercekten uygulandiginin isareti.
-        assertTrue(kullanici.getParolaHash().startsWith("$2"),
-                "parola BCrypt ile hash'lenmis olmali, bulunan: " + kullanici.getParolaHash());
+        assertTrue(user.getPasswordHash().startsWith("$2"),
+                "parola BCrypt ile hash'lenmis olmali, bulunan: " + user.getPasswordHash());
     }
 
     private String tokenAl() throws Exception {

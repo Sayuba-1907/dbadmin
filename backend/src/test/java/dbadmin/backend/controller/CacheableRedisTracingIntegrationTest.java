@@ -58,16 +58,26 @@ class CacheableRedisTracingIntegrationTest extends AbstractIntegrationTest {
     private SdkTracerProvider sdkTracerProvider;
 
     @BeforeEach
-    void tagsCacheiTemizle() {
-        cacheManager.getCache("tags").clear();
+    void workspaceCacheiTemizle() {
+        cacheManager.getCache("schemaWorkspace").clear();
         spanExporter.reset();
     }
 
+    /**
+     * Vehicle olarak {@code GET /api/schemas/schemaList} kullanir (bkz. {@code SchemaService
+     * #getSchemaList}, {@code @Cacheable("schemaWorkspace")}) — {@code GET /api/tags} bir
+     * onceki halde kullaniliyordu, ama Pageable eklenirken {@code @Cacheable("tags")} kaldirildi
+     * (bkz. TagService.listTags javadoc'u: {@code Page<T>} Redis'e yaziliyor ama Jackson'in
+     * PageImpl'i geri okuyacak bir constructor'i olmadigi icin okunamiyordu). Bu testin asil
+     * konusu (TracingAwareRedisCacheWriter'in Redis SET komutunu HTTP span'inin cocugu yapmasi)
+     * {@code tags} cache'ine ozgu degildi, sadece o an @Cacheable olan ilk uc oydu — simdi hala
+     * @Cacheable kalan {@code schemaWorkspace}'e tasindi, davranis/onem degismedi.
+     */
     @Test
-    void tagsIstegi_cacheMiss_redisSetKomutuHttpIsteginSpaninCocuguOlur() throws Exception {
-        mockMvc.perform(get("/api/tags")).andExpect(status().isOk());
+    void workspaceIstegi_cacheMiss_redisSetKomutuHttpIsteginSpaninCocuguOlur() throws Exception {
+        mockMvc.perform(get("/api/schemas/schemaList")).andExpect(status().isOk());
 
-        SpanData httpSpan = finishedSpanNamed("http get /api/tags")
+        SpanData httpSpan = finishedSpanNamed("http get /api/schemas/schemaList")
                 .orElseGet(() -> fail("HTTP root span'i bulunamadi, gorulenler: " + spanNames()));
         SpanData setSpan = finishedSpanNamed("set")
                 .orElseGet(() -> fail("redis 'set' span'i bulunamadi, gorulenler: " + spanNames()));

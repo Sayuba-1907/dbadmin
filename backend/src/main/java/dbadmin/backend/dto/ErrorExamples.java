@@ -304,7 +304,7 @@ public final class ErrorExamples {
 
     /**
      * PK yapilmak istenen kolonda tabloda zaten NULL/tekrar eden deger varsa Postgres
-     * {@code ADD CONSTRAINT ... PRIMARY KEY}'i reddeder (bkz. TabloService.changeKolonPrimaryKey).
+     * {@code ADD CONSTRAINT ... PRIMARY KEY}'i reddeder (bkz. TableService.changeColumnPrimaryKey).
      */
     public static final String CONFLICT_COLUMN_NOT_UNIQUE =
             """

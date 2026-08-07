@@ -56,12 +56,12 @@ test("mount'ta OTOMATIK istek atilmaz — tags bos baslar", () => {
   expect(global.fetch).not.toHaveBeenCalled();
 });
 
-test("yenile cagrisi tags'i ceker", async () => {
+test("refresh cagrisi tags'i ceker", async () => {
   mockFetch([{ id: 1, name: "onemli" }]);
   const { result } = renderHook(() => useTags());
 
   await act(async () => {
-    await result.current.yenile();
+    await result.current.refresh();
   });
 
   expect(result.current.tags).toEqual([{ id: 1, name: "onemli" }]);
@@ -71,7 +71,7 @@ test("createTag cagrisindan sonra liste yenilenir", async () => {
   mockFetch([{ id: 1, name: "onemli" }]);
   const { result } = renderHook(() => useTags());
   await act(async () => {
-    await result.current.yenile();
+    await result.current.refresh();
   });
 
   await act(async () => {
@@ -88,17 +88,17 @@ test("deleteTag cagrisindan sonra liste yenilenir", async () => {
   ]);
   const { result } = renderHook(() => useTags());
   await act(async () => {
-    await result.current.yenile();
+    await result.current.refresh();
   });
 
   await act(async () => {
     await result.current.deleteTag(2);
   });
 
-  // deleteTag hook'ta yenile'yi TEKRAR cagirmiyor (Dashboard'daki geri-al akisi kendi yeniliyor) —
+  // deleteTag hook'ta refresh'yi TEKRAR cagirmiyor (Dashboard'daki geri-al akisi kendi yeniliyor) —
   // bkz. useTags.ts: remove sadece API'yi cagirir. Bu yuzden burada backend'i dogrudan kontrol ediyoruz.
   await act(async () => {
-    await result.current.yenile();
+    await result.current.refresh();
   });
   expect(result.current.tags.map((t) => t.name)).toEqual(["onemli"]);
 });
@@ -108,7 +108,7 @@ test("createTag backend hata donerse hata disari firlatilir", async () => {
   mockFetch([{ id: 1, name: "onemli" }]);
   const { result } = renderHook(() => useTags());
   await act(async () => {
-    await result.current.yenile();
+    await result.current.refresh();
   });
 
   const orijinalFetch = global.fetch as jest.Mock;

@@ -19,7 +19,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
  * Ana sayfadaki schema/tag/kullanici listeleri icin {@code @Cacheable}/{@code @CacheEvict}
- * altyapisi — {@link dbadmin.backend.security.KullaniciRolCacheService}'in aksine burada
+ * altyapisi — {@link dbadmin.backend.security.UserRoleCacheService}'in aksine burada
  * Spring'in kendi annotasyon tabanli mekanizmasi kullanildi (notlar'daki "neden @Cacheable
  * kullanilmadi" sorusuna karsilik bilerek: rol cache'i JWT filter'inda parolasiz/ozel bir yolda
  * calisiyordu, bu ucu ise sadece "listele" controller metodlarindan cagriliyor — annotasyonun
@@ -51,9 +51,9 @@ public class CacheConfig implements CachingConfigurer {
 
     public CacheConfig(
             RedisConnectionFactory connectionFactory,
-            @Value("${app.cache.workspace.ttl-dakika}") long ttlDakika) {
+            @Value("${app.cache.workspace.ttl-minutes}") long ttlMinutes) {
         this.connectionFactory = connectionFactory;
-        this.ttl = Duration.ofMinutes(ttlDakika);
+        this.ttl = Duration.ofMinutes(ttlMinutes);
     }
 
     @Bean
@@ -63,7 +63,7 @@ public class CacheConfig implements CachingConfigurer {
                 .entryTtl(ttl)
                 .serializeKeysWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new StringRedisSerializer()))
-                // Deger tarafinda JSON: rol cache'inin aksine burada List<Tag>/List<Kullanici>/
+                // Deger tarafinda JSON: rol cache'inin aksine burada List<Tag>/List<User>/
                 // List<SchemaResponseDTO> gibi karmasik nesneler saklaniyor, duz string yetmez.
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new GenericJackson2JsonRedisSerializer()));
@@ -78,7 +78,7 @@ public class CacheConfig implements CachingConfigurer {
     }
 
     /**
-     * Fail-open: KullaniciRolCacheService'teki ayni felsefe (cache bir optimizasyon, bir
+     * Fail-open: UserRoleCacheService'teki ayni felsefe (cache bir optimizasyon, bir
      * bagimlilik degil) — Redis'e ulasilamazsa @Cacheable/@CacheEvict hata firlatip istegi
      * 500'e dusurmek yerine loglayip DB yoluna devam etmeli. Bu handler olmadan varsayilan
      * davranis TAM TERSI: Redis hatasi oldugu gibi caller'a firlar.

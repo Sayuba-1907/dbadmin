@@ -156,14 +156,14 @@ select:disabled {
    input'un icinde, sagda durmasini saglayan position:relative/absolute cifti burada elle
    kuruluyor. */
 .login-password input,
-.kullanici-password input {
+.user-password input {
   padding-right: 34px;
 }
 
 .login-password [data-pc-section="showicon"],
 .login-password [data-pc-section="hideicon"],
-.kullanici-password [data-pc-section="showicon"],
-.kullanici-password [data-pc-section="hideicon"] {
+.user-password [data-pc-section="showicon"],
+.user-password [data-pc-section="hideicon"] {
   position: absolute;
   top: 50%;
   right: var(--space-2);
@@ -174,8 +174,8 @@ select:disabled {
 
 .login-password [data-pc-section="showicon"]:hover,
 .login-password [data-pc-section="hideicon"]:hover,
-.kullanici-password [data-pc-section="showicon"]:hover,
-.kullanici-password [data-pc-section="hideicon"]:hover {
+.user-password [data-pc-section="showicon"]:hover,
+.user-password [data-pc-section="hideicon"]:hover {
   color: var(--color-text-primary);
 }
 
@@ -386,7 +386,7 @@ select:disabled {
    yukleniyor gorunumu olan content" secilip onun togglerini gizliyoruz. Schema ve tablo
    dugumlerinin togglerlari boylece dokunulmadan gorunur/tiklanabilir kalir. */
 .schema-tree
-  [data-pc-section="content"]:has(> .sidebar-kolon-item, > .sidebar-kolon-loading, > .empty-hint)
+  [data-pc-section="content"]:has(> .sidebar-column-item, > .sidebar-column-loading, > .empty-hint)
   [data-pc-section="toggler"] {
   visibility: hidden;
 }
@@ -398,7 +398,7 @@ select:disabled {
   min-width: 0;
 }
 
-.sidebar-kolon-item {
+.sidebar-column-item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -407,17 +407,17 @@ select:disabled {
   min-width: 0;
 }
 
-.sidebar-kolon-item .mono {
+.sidebar-column-item .mono {
   min-width: 0;
   flex-shrink: 1;
 }
 
-.sidebar-kolon-item .type-badge,
-.sidebar-kolon-item .pk-badge {
+.sidebar-column-item .type-badge,
+.sidebar-column-item .pk-badge {
   flex-shrink: 0;
 }
 
-.sidebar-kolon-loading {
+.sidebar-column-loading {
   padding: 5px var(--space-2);
   display: flex;
   flex-direction: column;
@@ -500,7 +500,7 @@ select:disabled {
   color: var(--color-danger);
 }
 
-.tablo-list-item {
+.table-list-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -520,16 +520,16 @@ select:disabled {
     transform var(--transition-fast);
 }
 
-.tablo-name {
+.table-name {
   min-width: 0;
 }
 
-.tablo-list-item:hover {
+.table-list-item:hover {
   background-color: var(--color-surface-raised);
   transform: translateX(2px);
 }
 
-.tablo-list-item.selected {
+.table-list-item.selected {
   background-color: var(--color-accent-soft);
   border-left: 3px solid var(--color-accent);
   box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18);
@@ -538,12 +538,12 @@ select:disabled {
   font-weight: 500;
 }
 
-.tablo-list-item.dragging {
+.table-list-item.dragging {
   opacity: 0.4;
   cursor: grabbing;
 }
 
-.kolon-count {
+.column-count {
   color: var(--color-text-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -598,7 +598,7 @@ select:disabled {
   gap: var(--space-2);
 }
 
-.tablo-name-input {
+.table-name-input {
   font-family: var(--font-mono);
   font-size: var(--text-lg);
   font-weight: 600;
@@ -609,12 +609,12 @@ select:disabled {
   border-radius: var(--radius-sm);
 }
 
-.tablo-name-input:hover,
-.tablo-name-input:focus {
+.table-name-input:hover,
+.table-name-input:focus {
   border-color: var(--color-border-strong);
 }
 
-.tablo-name-input:focus-visible {
+.table-name-input:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 1px;
 }
@@ -625,7 +625,7 @@ select:disabled {
   font-style: italic;
 }
 
-.kolon-row-silinecek {
+.column-row-to-delete {
   opacity: 0.5;
   text-decoration: line-through;
 }
@@ -636,20 +636,20 @@ select:disabled {
   margin-left: 6px;
 }
 
-.kolon-table {
+.column-table {
   border-collapse: collapse;
   margin-bottom: var(--space-4);
 }
 
-.kolon-table th,
-.kolon-table td {
+.column-table th,
+.column-table td {
   text-align: left;
   padding: var(--space-2);
   border-bottom: 1px solid var(--color-border);
   font-size: var(--text-base);
 }
 
-.kolon-table th {
+.column-table th {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -657,14 +657,14 @@ select:disabled {
   letter-spacing: 0.03em;
 }
 
-.kolon-table tbody tr {
+.column-table tbody tr {
   transition:
     background-color var(--transition-fast),
     opacity var(--transition-base);
   animation: row-enter 500ms ease;
 }
 
-.kolon-table tbody tr:hover {
+.column-table tbody tr:hover {
   background-color: var(--color-surface-raised);
 }
 
@@ -734,7 +734,7 @@ select:disabled {
   font-weight: 600;
 }
 
-.add-kolon-form,
+.add-column-form,
 .add-tag-form {
   gap: 8px;
   margin-bottom: 8px;
@@ -744,8 +744,21 @@ select:disabled {
   gap: 4px;
   align-items: center;
   /* .tagler-item-row grid'inin tek cocugu oldugunda tum satiri kaplasin diye (grid disi
-     kullanimlarda, ör. TabloSidebar, bu ozelligin hicbir etkisi yok). */
+     kullanimlarda, ör. TableSidebar, bu ozelligin hicbir etkisi yok). */
   grid-column: 1 / -1;
+  /* inline-flex varsayilan olarak sarmiyor (flex-wrap: nowrap) — TableSidebar'in 240px'lik
+     sabit genislikli kutusunda input + iki buton yan yana sigmayinca, tasan kismi sag
+     paneldeki (detail-panel/empty-state) icerik gorunurde ustunde kaliyor ama gercekte
+     tiklamalari o alamiyor (pointer-events tasan degil, altta kalan panelin oluyor) —
+     "Vazgeç" butonu gorunse de tiklanamaz hale geliyordu. Sarmayi acmak butonlari
+     ikinci satira dusurup hem gorunur hem tiklanabilir tutuyor.
+     */
+  flex-wrap: wrap;
+}
+
+.inline-edit-form input {
+  min-width: 0;
+  flex: 1 1 100%;
 }
 
 .btn {
@@ -770,7 +783,7 @@ select:disabled {
 }
 
 .btn:focus-visible,
-.tablo-list-item:focus-visible {
+.table-list-item:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
@@ -863,7 +876,7 @@ select:disabled {
 }
 
 /* Sekme (Semalar/Tagler/Kullanicilar) panelleri veya secili tablo detayi ilk kez DOM'a
-   girdiginde kisa bir fade+kaydirma - .sidebar/.detail-panel/.tagler-panel/.kullanicilar-panel
+   girdiginde kisa bir fade+kaydirma - .sidebar/.detail-panel/.tagler-panel/.users-panel
    class'larina dogrudan baglandigi icin sadece element MOUNT olunca (view degisince,
    ya da bos durumdan tablo secilince) tetikleniyor; ayni panel icinde veri guncellenirken
    (ör. baska bir tablo secilirken TabloDetail yeniden render olurken) tekrar oynamiyor. */
@@ -894,30 +907,30 @@ select:disabled {
 }
 
 .tagler-panel,
-.kullanicilar-panel {
+.users-panel {
   flex: 1;
   padding: var(--space-5);
 }
 
-.kullanici-table {
+.user-table {
   max-width: 480px;
   border-collapse: collapse;
   margin-bottom: var(--space-4);
 }
 
-.kullanici-table th,
-.kullanici-table td {
+.user-table th,
+.user-table td {
   text-align: left;
   padding: var(--space-2);
   border-bottom: 1px solid var(--color-border);
   font-size: var(--text-base);
 }
 
-.kullanici-table tbody tr {
+.user-table tbody tr {
   animation: row-enter 500ms ease;
 }
 
-.kullanici-table th {
+.user-table th {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -953,7 +966,7 @@ select:disabled {
   background-color: var(--color-role-viewer-bg);
 }
 
-.create-kullanici-form {
+.create-user-form {
   gap: var(--space-2);
 }
 
@@ -1044,7 +1057,7 @@ select:disabled {
   gap: var(--space-3);
 }
 
-.modal.create-tablo-form {
+.modal.create-table-form {
   width: 560px;
 }
 
@@ -1056,26 +1069,26 @@ select:disabled {
   color: var(--color-text-secondary);
 }
 
-.kolon-rows {
+.column-rows {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.kolon-row {
+.column-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.kolon-row input,
-.kolon-row select {
+.column-row input,
+.column-row select {
   flex: 1;
   min-width: 0;
 }
 
-.kolon-row .checkbox-label,
-.kolon-row .btn {
+.column-row .checkbox-label,
+.column-row .btn {
   flex-shrink: 0;
 }
 

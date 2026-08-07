@@ -102,6 +102,13 @@
     "passwordPlaceholder": "password",
     "create": "Create User"
   },
+  "notificationBell": {
+    "buttonLabel": "Notifications",
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "markAllRead": "Mark all as read",
+    "newNotificationToast": "{{user}}: {{message}}"
+  },
   "notifications": {
     "loadFailed": "Failed to load data",
     "tableCreated": "\"{{name}}\" table created",
@@ -172,6 +179,7 @@
     "VALIDATION_WEAK_PASSWORD": "Password must be at least {{min}} characters",
     "VALIDATION_MISSING_ROLE": "A role must be specified",
     "NOT_FOUND_USER": "User not found (id: {{id}})",
+    "NOT_FOUND_NOTIFICATION": "Notification not found (id: {{id}})",
     "CONFLICT_DUPLICATE_USERNAME": "A user named \"{{name}}\" already exists",
     "CONFLICT_LAST_ADMIN": "The last remaining admin cannot be removed or demoted",
     "NOT_FOUND_ENDPOINT": "No endpoint at this path: {{path}}",

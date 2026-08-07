@@ -15,7 +15,7 @@ function mockFetchOnce(response: Partial<Response>) {
 test("apiGet basarili yanitta json doner", async () => {
   mockFetchOnce({ ok: true, status: 200, json: async () => ({ id: 1 }) });
 
-  const result = await apiGet<{ id: number }>("/api/tablolar/1");
+  const result = await apiGet<{ id: number }>("/api/tables/1");
 
   expect(result).toEqual({ id: 1 });
 });
@@ -32,17 +32,17 @@ test("apiPost basarisiz yanitta ApiError firlatir (status + message)", async () 
     }),
   });
 
-  await expect(apiPost("/api/tablolar", { name: "x" })).rejects.toMatchObject({
+  await expect(apiPost("/api/tables", { name: "x" })).rejects.toMatchObject({
     status: 409,
     message: "tablo adi zaten kullaniliyor",
   });
-  await expect(apiPost("/api/tablolar", { name: "x" })).rejects.toBeInstanceOf(ApiError);
+  await expect(apiPost("/api/tables", { name: "x" })).rejects.toBeInstanceOf(ApiError);
 });
 
 test("apiDelete 204 yanitinda body okumaya calismaz", async () => {
   mockFetchOnce({ ok: true, status: 204 });
 
-  await expect(apiDelete("/api/tablolar/1")).resolves.toBeUndefined();
+  await expect(apiDelete("/api/tables/1")).resolves.toBeUndefined();
 });
 
 test("setAuthToken ile bir token verilmisse istek Authorization basligi tasir", async () => {
@@ -50,7 +50,7 @@ test("setAuthToken ile bir token verilmisse istek Authorization basligi tasir", 
   global.fetch = fetchMock as unknown as typeof fetch;
   setAuthToken("ornek-jwt");
 
-  await apiGet("/api/tablolar");
+  await apiGet("/api/tables");
 
   expect(fetchMock).toHaveBeenCalledWith(
     expect.any(String),
@@ -64,7 +64,7 @@ test("token yoksa Authorization basligi hic eklenmez", async () => {
   const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
   global.fetch = fetchMock as unknown as typeof fetch;
 
-  await apiGet("/api/tablolar");
+  await apiGet("/api/tables");
 
   const headers = fetchMock.mock.calls[0][1].headers as Record<string, string>;
   expect(headers.Authorization).toBeUndefined();
@@ -85,7 +85,7 @@ test("AUTH_REQUIRED kodlu 401'de onUnauthorized kancasi tetiklenir", async () =>
   const onUnauthorized = jest.fn();
   setOnUnauthorized(onUnauthorized);
 
-  await expect(apiGet("/api/tablolar")).rejects.toBeInstanceOf(ApiError);
+  await expect(apiGet("/api/tables")).rejects.toBeInstanceOf(ApiError);
 
   expect(onUnauthorized).toHaveBeenCalledTimes(1);
 });
@@ -108,9 +108,9 @@ test("AUTH_INVALID_CREDENTIALS kodlu 401'de (yanlis parola) onUnauthorized TETIK
   const onUnauthorized = jest.fn();
   setOnUnauthorized(onUnauthorized);
 
-  await expect(
-    apiPost("/api/auth/login", { kullaniciAdi: "x", parola: "y" })
-  ).rejects.toBeInstanceOf(ApiError);
+  await expect(apiPost("/api/auth/login", { username: "x", parola: "y" })).rejects.toBeInstanceOf(
+    ApiError
+  );
 
   expect(onUnauthorized).not.toHaveBeenCalled();
 });

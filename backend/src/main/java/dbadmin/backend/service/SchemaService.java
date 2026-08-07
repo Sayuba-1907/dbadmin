@@ -4,15 +4,15 @@ import dbadmin.backend.aop.BusinessLog;
 import dbadmin.backend.ddl.SchemaDdlExecutor;
 import dbadmin.backend.dto.SchemaResponseDTO;
 import dbadmin.backend.dto.TableSummaryDTO;
-import dbadmin.backend.entity.HedefTip;
-import dbadmin.backend.entity.IslemTipi;
+import dbadmin.backend.entity.DataTable;
+import dbadmin.backend.entity.OperationType;
 import dbadmin.backend.entity.Schema;
-import dbadmin.backend.entity.Tablo;
+import dbadmin.backend.entity.TargetType;
 import dbadmin.backend.exception.ConflictException;
 import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.SchemaRepository;
-import dbadmin.backend.repository.TabloRepository;
+import dbadmin.backend.repository.TableRepository;
 import dbadmin.backend.tracing.SpanRunner;
 import dbadmin.backend.validation.NameValidator;
 import io.micrometer.core.instrument.Counter;
@@ -26,11 +26,13 @@ import java.util.stream.Collectors;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dbadmin.backend.dto.SchemaResponse;
 
-/** {@link TabloService} ile ayni mantik: her metod metadata + gercek Postgres semasini birlikte degistirir. */
+/** {@link TableService} ile ayni mantik: her metod metadata + gercek Postgres semasini birlikte degistirir. */
 @Service
 public class SchemaService {
 
@@ -38,33 +40,33 @@ public class SchemaService {
      * Postgres'in kendi varsayilan schema'si. DBAdmin acisindan tamamen gorunmez: listelenmez,
      * id'siyle sorulursa 404 doner, bu isimle yeni schema olusturulamaz ve hicbir tablo buraya
      * kurulamaz/tasinamaz. Sebep: {@code public} altyapiya ait — uygulamanin kendi metadata
-     * tablolari ({@code tablo}, {@code kolon}, {@code sema}, {@code tag}) ve ileride kurulacak
+     * tablolari ({@code tables}, {@code columns}, {@code schemas}, {@code tag}) ve ileride kurulacak
      * extension/paketler orada duruyor; web arayuzunden degistirilebilir olmasi (ozellikle
      * {@code DROP SCHEMA public CASCADE}) uygulamanin kendisini silerdi.
      * <p>
-     * Normalde {@code sema} tablosunda bu isimde bir satir hic bulunmaz. Buradaki kontroller
+     * Normalde {@code schemas} tablosunda bu isimde bir satir hic bulunmaz. Buradaki kontroller
      * eski kurulumlar icin savunma katmani: bir sekilde boyle bir satir kalmissa da API onu
      * yokmus gibi gosterir.
      */
     public static final String RESERVED_SCHEMA_NAME = "public";
 
     private final SchemaRepository schemaRepository;
-    private final TabloRepository tabloRepository;
+    private final TableRepository tableRepository;
     private final SchemaDdlExecutor ddlExecutor;
     private final SpanRunner spanRunner;
     private final AuditLogService auditLogService;
     private final Counter schemasCreatedCounter;
     private final Counter schemasDeletedCounter;
 
-    public SchemaService(SchemaRepository schemaRepository, TabloRepository tabloRepository,
+    public SchemaService(SchemaRepository schemaRepository, TableRepository tableRepository,
             SchemaDdlExecutor ddlExecutor, SpanRunner spanRunner, AuditLogService auditLogService,
             MeterRegistry meterRegistry) {
         this.schemaRepository = schemaRepository;
-        this.tabloRepository = tabloRepository;
+        this.tableRepository = tableRepository;
         this.ddlExecutor = ddlExecutor;
         this.spanRunner = spanRunner;
         this.auditLogService = auditLogService;
-        // "creations"/"deletions" kullaniyoruz, "created" degil — bkz. TabloService'teki ayni
+        // "creations"/"deletions" kullaniyoruz, "created" degil — bkz. TableService'teki ayni
         // isimlendirmedeki not (Prometheus'ta "_created" rezerve bir sonek, Micrometer siliyor).
         this.schemasCreatedCounter = meterRegistry.counter("dbadmin.schemas.creations");
         this.schemasDeletedCounter = meterRegistry.counter("dbadmin.schemas.deletions");
@@ -77,20 +79,18 @@ public class SchemaService {
     }
 
     @Transactional(readOnly = true)
-    public List<SchemaResponse> listSchemalar() {
-        return schemaRepository.findAll().stream()
-                .filter(schema -> !isHidden(schema))
-                .map(this::toResponse)
-                .toList();
+    public Page<SchemaResponse> listSchemas(Pageable pageable) {
+        return schemaRepository.findAllExcludingSchema(RESERVED_SCHEMA_NAME, pageable)
+                .map(this::toResponse);
     }
     @Transactional(readOnly = true)
     public List<SchemaResponseDTO>getSchemaListV2() {
-        List<Tablo> tableList = tabloRepository.findAllByOrderByNameAsc();
+        List<DataTable> tableList = tableRepository.findAllByOrderByNameAsc();
         Map<Long, SchemaResponseDTO> schemaIdSchemaResponseMap = new HashMap<>();
 
-        for (Tablo table : tableList) {
+        for (DataTable table : tableList) {
             TableSummaryDTO tableSummaryDTO = new TableSummaryDTO(table.getId(), table.getName(),
-                    table.getKolonlar().size(), table.getSchema().getId());
+                    table.getColumns().size(), table.getSchema().getId());
             if (schemaIdSchemaResponseMap.containsKey(table.getSchema().getId())) {
                 schemaIdSchemaResponseMap.get(table.getSchema().getId()).addTableSummaryToList(tableSummaryDTO);
             } else {
@@ -107,11 +107,11 @@ public class SchemaService {
     /**
      * "schemaWorkspace" cache'i (bkz. CacheConfig) — ana sayfanin (Dashboard) tek istekte
      * cektigi schema+tablo agaci. Sadece bu sinifin create/rename/delete'i degil,
-     * {@link TabloService}'teki tablo/kolon sayisini etkileyen HER mutasyon da (createTablo,
-     * changeSchema, renameTablo, deleteTablo, addKolon, deleteKolon, applyChanges) ayni cache
+     * {@link TableService}'teki tablo/kolon sayisini etkileyen HER mutasyon da (createTable,
+     * changeSchema, renameTable, deleteTable, addColumn, deleteColumn, applyChanges) ayni cache
      * adini evict ediyor — cunku donen DTO'da tablo isimleri ve kolon sayilari da var. Kolonun
-     * adi/tag'i/PK'si degisen ama sayisi degismeyen islemler (renameKolon, changeKolonTag,
-     * changeKolonPrimaryKey) BILEREK evict etmiyor: bu DTO'da o alanlar hic yok.
+     * adi/tag'i/PK'si degisen ama sayisi degismeyen islemler (renameColumn, changeColumnTag,
+     * changeColumnPrimaryKey) BILEREK evict etmiyor: bu DTO'da o alanlar hic yok.
      */
     @Cacheable("schemaWorkspace")
     @Transactional(readOnly = true)
@@ -120,7 +120,7 @@ public class SchemaService {
         Map<Long, SchemaResponseDTO> schemaIdSchemaResponseMap = new HashMap<>();
 
         // Once TUM schema'lar icin (tablosu olmasa bile) bos bir DTO acilir — asagidaki
-        // findAllSchemaTabloPairs sadece tablosu OLAN schema'lari uretir (inner join gibi
+        // findAllSchemaTablePairs sadece tablosu OLAN schema'lari uretir (inner join gibi
         // davranir), bu yuzden yeni olusturulup henuz tablo eklenmemis bir schema o listede
         // hic gorunmez ve olusturulmasaydi frontend'de kayboluyordu.
         schemaRepository.findAll().stream()
@@ -128,18 +128,18 @@ public class SchemaService {
                 .forEach(schema -> schemaIdSchemaResponseMap.put(schema.getId(),
                         new SchemaResponseDTO(schema.getId(), schema.getName())));
 
-        Map<Long, Long> tabloIdColumnCountMap = tabloRepository.countKolonlarGroupByTablo().stream()
+        Map<Long, Long> tableIdColumnCountMap = tableRepository.countColumnsGroupByTable().stream()
                 .collect(Collectors
-                        .toMap(TabloRepository.TabloKolonCountProjection::getTabloId,
-                                TabloRepository.TabloKolonCountProjection::getKolonSayisi));
+                        .toMap(TableRepository.TableColumnCountProjection::getTableId,
+                                TableRepository.TableColumnCountProjection::getColumnCount));
 
 
-        List<TabloRepository.SchemaTabloProjection> schemaTablePairs = tabloRepository.findAllSchemaTabloPairs();
-        for (TabloRepository.SchemaTabloProjection schemaTablePair : schemaTablePairs) {
+        List<TableRepository.SchemaTableProjection> schemaTablePairs = tableRepository.findAllSchemaTablePairs();
+        for (TableRepository.SchemaTableProjection schemaTablePair : schemaTablePairs) {
             // Hic kolonu olmayan bir tablo GROUP BY sonucunda hic satir uretmez (bkz.
-            // countKolonlarGroupByTablo javadoc'u), yani map'te yer almaz — getOrDefault ile 0 kabul ediyoruz.
-            TableSummaryDTO tableSummaryDTO = new TableSummaryDTO(schemaTablePair.getTabloId(), schemaTablePair.getTabloName(),
-                    tabloIdColumnCountMap.getOrDefault(schemaTablePair.getTabloId(), 0L).intValue(),
+            // countColumnsGroupByTable javadoc'u), yani map'te yer almaz — getOrDefault ile 0 kabul ediyoruz.
+            TableSummaryDTO tableSummaryDTO = new TableSummaryDTO(schemaTablePair.getTableId(), schemaTablePair.getTableName(),
+                    tableIdColumnCountMap.getOrDefault(schemaTablePair.getTableId(), 0L).intValue(),
                     schemaTablePair.getSchemaId());
             if(schemaIdSchemaResponseMap.containsKey(schemaTablePair.getSchemaId())){
                 schemaIdSchemaResponseMap.get(schemaTablePair.getSchemaId()).addTableSummaryToList(tableSummaryDTO);
@@ -157,13 +157,13 @@ public class SchemaService {
 
     /**
      * {@link Schema} entity'sini disari donen DTO'ya cevirir, tablo sayisini da hesaplayip ekler.
-     * Tek yerde toplanmasinin sebebi: bu cevirme islemi listSchemalar/getSchema/createSchema/
+     * Tek yerde toplanmasinin sebebi: bu cevirme islemi listSchemas/getSchema/createSchema/
      * renameSchema'nin hepsinde gerekiyor — hepsi ayni sorguyu (countBySchemaId) tekrar tekrar
      * yazmak yerine buraya geliyor.
      */
     public SchemaResponse toResponse(Schema schema) {
-        long tabloSayisi = tabloRepository.countBySchemaId(schema.getId());
-        return SchemaResponse.from(schema, tabloSayisi);
+        long tableCount = tableRepository.countBySchemaId(schema.getId());
+        return SchemaResponse.from(schema, tableCount);
     }
 
     /**
@@ -200,7 +200,7 @@ public class SchemaService {
         Schema saved = spanRunner.inSpan("metadata-write", () -> schemaRepository.save(new Schema(name)));
         spanRunner.inSpan("ddl-execute", "db.schema.name", saved.getName(), () -> ddlExecutor.createSchema(saved.getName()));
         schemasCreatedCounter.increment();
-        auditLogService.kaydet(IslemTipi.SCHEMA_OLUSTURULDU, HedefTip.SCHEMA, saved.getId(),
+        auditLogService.record(OperationType.SCHEMA_CREATED, TargetType.SCHEMA, saved.getId(),
                 "schema olusturuldu: " + saved.getName());
         return saved;
     }
@@ -235,14 +235,14 @@ public class SchemaService {
         String oldName = schema.getName();
         schema.setName(newName);
         ddlExecutor.renameSchema(oldName, newName);
-        auditLogService.kaydet(IslemTipi.SCHEMA_YENIDEN_ADLANDIRILDI, HedefTip.SCHEMA, id,
+        auditLogService.record(OperationType.SCHEMA_RENAMED, TargetType.SCHEMA, id,
                 "isim degisti: " + oldName + " -> " + newName);
         return schema;
     }
 
     /**
-     * Once bu schema'nin altindaki Tablo metadata satirlarini siliyoruz (Kolon'lar da
-     * {@link Tablo}'daki cascade+orphanRemoval sayesinde otomatik gider), sonra Schema satirini
+     * Once bu schema'nin altindaki DataTable metadata satirlarini siliyoruz (DataColumn'lar da
+     * {@link DataTable}'daki cascade+orphanRemoval sayesinde otomatik gider), sonra Schema satirini
      * ve gercek Postgres schema'sini. Sira onemli: {@code ddlExecutor.dropSchema} zaten
      * {@code CASCADE} ile gercek tablolari fiziksel siliyor; metadata'yi da ayni yonde
      * temizlemezsek DBAdmin arayuzunde artik var olmayan "hayalet" tablolar gorunurdu.
@@ -254,13 +254,13 @@ public class SchemaService {
         // getSchema "public" icin 404 verir; buraya asla "DROP SCHEMA public CASCADE" gelemez.
         Schema schema = getSchema(id);
         String name = schema.getName();
-        List<Tablo> tablolarInSchema = tabloRepository.findBySchemaIdOrderByNameAsc(schema.getId());
+        List<DataTable> tablesInSchema = tableRepository.findBySchemaIdOrderByNameAsc(schema.getId());
         spanRunner.inSpan("metadata-write", () -> {
-            tabloRepository.deleteAll(tablolarInSchema);
+            tableRepository.deleteAll(tablesInSchema);
             schemaRepository.delete(schema);
         });
         spanRunner.inSpan("ddl-execute", "db.schema.name", name, () -> ddlExecutor.dropSchema(name));
         schemasDeletedCounter.increment();
-        auditLogService.kaydet(IslemTipi.SCHEMA_SILINDI, HedefTip.SCHEMA, id, "schema silindi: " + name);
+        auditLogService.record(OperationType.SCHEMA_DELETED, TargetType.SCHEMA, id, "schema silindi: " + name);
     }
 }

@@ -1,9 +1,8 @@
 package dbadmin.backend.security;
 
-import dbadmin.backend.entity.Kullanici;
-import dbadmin.backend.entity.Rol;
+import dbadmin.backend.entity.Role;
 import dbadmin.backend.exception.NotFoundException;
-import dbadmin.backend.service.KullaniciService;
+import dbadmin.backend.service.UserService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -37,6 +36,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * <p>{@code OncePerRequestFilter}'dan tureme sebebi: forward/include gibi durumlarda ayni
  * istek filtre zincirinden birden fazla gecebilir, bu taban sinif bir kez calismayi garanti eder.
+ * <p>
+ * Not: bu dosyada Spring Security'nin {@code User} sinifi (import edildi) ile bizim
+ * {@code dbadmin.backend.entity.User} entity'miz bir arada gecebiliyor — ikinciyi bilerek
+ * fully-qualified kullaniyoruz, aksi halde ayni isimde iki sinif kafa karistirirdi.
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -47,16 +50,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String PREFIX = "Bearer ";
 
     private final JwtService jwtService;
-    private final KullaniciService kullaniciService;
-    private final KullaniciRolCacheService kullaniciRolCacheService;
+    private final UserService userService;
+    private final UserRoleCacheService userRoleCacheService;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
-            KullaniciService kullaniciService,
-            KullaniciRolCacheService kullaniciRolCacheService) {
+            UserService userService,
+            UserRoleCacheService userRoleCacheService) {
         this.jwtService = jwtService;
-        this.kullaniciService = kullaniciService;
-        this.kullaniciRolCacheService = kullaniciRolCacheService;
+        this.userService = userService;
+        this.userRoleCacheService = userRoleCacheService;
     }
 
     @Override
@@ -66,15 +69,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        String token = tokenCikar(request);
+        String token = extractToken(request);
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            kimlikAta(request, token);
+            assignIdentity(request, token);
         }
         filterChain.doFilter(request, response);
     }
 
     /** {@code Authorization: Bearer xxx} basligindan token'i ayirir; baslik yoksa/bicimsizse null. */
-    private String tokenCikar(HttpServletRequest request) {
+    private String extractToken(HttpServletRequest request) {
         String header = request.getHeader(HEADER);
         if (header == null || !header.startsWith(PREFIX)) {
             return null;
@@ -88,13 +91,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * "imza mi tutmadi, sure mi doldu" bilgisini verirdi; korunan bir uca gidiliyorsa zaten
      * 401 donecek.
      */
-    private void kimlikAta(HttpServletRequest request, String token) {
+    private void assignIdentity(HttpServletRequest request, String token) {
         try {
-            String kullaniciAdi = jwtService.kullaniciAdiCikar(token);
-            UserDetails kullanici = kullaniciYukle(kullaniciAdi);
+            String username = jwtService.extractUsername(token);
+            UserDetails userDetails = loadUser(username);
 
             var authentication = new UsernamePasswordAuthenticationToken(
-                    kullanici, null, kullanici.getAuthorities());
+                    userDetails, null, userDetails.getAuthorities());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (JwtException | IllegalArgumentException | NotFoundException ex) {
@@ -105,26 +108,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Once Redis'e bakar; oradaysa DB'ye hic gitmeden {@link UserDetails} kurar. Cache miss'te
-     * (ya da Redis erisilemezse — bkz. {@link KullaniciRolCacheService}) {@link KullaniciService}
+     * (ya da Redis erisilemezse — bkz. {@link UserRoleCacheService}) {@link UserService}
      * uzerinden DB'ye gider ve sonucu Redis'e yazar.
      * <p>
-     * Bilerek {@link KullaniciDetailsService} degil {@link KullaniciService} kullaniliyor:
-     * {@code KullaniciDetailsService.loadUserByUsername} login sirasinda {@code AuthenticationManager}
+     * Bilerek {@link UserDetailsServiceImpl} degil {@link UserService} kullaniliyor:
+     * {@code UserDetailsServiceImpl.loadUserByUsername} login sirasinda {@code AuthenticationManager}
      * tarafindan da cagriliyor ve parola hash'ini tasiyor — o metodun icine cache koysaydik parola
-     * hash'i Redis'e yazilirdi. Bu yol zaten parolasiz calisiyor (bkz. {@link #kimlikAta}'daki
+     * hash'i Redis'e yazilirdi. Bu yol zaten parolasiz calisiyor (bkz. {@link #assignIdentity}'daki
      * {@code credentials = null}), o yuzden {@code User} burada bos bir parola alaniyla kuruluyor.
      */
-    private UserDetails kullaniciYukle(String kullaniciAdi) {
-        return kullaniciRolCacheService.get(kullaniciAdi)
-                .<UserDetails>map(onbellekli -> yeniKullaniciDetaylari(kullaniciAdi, onbellekli.rol()))
+    private UserDetails loadUser(String username) {
+        return userRoleCacheService.get(username)
+                .<UserDetails>map(cached -> newUserDetails(username, cached.role()))
                 .orElseGet(() -> {
-                    Kullanici kullanici = kullaniciService.getKullaniciByAd(kullaniciAdi);
-                    kullaniciRolCacheService.put(kullaniciAdi, kullanici.getId(), kullanici.getRol());
-                    return yeniKullaniciDetaylari(kullaniciAdi, kullanici.getRol());
+                    dbadmin.backend.entity.User user = userService.getUserByUsername(username);
+                    userRoleCacheService.put(username, user.getId(), user.getRole());
+                    return newUserDetails(username, user.getRole());
                 });
     }
 
-    private UserDetails yeniKullaniciDetaylari(String kullaniciAdi, Rol rol) {
-        return new User(kullaniciAdi, "", List.of(new SimpleGrantedAuthority(rol.authority())));
+    private UserDetails newUserDetails(String username, Role role) {
+        return new User(username, "", List.of(new SimpleGrantedAuthority(role.authority())));
     }
 }

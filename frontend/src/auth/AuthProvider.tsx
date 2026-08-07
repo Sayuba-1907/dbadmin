@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Rol, ben, login as apiLogin } from "../api/auth";
+import { Role, me, login as apiLogin } from "../api/auth";
 import { setAuthToken, setOnUnauthorized } from "../api/client";
 import { useNotify } from "../notifications/NotificationProvider";
 
@@ -17,25 +17,25 @@ const STORAGE_KEY = "dbadmin-token";
 
 /**
  * "loading": sayfa yeni acildi, localStorage'daki token'in (varsa) hala gecerli olup olmadigi
- * /api/auth/ben ile dogrulaniyor — bu bitene kadar ekranda ne login formu ne Dashboard gosterilir,
+ * /api/auth/me ile dogrulaniyor — bu bitene kadar ekranda ne login formu ne Dashboard gosterilir,
  * yoksa gecerli bir oturumu olan kullaniciya bir an icin login formu goruntulenirdi.
  */
 type AuthStatus = "loading" | "anonymous" | "authenticated";
 
 export interface AuthContextValue {
   status: AuthStatus;
-  kullaniciAdi: string | null;
-  rol: Rol | null;
-  /** rol EDITOR ya da ADMIN ise true — "kimisi update edebilsin kimisi edemesin" burada okunur. */
+  username: string | null;
+  role: Role | null;
+  /** role EDITOR ya da ADMIN ise true — "kimisi update edebilsin kimisi edemesin" burada okunur. */
   canWrite: boolean;
   isAdmin: boolean;
-  login: (kullaniciAdi: string, parola: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 /**
  * Export edilmesinin tek sebebi testler: Dashboard.test.tsx gibi testler gercek AuthProvider'in
- * localStorage/`/api/auth/ben` akisina girmeden, sabit bir rolle (ör. EDITOR) dogrudan
+ * localStorage/`/api/auth/me` akisina girmeden, sabit bir rolle (ör. EDITOR) dogrudan
  * {@code <AuthContext.Provider value={...}>} ile sarmalayabilsin diye. Uygulama kodu bunun
  * yerine hep {@link useAuth} kullanmali.
  */
@@ -50,8 +50,8 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
-  const [kullaniciAdi, setKullaniciAdi] = useState<string | null>(null);
-  const [rol, setRol] = useState<Rol | null>(null);
+  const [username, setKullaniciAdi] = useState<string | null>(null);
+  const [role, setRol] = useState<Role | null>(null);
   const notify = useNotify();
   const { t } = useTranslation();
   // onUnauthorized kancasi kapanma (closure) icinde kuruluyor ve status'un o anki degerini
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // client.ts, token gecersiz/suresi dolmus bir 401 (AUTH_REQUIRED) aldiginda burayi cagirir.
-  // Daha once giris yapilmissa kullaniciyi bilgilendiriyoruz; login formundaki yanlis parola
+  // Daha once giris yapilmissa kullaniciyi bilgilendiriyoruz; login formundaki yanlis password
   // denemesi bu yola hic girmez (bkz. client.ts'teki AUTH_INVALID_CREDENTIALS ayrimi).
   useEffect(() => {
     setOnUnauthorized(() => {
@@ -81,8 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setOnUnauthorized(null);
   }, [logout, notify, t]);
 
-  // Sayfa ilk acildiginda localStorage'da token varsa gecerliligini /api/auth/ben ile dogrular
-  // (rol bu arada degismis olabilir, token suresi dolmus olabilir). Bilerek sadece bir kez
+  // Sayfa ilk acildiginda localStorage'da token varsa gecerliligini /api/auth/me ile dogrular
+  // (role bu arada degismis olabilir, token suresi dolmus olabilir). Bilerek sadece bir kez
   // (mount'ta) calisir.
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -91,31 +91,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     setAuthToken(stored);
-    ben()
+    me()
       .then((result) => {
-        setKullaniciAdi(result.kullaniciAdi);
-        setRol(result.rol);
+        setKullaniciAdi(result.username);
+        setRol(result.role);
         setStatus("authenticated");
       })
       .catch(() => logout());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = useCallback(async (kullaniciAdiInput: string, parola: string) => {
-    const result = await apiLogin(kullaniciAdiInput, parola);
+  const login = useCallback(async (usernameInput: string, password: string) => {
+    const result = await apiLogin(usernameInput, password);
     localStorage.setItem(STORAGE_KEY, result.token);
     setAuthToken(result.token);
-    setKullaniciAdi(result.kullaniciAdi);
-    setRol(result.rol);
+    setKullaniciAdi(result.username);
+    setRol(result.role);
     setStatus("authenticated");
   }, []);
 
   const value: AuthContextValue = {
     status,
-    kullaniciAdi,
-    rol,
-    canWrite: rol === "EDITOR" || rol === "ADMIN",
-    isAdmin: rol === "ADMIN",
+    username,
+    role,
+    canWrite: role === "EDITOR" || role === "ADMIN",
+    isAdmin: role === "ADMIN",
     login,
     logout,
   };
