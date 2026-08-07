@@ -1,0 +1,52 @@
+/* PrimeReact'in ConfirmDialog'u (Dialog'un ustune kurulu) unstyled modda bile "yapisal" bir
+   CSS enjekte ediyor (position/flex/transition — renk/spacing degil, bkz. dialog.cjs.js icindeki
+   @layer primereact bloğu), o yuzden .p-dialog-mask class'i her zaman var ama arka plan rengi
+   yok. Bunu (eskiden kendi yazdigimiz .confirm-overlay'in yaptigi isi) tek satirla tamamliyoruz —
+   .confirm-modal/.confirm-message/.confirm-actions ise ConfirmProvider'daki pt (passthrough)
+   prop'lariyla dogrudan enjekte ediliyor, tamamen bizim kontrolumuzde. */
+.p-dialog-mask {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.confirm-modal {
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  max-width: 360px;
+  box-shadow: var(--shadow-md);
+  animation: confirm-modal-in 150ms ease;
+}
+
+/* ConfirmDialog'un ustune kurulu oldugu Dialog'un baslik/X-kapat alani hic istemiyoruz (eskiden
+   kendi modalimizda yoktu, sadece mesaj+iki buton) — pt ile o bolumu tamamen kaldirmak yerine
+   (bazi versiyonlarda header'i sifirdan gecersiz kilmak deneysel/kirilgan) burada gizliyoruz. */
+.confirm-modal [data-pc-section="header"] {
+  display: none;
+}
+
+/* message icin pt.message {className} sessizce yoksayiliyor (bkz. ConfirmProvider'daki not) —
+   PrimeReact'in kendi stabil data-pc-section niteligini dogrudan hedefliyoruz. */
+.confirm-modal [data-pc-section="message"] {
+  display: block;
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@keyframes confirm-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

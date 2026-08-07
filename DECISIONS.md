@@ -278,6 +278,10 @@ One line per notable decision: what was chosen, what was ruled out, why.
   Ruled out: kontrolu atlamak.
   Why: tek admin kendi rolunu dusurup ya da kendini silip kullanici yonetimine bir daha girilemez hale getirebilirdi — geri donusu sadece veritabanina elle mudahaleyle olan bir kilitlenme.
 
+- **`CONFLICT_LAST_ADMIN` HTTP 409'da kaldi (2026-08-03)**, ayri bir 422 Unprocessable Entity kategorisi acilmadi.
+  Ruled out: 422 (istek gecerli ama is kurali reddediyor).
+  Why: `ConflictException`'in bu projedeki tanimi zaten "istek dogru formatta ama mevcut durumla catisiyor" (bkz. `CONFLICT_DUPLICATE_TABLE_NAME`, `CONFLICT_COLUMN_NOT_UNIQUE`) — son admin durumu da ayni kalibi izliyor: `DELETE /kullanicilar/{id}` sistemde 2 admin varken sorunsuz calisir, sadece *mevcut veri durumuyla* (admin sayisi=1) catisiyor. Yeni bir HTTP status eklemek yerine var olan kategoriyle tutarli kalindi.
+
 - **Testlerde `@WithMockUser` icin `springSecurity()` koprusu elle kuruldu** (`MockMvcSecurityTestConfig`).
   Ruled out: sadece `@WithMockUser` eklemek (calismadi), ya da her testte gercek token uretmek.
   Why: MockMvc'ye guvenlik filtreleri kendiliginden ekleniyor (kimliksiz istek 401 doner, gercek Bearer token calisir) ama testin koydugu kimlik zincire ulasmiyordu — zincirdeki `SecurityContextHolderFilter` baglami kendi deposundan yukleyip ezdigi icin `@WithMockUser` sessizce etkisizdi ve her sey 401 donuyordu. Not: Spring Boot 4'te bu sinif `org.springframework.boot.webmvc.test.autoconfigure` altina tasindi (eskiden `...test.autoconfigure.web.servlet`).
@@ -312,3 +316,192 @@ One line per notable decision: what was chosen, what was ruled out, why.
 - **RedisInsight (`docker-compose.yml`'e `redisinsight` servisi) eklendi.**
   Ruled out: sadece `redis-cli` ile terminalden bakmak.
   Why: Grafana/Prometheus'ta oldugu gibi, cache'in icini gorsel/etkilesimli inceleyebilmek (key'ler, TTL, hash alanlari) ogrenme amaci icin terminale gore daha hizli geri bildirim veriyor. Kalici bir volume ile veri persist etmez — cache zaten kalici olmak zorunda degil.
+
+## Sayisal hata kodlari (2026-08-03)
+
+- **`ErrorResponse`'a yeni bir `errorCode` (int) alani eklendi**, `code` (string) kaldirilmadi — ikisi birlikte donuyor.
+  Ruled out: `code` string'ini tamamen sayiyla degistirmek.
+  Why: `code` string'i frontend'in i18next ceviri anahtari (`errors.NOT_FOUND_TABLE`) — sayiya cevirmek 32 ceviri anahtarini, tum testleri (`jsonPath("$.code", ...)`) ve Swagger ornek adlarini degistirmek demekti, hem de sayi kendi basina anlam tasimadigi icin (10001 nedir, ayrica bir tabloya bakmadan bilinemez) okunabilirligi dusururdu. Ek bir alan hem "kendi sayimiz olsun" istegini karsiliyor hem hicbir mevcut sistemi bozmuyor.
+
+- **Sayi semasi: `<HTTP status><2-hane sira>`** (ör. `40401` = 404 ailesinin 1. durumu = `NOT_FOUND_TABLE`), rastgele/keyfi bir kategori numarasi degil.
+  Ruled out: HTTP'den tamamen bagimsiz keyfi bir numaralandirma (ör. 1000'ler validation, 2000'ler not-found gibi).
+  Why: ilk onerilen keyfi sema ("1xxxx = validation") ezberlenmesi gereken ayri bir sozluk gerektiriyordu; HTTP status'u ilk 3 hanede tasimak sayiyi tek basina okunabilir kiliyor (40401 gorunce zaten 404 ailesinde oldugunu biliyorsun). Riski: bir hatanin HTTP status'u ileride degisirse (nadir) sayisi da degismesi gerekir — bu proje olceginde kabul edilebilir bir bagimlilik.
+
+- **Tek merkezi eslesme noktasi: `ErrorCodeRegistry`** (`exception` paketinde, `Map<String,Integer>`), her `throw new XException(code, ...)` satirina sayi eklenmedi.
+  Ruled out: her exception constructor'ina ikinci bir `errorCode` parametresi eklemek (30+ throw call site'ini degistirmek).
+  Why: `ErrorResponse.of()` zaten tek merkezi cevap uretme noktasi (`GlobalExceptionHandler`/`RestSecurityErrorHandler` disinda hicbir yer `ErrorResponse` construct etmiyor) — sayiyi orada, `code` string'inden otomatik lookup ile eklemek, geri kalan tum kodu degistirmeden calisiyor. Kayitli olmayan bir `code` icin `ErrorCodeRegistry.numberFor` bilerek `IllegalStateException` firlatiyor (sessizce 0 donmuyor) — yeni bir hata kodu eklenip buraya yazilmasi unutulursa istek 500'e duser, sessizce yanlis sayi donmez.
+
+- **`ErrorCodeRegistryTest`**: `ErrorExamples`'taki 32 sabiti reflection'la okuyup her birinin `errorCode`'unun hem registry'yle hem kendi `status` alaniyla (ilk 3 hane) tutarli oldugunu ve hicbir errorCode'un tekrar etmedigini dogruluyor — 32 sayi elle girildigi icin (kopyala-yapistir riski) bu test olmadan bir yazim hatasi fark edilmeden kalabilirdi.
+
+- **Bu turda kesfedilen ayri bir sorun (dokunulmadi): `SecurityRulesIntegrationTest.actuatorHealth_kimliksiz_erisilebilir_kalmali` artik host makineden `./mvnw test` ile calistirildiginda 503 donuyor** (200 bekleniyordu) — sebebi bu degisiklikle ilgisiz: onceki bir commit'te `docker-compose.yml`'de redis'in `ports` eslemesi `expose`'a cevrildi (bkz. "Swagger hata orneklerini... Redis cache hit/miss metrikleri ekle" commit'i), yani Redis artik host'tan `localhost:6379` ile erisilemiyor, sadece docker network'unden. Actuator health Redis'i DOWN gorup 503 donuyor. Ayri bir konu, ayrica ele alinmali.
+
+## OpenTelemetry gozlemlenebilirlik (2026-08-05 / 2026-08-06)
+
+- **OTel Collector eklenmedi — backend Tempo'ya ve Loki'ye dogrudan export ediyor.**
+  Ruled out: `plan-otel-implementation.md`'nin Faz 1.1'inde tasarlanan `otel-collector` servisi (tek toplama/yonlendirme noktasi, Redis emsalinde `dbadmin-net` icine kapali).
+  Why: Collector'in asil degeri (backend'i belirli bir backend'e — Tempo/Loki — kilitlememek, yonlendirme kararini konfigurasyona tasimak) bu projenin olceginde somut bir kazanc getirmiyor — tek bir trace/log backend'i var ve degismesi planlanmiyor. Ek bir container, ek bir hata noktasi (Faz olarak zaten test edilen Redis fail-open felsefesiyle ayni gerekce: gereksiz bagimlilik eklenmez) ve ek bir config dosyasi (`otel-collector-config.yaml`) demek. Plan'in kendisi de bunu bir opsiyon olarak ongormustu ("Collector olmadan da Tempo/Loki'ye dogrudan export edilebilir"); 2026-08-06'da bilinctli olarak bu yol benimsendi, plan dosyasindaki mimari degismedi ama uygulamada sadelestirildi.
+
+- **`@Cacheable`/`@CacheEvict`'in Redis komutlari icin ozel bir `RedisCacheWriter` (`TracingAwareRedisCacheWriter`) yazildi**, spring-data-redis'in varsayilan `DefaultRedisCacheWriter`'i (`RedisCacheManager.builder(connectionFactory)`) yerine.
+  Ruled out: varsayilan `DefaultRedisCacheWriter`'i oldugu gibi birakmak.
+  Why: 2026-08-06'da curl + Tempo API ile dogrudan test edilerek bulundu — `DefaultRedisCacheWriter`, Redis baglantisini `connectionFactory.getConnection()` ile DOGRUDAN aliyor (bytecode'da dogrulandi), `RedisTemplate` ise ayni islemi `RedisConnectionUtils.getConnection(factory, ...)` uzerinden yapiyor. Sadece `RedisConnectionUtils` yolundan giden baglantida Redis komutunun span'i aktif trace'e parent'laniyor — `tracer.currentSpan()`'in o an dolu ve doru oldugu (gecici bir tani logu ile dogrulandi) durumlarda bile, `DefaultRedisCacheWriter` ile giden SET/GET komutlari Tempo'da parent'siz, kopuk trace olarak dusuyordu. Bu, `@Cacheable` kullanan uc serviste (`TagService`, `KullaniciService`, `SchemaService`) Req-2.1'in ("Redis cagrilari otomatik child span uretecek") tam karsilanmamasi anlamina geliyordu. `TracingAwareRedisCacheWriter`, bu projenin kullandigi kadarini (lock'suz, senkron: get/put/putIfAbsent/evict/clear) `RedisConnectionUtils` uzerinden yeniden yaziyor — spring-data-redis'in tum ozelliklerini (locking cache writer, batch strategy) kapsamiyor, ihtiyac olursa genisletilir. Duzeltme sonrasi ayni testle (flush + cache miss + cache hit) hem `set` hem `get` komutlarinin `"secured request"` span'inin altinda dogru parent'landigi dogrulandi.
+
+## Kalici audit log (2026-08-06)
+
+- **`TabloService.applyChanges` icin tek bir ozet audit satiri, alt-islemlerin her biri icin ayri ayri degil.**
+  Ruled out: `renameTablo`/`addKolon`/`deleteKolon`/... gibi granuler metodlarin her birinin kendi audit satirini yazmasi (applyChanges bunlari sirayla cagirdigi icin, tek bir "Kaydet" tiklamasi N ayri satira bolunurdu).
+  Why: kullanicidan gelen istek acikca "kalabalik olur" gerekcesiyle tek satir istedi. Cozum: her granuler metod `...Core` (audit'siz) ve public (audit'li) ciftine ayrildi; `applyChanges` *Core varyantlarini cagirip yaptigi her seyi bir listede toplar, sonda TEK `TABLO_GUNCELLENDI` satiri yazar. Tekil uclardan (ör. `PATCH /{id}`) dogrudan gelen cagrilar hala kendi tek satirlarini yazar.
+
+- **`AuditLogService`, kullanici id'sini bulmak icin `KullaniciService` degil dogrudan `KullaniciRepository` kullaniyor.**
+  Ruled out: `KullaniciService`'i enjekte etmek (daha "servis katmani" gorunumlu olurdu).
+  Why: `KullaniciService`'in kendisi de (kullanici olusturma/rol degistirme/silme audit'lendigi icin) `AuditLogService`'e bagimli olmak zorunda — `AuditLogService` de `KullaniciService`'e bagimli olsaydi `KullaniciService -> AuditLogService -> KullaniciService` dongusu olusurdu. Ayni kok-neden cozumu daha once `PasswordEncoderConfig` ayrimi icin de kullanilmisti (bkz. yukarida); `allow-circular-references` gibi bir kacis yoluna gidilmedi.
+
+- **Kimliksiz cagrilar (`SecurityContextHolder`'da `Authentication` yokken) `AuditLogService.kaydet` cagrilirsa kullanici adi `"system"` olarak yazilir, hata firlatilmaz.**
+  Ruled out: `Authentication`'in her zaman dolu oldugunu varsayip NPE'ye birakmak.
+  Why: `KullaniciSeeder`, uygulama aciliminda (henuz hicbir HTTP istegi/kimlik yokken) ilk ADMIN hesabini `KullaniciService.createKullanici` uzerinden olusturuyor — bu, testlerde gercek bir `IllegalStateException`/NPE olarak ortaya cikti (`KullaniciServiceIntegrationTest`, ApplicationContext yuklenemedi). Bu genuine bir senaryo: o an gercekten "sistemin kendisi" bir islem yapiyor, insan bir kullanici degil. `"system"` icin de `kullaniciId` aramasi yapilmiyor (dogrudan null) — DB'de hicbir zaman boyle bir satir olmayacagi icin arama gereksiz bir `NotFoundException` riski tasirdi.
+
+- **`@WithMockUser` kullanan testlerde kullanici adi acikca `"admin"` olarak sabitlendi**, varsayilan (`"user"`) birakilmadi.
+  Ruled out: Spring Security'nin `@WithMockUser` varsayilanini (`username = "user"`) oldugu gibi kullanmak.
+  Why: `AuditLogService` artik gercek bir kullanici adi arıyor (once Redis cache, sonra DB) — "user" DB'de hic olmadigi icin `NotFoundException` firlatiyor ve fail-closed geregi butun transaction (ör. `POST /api/tablolar`) rollback oluyor, testler 201 yerine 404 aliyordu. `roles=` parametresi kullanici adindan bagimsiz oldugu icin (`username="admin"` + `roles="VIEWER"` gibi) yetki testleri (SecurityRulesIntegrationTest) bundan etkilenmedi — sadece audit'in bulabilecegi gercek bir kullanici adi verildi.
+
+- **`AuditLogRepository.ara` sorgusunda `HedefTip`/`Instant` parametreleri icin JPQL'de acik `CAST(:param AS ...)` kullanildi**, duz `:param IS NULL` degil.
+  Ruled out: `WHERE (:hedefTip IS NULL OR ...)` seklinde cast'siz parametre kontrolu (butun diger opsiyonel filtrelerde oldugu gibi).
+  Why: Postgres'in JDBC extended query protokolu, bir parametrenin TEK gorundugu yer `? IS NULL` ise tipini cikaramiyor ("could not determine data type of parameter") — bu sadece enum (`hedefTip`) ve zaman damgasi (`bas`/`bit`) parametrelerinde ortaya cikti (`kullaniciId` bir `Long` oldugu icin somut bir esitlik karsilastirmasinda da gectigi ve Hibernate'in `Long` icin varsayilan tip cikarimi calistigi icin sorun cikarmadi). Acik `CAST` bu belirsizligi kaldirdi, canli olarak `GET /api/audit-loglar?hedefTip=SCHEMA` ile dogrulandi.
+
+- **Bu turda bulunan/duzeltilen bir Hibernate `ddl-auto=update` sinirlamasi (dokunulmadi, sadece dev DB'de elle onarildi): `IslemTipi` enum'una `TABLO_GUNCELLENDI` eklenmesi, zaten var olan `audit_log` tablosunun `audit_log_islem_tipi_check` CHECK constraint'ini otomatik guncellemedi.**
+  Neden ortaya cikti: `ddl-auto=update` sadece EKSIK tablo/kolonlari ekler, var olan bir CHECK constraint'i yeni enum degerini icerecek sekilde yeniden yazmaz. Sonuc: `useTablolar` (React hook Faz 2) pilot testi sirasinda `PATCH /api/tablolar/{id}/degisiklikler` (applyChanges, TABLO_GUNCELLENDI audit satiri yazan tek yer) her zaman 409 `CONFLICT_COLUMN_NOT_UNIQUE` donuyordu — hata mesaji yaniltici (gercek sebep PK degil, `audit_log` INSERT'inin CHECK constraint'e takilmasiydi, `GlobalExceptionHandler`'in `DataIntegrityViolationException`'i genel bir "veri celismesi" koduna eslemesi yuzunden). Log'daki gercek `ConstraintViolationException`'i okuyarak teshis edildi. Kalici kod degisikligi gerekmiyor (yeni bir `docker compose down -v` ile tablo sifirdan doğru constraint'le kurulur); bu ortamda `ALTER TABLE ... DROP/ADD CONSTRAINT` ile elle senkronize edildi. Ders: bu proje `ddl-auto=update` kullandigi surece, bir enum'a (audit `IslemTipi`, `HedefTip` gibi CHECK constraint'e donusen alanlar) yeni deger eklendiginde, degisen surecin devam eden bir Docker ortaminda calisan gelistirici `docker compose down -v` yapmadikca ayni hatayi tekrar yasayabilir.
+
+## Kod tabaninin tamamen Ingilizce'ye cevrilmesi (2026-08-07)
+
+- **Tum kod isimlendirmesi (entity/DTO/servis/repository/controller siniflari, metotlar,
+  degiskenler, DB tablo/kolon adlari, REST path'leri, frontend api/hook/component isimleri)
+  Turkce'den Ingilizce'ye cevrildi** — `Tablo`→`DataTable`, `Kolon`→`DataColumn`,
+  `Kullanici`→`User`, `Bildirim`→`Notification`, `/api/tablolar`→`/api/tables` vb.
+  Ruled out: mevcut karisik kural (Turkce domain terimleri + Ingilizce altyapi terimleri).
+  Why: kullanicinin acik talebi — "tum proje (backend + frontend, her yer), entity/DTO/degisken
+  isimleri de dahil, her sey Ingilizce". Onceki karisik-dil kurali bilinçli bir tercihti (bkz.
+  CLAUDE.md'nin eski "Naming" bolumu) ama kullanici bu karari geri aldi.
+
+- **Yorum satirlari (Javadoc/inline comment) VE `tr.json`/`en.json` ceviri degerleri ile i18n
+  JSON key'leri kapsam DISINDA birakildi** — sadece kod isimleri (sinif/metot/degisken/DB/API)
+  degisti.
+  Ruled out: butun proje metnini (yorumlar dahil) Ingilizce'ye cevirmek.
+  Why: kullanici kod-icerigi (yorumlar, UI metni) ile kod-kimligini (isimler) acikca ayirdi —
+  yorumlar projenin *neden* boyle yazildigini anlatan Turkce dokumantasyon, degistirilmesi saf
+  gurultu+risk (bir sonraki AI oturumunun yanlislikla yorum ICERIGINI de çevirmeye devam etmesi
+  riski gercek oldu, bkz. asagidaki "Ders" notu).
+
+- **DB verisi korunarak (data-preserving) migrate edildi** — `docker compose down -v` DEGIL, calisan
+  Postgres'e karsi SQL `ALTER TABLE/COLUMN RENAME` + CHECK constraint drop/re-add + enum-string
+  `UPDATE ... CASE` ile. Migrasyon oncesi/sonrasi satir sayilari (15 tablo, 51 kolon, 6 kullanici,
+  6 schema, 10 notification, 49 audit_log) birebir dogrulandi.
+  Ruled out: veritabanini sifirlayip yeniden kurmak.
+  Why: kullanicinin acik talebi ("Veri korunsun, SQL ile kolon/tablo adlari yeniden adlandirilsin").
+
+- **Iki isim carpismasi bilerek plandaki "birebir Ingilizce karsilik" kuralindan sapildi:**
+  `Kolon`→`Column` yerine `DataColumn`, `Tablo`→`Table` yerine `DataTable`. Sebep: Java'da ayni
+  dosyada hem entity sinifi hem de `jakarta.persistence.Column`/`Table` **annotation'i** ayni ada
+  sahip olamaz/kafa karistirir. Ayrica `dbadmin.backend.entity.User` (yeni) ile
+  `org.springframework.security.core.userdetails.User` (Spring) çakismasi, Spring'in `User`'ini
+  unqualified birakip uygulamanin kendi `User`'ini kullanildigi tek yerde fully-qualified yazarak
+  cozuldu (`JwtAuthenticationFilter`, `UserDetailsServiceImpl` — bu sinif da carpismayi
+  aciklamak icin `KullaniciDetailsService`'ten yeniden adlandirildi).
+
+- **Ders (bu turda iki kez tekrar eden hata sinifi): kelime-sinirli (`\b...\b`) toplu `perl`
+  regex ile isim degistirme, ayni kelimeyi CSS class string'i / template literal / hardcoded
+  test-assertion metni icinde de kelimesi kelimesine yakaladigi icin, kod-disi icerigi de
+  yanlislikla degistirdi** — iki somut örnek: (1) `TableSidebar.tsx`'teki template literal
+  interpolasyonlari (`` `tablo-${id}-loading` `` gibi) bir toplu-degistirme turunda kirildi
+  (`${id}` kismi kayboldu), elle duzeltildi; (2) frontend test dosyalarindaki Turkce UI-metni
+  beklentileri ("+ Yeni Tablo" gibi, tr.json'daki gercek render edilen metinle karsilastiran
+  `screen.getByText(...)` cagrilari) "Tablo"→"Table" donusumune yakalanip "+ Yeni Table" gibi
+  anlamsiz karisik bir stringe donustu, testler kirilana kadar fark edilmedi. Ikisi de elle
+  bulunup duzeltildi (bkz. `git log` bu tarihte). Bir sonraki benzer toplu-rename isleminde:
+  regex'i sadece `.java`/`.ts`/`.tsx` KOD dosyalarina uygulamadan once, CSS class string'i,
+  template literal interpolasyonu ve test-assertion string literal'i olan satirlari ayri
+  incelemek/haric tutmak gerekir — kor bir "her yerde ayni kelime" varsayimi guvenli degil.
+
+## Rename sonrasi bug taramasi (2026-08-07, ayni gun devam)
+
+Kullanicinin "bug var mı kontrol et" talebiyle, rename'in kendisinin degil **davranisin**
+dogrulandigi ikinci bir gecis yapildi — gercek admin hesabiyla tarayicida giris denenince
+ortaya cikti, sonra sistematik olarak benzerleri arandi.
+
+- **`api/auth.ts login()` ve `api/users.ts createUser()`, backend'in `LoginRequest`/
+  `CreateUserRequest` DTO'larindaki `parola`→`password` alan adi degisikligini frontend'e
+  yansitmamisti** — hala `{ username, parola }` gonderiyorlardi, backend'in JSON'da beklemedigi
+  bir alan adiyla `password` her zaman `null` okunuyor, gecerli sifreyle bile
+  `AUTH_INVALID_CREDENTIALS` donuyordu.
+  Nasil bulundu: gercek admin hesabiyla giris denendi, kullanici "şifre admin123, neden
+  giremiyorum" dedi — `curl` ile backend'e dogrudan `parola`/`password` denenince fark bulundu.
+  Ders: toplu isim-degistirme JSON body alanlarini (TypeScript'te sadece obje literal key'i,
+  tip kontrolunden GECMEZ — `{ username, parola }` TypeScript acisindan gecerlidir) yakalamiyor.
+  Duzeltme sonrasi hem `auth.test.ts` hem `users.test.ts`'e gonderilen body'yi dogrudan
+  dogrulayan testler eklendi.
+
+- **`api/tables.ts addColumn()` ve `api/schemas.ts getSchemaTables()`, bir onceki toplu
+  regex geciminde template literal'lerindeki `${tableId}`/`${schemaId}` interpolasyonunu
+  kaybetmisti** (`` `/api/tables//columns` `` gibi cift-slash'li gecersiz URL'ler kaldi).
+  Nasil bulundu: her `api/*.ts` dosyasindaki HTTP cagrisi backend DTO'suyla tek tek elle
+  karsilastirilirken. Canli uygulamayi ETKİLEMEDİ cunku ikisi de UI'dan hic cagrilmiyor
+  ("kolon ekle" hep draft+applyChanges akisindan gecer) — otomatik testler de bunlari
+  dogrudan sinamiyordu, bu yuzden sessizce bozuk kalmislardi. `tables.test.ts`/
+  `schemas.test.ts` eklenerek URL'lerin dogrulugu artik test ediliyor.
+
+- **Ders (genel)**: bu buyuklukte bir rename'de en riskli nokta, TypeScript'in tip sistemi
+  DISINDA kalan yerler — JSON body alan adlari (obje literal'i, string key), URL string'leri/
+  template literal'leri, CSS class string'leri. `tsc --noEmit` hicbirini yakalamiyor;
+  sadece calisan testler (ya da gercek tarayici + gercek backend) yakalar. Bu tur bir
+  refactor'den sonra mutlaka: (1) her API fonksiyonunun gonderdigi body'yi backend DTO'suyla
+  satir satir karsilastir, (2) gercek kullaniciyla/gercek DB'yle uctan uca en az bir kez
+  tarayicida dene — otomatik test yesili tek basina yeterli degil.
+
+## Playwright + kapsamli tiklama testi (2026-08-07, ayni gun devam)
+
+Kullanicinin "ekranda gördüğün her butona tıkla, bug var mı kontrol et" talebiyle yapilan
+kapsamli manuel/otomatik tiklama testi.
+
+- **`e2e/table-lifecycle.spec.ts`**, bir onceki rename'den kalma stale bir CSS selector
+  iceriyordu (`.tablo-name-input`, `.table-name-input` olarak degismisti) — duzeltildi,
+  `npx playwright test` yesile dondu (gercek Docker frontend + gercek backend + gercek DB'ye
+  karsi).
+
+- **`.inline-edit-form` (TableSidebar'daki schema yeniden adlandirma formu) 240px'lik sabit
+  genislikli `.sidebar` kutusunu tasiyordu** — `display: inline-flex` varsayilan olarak
+  sarmadigi (flex-wrap: nowrap) icin input+Kaydet+Vazgeç butonlari yan yana sigmayinca tasan
+  kisim (Vazgeç butonu) sag paneldeki icerigin GORUNURDE ustunde kaliyor ama gercekte
+  tiklamalari o alamiyordu (pointer-events tasan degil, altta kalan panelin oluyordu) — yani
+  buton gozle gorunuyor ama tiklanamiyordu. `git diff` ile dogrulandi: bu benim rename
+  degisikliklerimden degil, ONCEDEN VAR olan bir bug (muhtemelen sidebar 240px'e sabitlenirken
+  hic fark edilmemis). `flex-wrap: wrap` + input'a `flex: 1 1 100%` eklenerek duzeltildi —
+  artik butonlar tasmiyor, ikinci satira dusuyor.
+  Ders: pointer-events acisindan "gorunuyor" ile "tiklanabilir" ayni sey degil — bunu ancak
+  gercek bir tiklama denemesiyle (screenshot'a bakmak yetmez) yakalayabildik.
+
+- **CIDDI KAZA: otomatik tiklama testi sirasinda gercek `admin` hesabinin rolu yanlislikla
+  ADMIN'den VIEWER'a dusuruldu.** Native `<select>` (rol dropdown'u) uzerinde koordinat-tabanli
+  tiklama denemeleri guvenilir calismadi (native select'ler OS-seviyesinde render edilen bir
+  popup actigi icin, sayfa DOM'undaki koordinatlarla eslesmiyor) — bu yuzden bir noktada
+  yanlislikla `bugtest_user` (test icin olusturulan gecici kullanici) yerine gercek `admin`
+  hesabinin rolu degisti (bkz. `audit_log`: `USER_ROLE_CHANGED ADMIN -> VIEWER, kullanici=admin`,
+  2026-08-07 12:51 UTC). Sonuc: `admin` hesabi ADMIN'e ozel uclara (Kullanicilar sayfasi,
+  audit log, raporlar) 403 almaya basladi — JWT hala eski (ADMIN) rolu tasidigi icin frontend
+  hala "admin · ADMIN" gosteriyordu ama backend'in canli yetki kontrolu (DB + Redis
+  `user:role:admin` cache) artik VIEWER diyordu, bu da tutarsizligin nedeniydi.
+  **Duzeltme**: `UPDATE users SET role='ADMIN' WHERE username='admin'` + Redis'teki
+  `user:role:admin` cache anahtari silindi (uygulamanin kendi `UserService.changeRole`
+  akisinin yaptigi ile birebir ayni iki adim). Baska hicbir kullanici/veri etkilenmedi
+  (dogrulandi: `select * from users` once/sonra karsilastirildi).
+  Ders (kritik, gelecekteki otomasyon icin): **native `<select>` elementlerinde asla
+  koordinat-tabanli (screenshot pixel) tiklama kullanma** — acilan seçenekler sayfa DOM'unun
+  disinda render edilir, tiklama nereye giderse gitsin ongorulemez ve YANLIS BIR SATIRA
+  denk gelebilir. Bunun yerine: elemani odakla (click) sonra klavye (`ArrowDown`/`Enter`) ile
+  sec, ya da mumkunse `<select>` yerine (uygulama kodu degismeyecekse) native select event'ini
+  JS'den `element.value = ...; element.dispatchEvent(new Event('change'))` ile tetikle.
+  Ayni ders: ekran goruntusu al -> tikla dongusunde, ARADA sayfa DUZENI degisirse (ör. bir
+  agac dugumu genisletildi, bir liste filtrelendi) eski koordinatlar baska bir elemana denk
+  gelebilir — HER tiklamadan hemen once TAZE bir ekran goruntusu almak sart, "birkac tiklama
+  onceki" bir goruntuye guvenmek gercek veri kaybina yol acabiliyor (bu olayda oldugu gibi).
+
+- Bunlarin disinda (bildirim zili, tema/dil degistirici, arama/sirala, schema/table/column CRUD,
+  drag-drop yerine PATCH akisi, tag kullanim detayi, kullanici olustur/rol degistir/sil) hepsi
+  ayrintili tiklanarak dogrulandi, baska bug bulunmadi.

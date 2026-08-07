@@ -9,7 +9,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 /**
  * Redis'e String key/value olarak yaziyoruz (JSON/Object serilestirme yok) — hem elle
  * {@code redis-cli HGETALL user:role:admin} ile okunabilir kalsin, hem de sadece basit bir
- * kullanici-rol cache'i icin gereksiz bir serileştirici katmani eklenmesin.
+ * user-role cache'i icin gereksiz bir serileştirici katmani eklenmesin.
  */
 @Configuration
 public class RedisConfig {

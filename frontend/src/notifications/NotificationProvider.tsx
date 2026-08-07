@@ -1,5 +1,6 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { ReactNode, createContext, useCallback, useContext, useRef } from "react";
 import { TFunction } from "i18next";
+import { Toast, ToastMessage } from "primereact/toast";
 import { ApiError } from "../api/client";
 import "./notifications.css";
 
@@ -11,28 +12,18 @@ interface NotificationAction {
   onClick: () => void;
 }
 
-interface Notification {
-  kind: NotificationKind;
-  message: string;
-  action?: NotificationAction;
-}
-
 /** action opsiyonel: cogu bildirim (basari/hata) sadece bilgilendirir, sadece geri alinabilir islemler bir aksiyon tasir. */
 type NotifyFn = (status: number, message: string, action?: NotificationAction) => void;
 
 /**
  * Bildirimin ekranda kalma suresi — geri alinabilir bir islemde bu ayni zamanda "geri alma
  * penceresi"dir. Export ediliyor ki mesela Dashboard'daki gecikmeli silme, gercek API cagrisini
- * tam bu bildirim kaybolurken tetikleyecek sekilde ayni degeri kullanabilsin.
+ * tam bu bildirim kaybolurken tetikleyecek sekilde ayni degeri kullanabilsin. PrimeReact'in
+ * Toast'u {@code life} prop'uyla bu sureyi kendi yonetiyor — eskiden kendi yazdigimiz
+ * setTimeout+leaving-state mekanigi tamamen kalkti.
  */
 export const NOTIFICATION_DURATION_MS = 5000;
 
-/**
- * React Context: "prop drilling" olmadan (her component'e tek tek notify fonksiyonunu
- * elle gecirmeden) agacin herhangi bir yerinden {@link useNotify} ile bu fonksiyona
- * erisilmesini saglar. Baslangic degeri null — cunku Provider disinda hic kimse bunu
- * kullanmamali (bkz. useNotify'daki hata kontrolu).
- */
 const NotificationContext = createContext<NotifyFn | null>(null);
 
 /** HTTP status kodunu bildirim rengine cevirir — assignment'in istedigi "cevap durumuna gore renkli bildirim" ozelligi burada. */
@@ -60,55 +51,62 @@ const KIND_ICON: Record<NotificationKind, string> = {
 };
 
 /**
- * App.tsx'te tum uygulamayi sarmalayan Provider. Kendi state'inde (aktif bildirim) tutar ve
- * bunu Context uzerinden altindaki her component'e acar. children (sarmaladigi tum uygulama)
- * ile birlikte, varsa aktif bildirim kutusunu da ekranin bir kosesinde render eder.
+ * App.tsx'te tum uygulamayi sarmalayan Provider. Eskiden kendi state'inde bir bildirim yigini
+ * tutup elle render ederdi (bkz. git gecmisi); simdi PrimeReact'in {@link Toast}'una sariyor —
+ * {@code toastRef.current.show(...)} imperatif cagrisi Toast'un KENDI ic yiginina ekliyor,
+ * ayni anda birden fazla bildirimin ust uste binmeden gosterilmesi (stacking) artik bizim
+ * elle yazdigimiz bir seyi degil.
+ * <p>
+ * {@code content} render prop'uyla PrimeReact'in varsayilan summary/detail sablonunu HIC
+ * kullanmiyoruz — bunun yerine eski markup'imizi ({@code .notification}, {@code role="alert"}
+ * vb.) birebir ayni class isimleriyle kendimiz basiyoruz, boylece hem gorunum hem de mevcut
+ * testlerin ({@code closest('[role="alert"]')}) sorguladigi yapi degismedi.
  */
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notification, setNotification] = useState<Notification | null>(null);
+  const toastRef = useRef<Toast>(null);
 
-  // useCallback: notify fonksiyonunun her render'da yeniden olusturulmamasini saglar
-  // (referans stabil kalir), boylece Context.Provider'a verilen value her seferinde
-  // "degismis" gibi algilanip alt component'lerin gereksiz yere yeniden render olmasina yol acmaz.
   const notify = useCallback<NotifyFn>((status, message, action) => {
-    setNotification({ kind: kindForStatus(status), message, action });
-  }, []);
-
-  // Yeni bir bildirim geldiginde NOTIFICATION_DURATION_MS sonra otomatik kaybolmasi icin
-  // timer kurar. Bildirim degismeden onceki timer'i temizlemek (cleanup fonksiyonu = return
-  // edilen fonksiyon) onemli: yoksa ust uste bildirimler gelince eski timer'lar yeni
-  // bildirimi erken kapatabilirdi.
-  useEffect(() => {
-    if (!notification) {
-      return;
-    }
-    const timer = setTimeout(() => setNotification(null), NOTIFICATION_DURATION_MS);
-    return () => clearTimeout(timer);
-  }, [notification]);
-
-  return (
-    <NotificationContext.Provider value={notify}>
-      {children}
-      {notification && (
-        <div className={`notification notification-${notification.kind}`} role="alert">
+    const kind = kindForStatus(status);
+    // toastMessage'i once bir degiskene atayip content() icinden ona referans veriyoruz —
+    // "Geri Al" butonuna basilinca Toast'un show() ile verdigimiz AYNI nesneyi remove()'a
+    // geçirmemiz gerekiyor (Toast, mesaji referans esitligiyle bulup kaldiriyor).
+    const toastMessage: ToastMessage = {
+      life: NOTIFICATION_DURATION_MS,
+      // Eski tasarimda kapatma butonu hic yoktu (sadece otomatik kapanma + "Geri Al" gibi
+      // ozel bir aksiyon) — PrimeReact'in varsayilan X butonunu bilerek kapatiyoruz.
+      closable: false,
+      content: () => (
+        <div className={`notification notification-${kind}`} role="alert">
           <span className="notification-icon" aria-hidden="true">
-            {KIND_ICON[notification.kind]}
+            {KIND_ICON[kind]}
           </span>
-          <span className="notification-message">{notification.message}</span>
-          {notification.action && (
+          <span className="notification-message">{message}</span>
+          {action && (
             <button
               type="button"
               className="notification-action"
               onClick={() => {
-                notification.action!.onClick();
-                setNotification(null);
+                action.onClick();
+                toastRef.current?.remove(toastMessage);
               }}
             >
-              {notification.action.label}
+              {action.label}
             </button>
           )}
         </div>
-      )}
+      ),
+    };
+    toastRef.current?.show(toastMessage);
+  }, []);
+
+  return (
+    <NotificationContext.Provider value={notify}>
+      {children}
+      {/* pt.root: Toast'in DIS kapsayicisini (sabit konumlanan asil kutu) hedefliyor — unstyled
+          modda p-* class'lari hic eklenmiyor (bkz. notifications.css'teki not), o yuzden
+          konumlandirmayi CSS'te ".p-toast-bottom-right" gibi tahmini bir class'a degil,
+          burada acikca verdigimiz "toast-stack"e bagliyoruz. */}
+      <Toast ref={toastRef} position="bottom-right" pt={{ root: { className: "toast-stack" } }} />
     </NotificationContext.Provider>
   );
 }

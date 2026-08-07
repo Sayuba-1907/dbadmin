@@ -11,6 +11,11 @@
     "tagler": "Etiketler",
     "kullanicilar": "Kullanıcılar"
   },
+  "theme": {
+    "switcherLabel": "Tema seçici",
+    "dark": "Koyu",
+    "light": "Açık"
+  },
   "auth": {
     "username": "Kullanıcı adı",
     "password": "Parola",
@@ -37,6 +42,8 @@
     "searchPlaceholder": "Tablo ara...",
     "noSearchResults": "Eşleşen tablo yok",
     "noTablesInSchema": "Bu schema'da henüz tablo yok",
+    "noKolonlarInTablo": "Bu tabloda henüz kolon yok",
+    "loadingKolonlar": "Kolonlar yükleniyor...",
     "confirmDeleteSchema": "\"{{name}}\" schema'sını silmek istediğinize emin misiniz? Bu, içindeki {{count}} tabloyu da kalıcı olarak silecek.",
     "dragToMoveHint": "Başka bir schema'ya taşımak için sürükleyin",
     "sortLabel": "Sıralama",
@@ -58,6 +65,7 @@
     "colTag": "Tag",
     "colPrimaryKey": "PK",
     "emptyColumns": "Henüz kolon yok",
+    "columnSearchPlaceholder": "Kolon ara...",
     "columnNamePlaceholder": "kolon_adi",
     "addColumn": "Kolon Ekle",
     "primaryKeyLabel": "Birincil Anahtar",
@@ -93,6 +101,13 @@
     "usernamePlaceholder": "kullanici_adi",
     "passwordPlaceholder": "parola",
     "create": "Kullanıcı Oluştur"
+  },
+  "notificationBell": {
+    "buttonLabel": "Bildirimler",
+    "title": "Bildirimler",
+    "empty": "Henüz bildiriminiz yok",
+    "markAllRead": "Tümünü okundu işaretle",
+    "newNotificationToast": "{{user}}: {{message}}"
   },
   "notifications": {
     "loadFailed": "Veriler yüklenemedi",
@@ -164,7 +179,14 @@
     "VALIDATION_WEAK_PASSWORD": "Parola en az {{min}} karakter olmalı",
     "VALIDATION_MISSING_ROLE": "Bir rol belirtilmeli",
     "NOT_FOUND_USER": "Kullanıcı bulunamadı (id: {{id}})",
+    "NOT_FOUND_NOTIFICATION": "Bildirim bulunamadı (id: {{id}})",
     "CONFLICT_DUPLICATE_USERNAME": "\"{{name}}\" adında bir kullanıcı zaten var",
-    "CONFLICT_LAST_ADMIN": "Sistemdeki son yönetici silinemez ya da yetkisi düşürülemez"
+    "CONFLICT_LAST_ADMIN": "Sistemdeki son yönetici silinemez ya da yetkisi düşürülemez",
+    "NOT_FOUND_ENDPOINT": "Bu yolda bir uç nokta yok: {{path}}",
+    "VALIDATION_METHOD_NOT_ALLOWED": "{{method}} metodu burada desteklenmiyor, şunlardan birini kullanın: {{supported}}",
+    "VALIDATION_MALFORMED_BODY": "İstek gövdesi eksik ya da geçerli bir JSON değil",
+    "VALIDATION_INVALID_PATH_PARAM": "{{parameter}} geçerli bir {{type}} olmalı: {{value}}",
+    "CONFLICT_COLUMN_NOT_UNIQUE": "Bu işlem tablodaki mevcut veriyle çelişiyor (ör. birincil anahtar yapılmak istenen kolonda boş veya tekrar eden değerler var)",
+    "INTERNAL_ERROR": "Beklenmeyen bir hata oluştu"
   }
 }

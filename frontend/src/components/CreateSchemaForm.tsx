@@ -1,5 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { InputText } from "primereact/inputtext";
+import { Button } from "primereact/button";
 import { clearCustomValidity, onRequiredInvalid } from "../i18n/nativeValidation";
 
 interface CreateSchemaFormProps {
@@ -7,7 +9,7 @@ interface CreateSchemaFormProps {
   onClose: () => void;
 }
 
-/** "Yeni Schema" modal formu — CreateTabloForm ile ayni yapi, sadece tek bir isim alani var. */
+/** "Yeni Schema" modal formu — CreateTableForm ile ayni yapi, sadece tek bir isim alani var. */
 export function CreateSchemaForm({ onSubmit, onClose }: CreateSchemaFormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
@@ -24,13 +26,13 @@ export function CreateSchemaForm({ onSubmit, onClose }: CreateSchemaFormProps) {
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay fixed flex align-items-center justify-content-center">
       <form className="modal create-schema-form" onSubmit={handleSubmit}>
         <h2>{t("createSchemaForm.title")}</h2>
 
         <label>
           {t("createSchemaForm.schemaNameLabel")}
-          <input
+          <InputText
             type="text"
             placeholder={t("createSchemaForm.schemaNamePlaceholder")}
             value={name}
@@ -43,13 +45,14 @@ export function CreateSchemaForm({ onSubmit, onClose }: CreateSchemaFormProps) {
           />
         </label>
 
-        <div className="modal-actions">
-          <button type="button" className="btn" onClick={onClose}>
-            {t("common.cancel")}
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {t("createSchemaForm.submit")}
-          </button>
+        <div className="modal-actions flex justify-content-end">
+          <Button type="button" className="btn" onClick={onClose} label={t("common.cancel")} />
+          <Button
+            type="submit"
+            className="btn btn-primary"
+            disabled={submitting}
+            label={t("createSchemaForm.submit")}
+          />
         </div>
       </form>
     </div>

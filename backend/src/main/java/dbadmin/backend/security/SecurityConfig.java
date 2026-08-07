@@ -1,6 +1,6 @@
 package dbadmin.backend.security;
 
-import dbadmin.backend.entity.Rol;
+import dbadmin.backend.entity.Role;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +24,11 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *       boslar (bkz. prometheus.yml). Bu uclar olcum verisi doner, is verisi degil.
  *   <li>Swagger ({@code /swagger-ui/**}, {@code /v3/api-docs/**}) — API dokumantasyonu; kapali
  *       olsaydi hocaya/ekibe API'yi gostermek icin once giris yapmak gerekirdi.
+ *   <li>{@code /ws} — WebSocket handshake'i (tarayicinin native {@code WebSocket} API'si custom
+ *       {@code Authorization} basligi ekleyemedigi icin) bu filtre zincirinden degil, {@code
+ *       NotificationWebSocketHandler} icindeki JWT-query-param kontrolunden gecer (bkz.
+ *       requirement-websocket-notifications.md Req-3.1). Filtre burada kapali kalirsa handshake'in
+ *       kendisi (401) hic {@code afterConnectionEstablished}'a ulasmadan reddedilirdi.
  * </ul>
  *
  * <h2>Yetki kurallari</h2>
@@ -31,8 +36,12 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <li>GET {@code /api/**} → giris yapmis <b>herkes</b> (VIEWER dahil) okuyabilir.
  *   <li>Diger metodlar {@code /api/**} → EDITOR veya ADMIN ("kimisi update edebilsin kimisi
  *       edemesin").
- *   <li>{@code /api/kullanicilar/**} → sadece ADMIN. Bu kural digerlerinden <b>once</b>
- *       yazilmalidir: kurallar sirayla degerlendirilir, ilk eslesen kazanir.
+ *   <li>{@code /api/users/**}, {@code /api/audit-logs/**} ve {@code /api/reports/**} →
+ *       sadece ADMIN. Bu kurallar digerlerinden <b>once</b> yazilmalidir: kurallar sirayla
+ *       degerlendirilir, ilk eslesen kazanir.
+ *   <li>{@code /api/notifications/**} → rol kisiti yok, PATCH dahil giris yapmis herkes (bkz.
+ *       requirement-websocket-notifications.md Req-3.6) — filtre rol degil, {@code
+ *       NotificationService}'in her sorguda uyguladigi "sadece kendi bildirimi" kurali.
  * </ul>
  *
  * <h2>Neden stateless / CSRF kapali</h2>
@@ -71,12 +80,20 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/prometheus", "/actuator/health/**", "/actuator/health")
                         .permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/ws").permitAll()
                         // Tarayici preflight istegi kimlik tasimaz; reddedilirse asil istek hic atilmaz.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Kullanici yonetimi sadece ADMIN — genel /api/** kuralindan ONCE gelmeli.
-                        .requestMatchers("/api/kullanicilar/**").hasRole(Rol.ADMIN.name())
+                        // Kullanici yonetimi, audit log ve rapor tetikleme sadece ADMIN — genel /api/** kuralindan ONCE gelmeli.
+                        .requestMatchers("/api/users/**").hasRole(Role.ADMIN.name())
+                        .requestMatchers("/api/audit-logs/**").hasRole(Role.ADMIN.name())
+                        .requestMatchers("/api/reports/**").hasRole(Role.ADMIN.name())
+                        // Bildirimler rol kisitli degil (Req-3.6): PATCH dahil herhangi bir
+                        // kimlikli kullanici (VIEWER dahil) kendi bildirimini okundu isaretleyebilir
+                        // — genel "/api/** PATCH/POST/DELETE sadece EDITOR/ADMIN" kuralindan ONCE
+                        // gelmeli, aksi halde VIEWER kendi bildirimini bile isaretleyemezdi.
+                        .requestMatchers("/api/notifications/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
-                        .requestMatchers("/api/**").hasAnyRole(Rol.EDITOR.name(), Rol.ADMIN.name())
+                        .requestMatchers("/api/**").hasAnyRole(Role.EDITOR.name(), Role.ADMIN.name())
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(securityErrorHandler)
@@ -99,7 +116,7 @@ public class SecurityConfig {
      * kimlik guvenlik baglami yuklenmeden atanmaya calisilir ve teshisi zor bir hataya donusur.
      */
     @Bean
-    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterOtomatikKaydiKapat(
+    public FilterRegistrationBean<JwtAuthenticationFilter> disableJwtFilterAutoRegistration(
             JwtAuthenticationFilter filter) {
         FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);

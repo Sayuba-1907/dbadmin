@@ -1,17 +1,20 @@
 package dbadmin.backend.controller;
 
+import dbadmin.backend.dto.ErrorExamples;
 import dbadmin.backend.dto.ErrorResponse;
 import dbadmin.backend.dto.LoginRequest;
 import dbadmin.backend.dto.LoginResponse;
-import dbadmin.backend.entity.Kullanici;
+import dbadmin.backend.entity.User;
 import dbadmin.backend.security.JwtService;
-import dbadmin.backend.service.KullaniciService;
+import dbadmin.backend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,15 +33,15 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final KullaniciService kullaniciService;
+    private final UserService userService;
 
     public AuthController(
             AuthenticationManager authenticationManager,
             JwtService jwtService,
-            KullaniciService kullaniciService) {
+            UserService userService) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
-        this.kullaniciService = kullaniciService;
+        this.userService = userService;
     }
 
     /**
@@ -57,17 +60,21 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Giris basarili, token dondu"),
         @ApiResponse(
                 responseCode = "401",
-                description = "Kullanici adi ya da parola hatali (AUTH_INVALID_CREDENTIALS)",
-                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                description = "Kullanici adi ya da parola hatali.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "AUTH_INVALID_CREDENTIALS",
+                                summary = "Kullanici adi ya da parola yanlis",
+                                value = ErrorExamples.AUTH_INVALID_CREDENTIALS)))
     })
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.kullaniciAdi(), request.parola()));
+                new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
-        Kullanici kullanici = kullaniciService.getKullaniciByAd(request.kullaniciAdi());
+        User user = userService.getUserByUsername(request.username());
         return new LoginResponse(
-                jwtService.tokenUret(kullanici), kullanici.getKullaniciAdi(), kullanici.getRol());
+                jwtService.generateToken(user), user.getUsername(), user.getRole());
     }
 
     /**
@@ -82,15 +89,19 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Token gecerli, kullanici bilgisi dondu"),
         @ApiResponse(
                 responseCode = "401",
-                description = "Token yok, bozuk ya da suresi dolmus (AUTH_REQUIRED)",
-                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                description = "Token yok, bozuk ya da suresi dolmus.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "AUTH_REQUIRED",
+                                summary = "Token yok/gecersiz",
+                                value = ErrorExamples.AUTH_REQUIRED)))
     })
-    @GetMapping("/ben")
-    public ResponseEntity<LoginResponse> ben(Authentication authentication) {
-        Kullanici kullanici = kullaniciService.getKullaniciByAd(authentication.getName());
+    @GetMapping("/me")
+    public ResponseEntity<LoginResponse> me(Authentication authentication) {
+        User user = userService.getUserByUsername(authentication.getName());
         // Token yeniden uretilmiyor: cagiran zaten gecerli bir token'la geldi, amac sadece
         // kim oldugunu soylemek. Bu yuzden token alani bos.
         return ResponseEntity.ok(
-                new LoginResponse(null, kullanici.getKullaniciAdi(), kullanici.getRol()));
+                new LoginResponse(null, user.getUsername(), user.getRole()));
     }
 }

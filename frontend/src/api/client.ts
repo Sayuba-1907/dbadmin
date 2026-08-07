@@ -1,8 +1,8 @@
-const API_BASE_URL = "http://localhost:8081";
+export const API_BASE_URL = "http://localhost:8081";
 
 /**
  * Su anki JWT — AuthProvider'in disardan set ettigi bir modul-seviyesi degisken. client.ts
- * bilerek AuthProvider'i import etmez (auth/AuthProvider zaten login/ben icin bu dosyadaki
+ * bilerek AuthProvider'i import etmez (auth/AuthProvider zaten login/me icin bu dosyadaki
  * apiPost/apiGet'i cagirir; tersten bir import döngüye yol acardi). Bunun yerine AuthProvider
  * {@link setAuthToken}'i cagirarak token'i buraya bildirir — akis tek yonlu kalir.
  */
@@ -11,6 +11,11 @@ let authToken: string | null = null;
 /** AuthProvider login/logout olduğunda ya da sayfa acilista localStorage'dan okudugunda cagirir. */
 export function setAuthToken(token: string | null) {
   authToken = token;
+}
+
+/** useWebSocket icin: /ws handshake'i header degil query param tasidigi icin (bkz. o hook'un javadoc'u) token'in kendisine ihtiyac var. */
+export function getAuthToken(): string | null {
+  return authToken;
 }
 
 /**

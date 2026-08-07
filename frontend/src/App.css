@@ -1,37 +1,65 @@
 .App {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
 .app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid #e2e8f0;
-  background-color: #fff;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-surface);
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 18px;
+}
+
+.brand-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  font-family: inherit;
+  transition: background-color var(--transition-fast);
+}
+
+.brand-button:hover {
+  background-color: var(--color-surface-raised);
+}
+
+.brand-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .app-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .current-user {
-  font-size: 13px;
-  color: #64748b;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
-.language-switcher {
+.language-switcher,
+.theme-switcher {
   display: flex;
   gap: 4px;
 }
@@ -48,147 +76,230 @@
   min-width: 0;
 }
 
+input:not([type="checkbox"]):not([type="radio"]),
+select {
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):hover,
+select:hover {
+  border-color: var(--color-border-strong);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .login-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex: 1;
   min-height: 100vh;
 }
 
 .login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   width: 280px;
-  padding: 24px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background-color: #fff;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface-raised);
+  box-shadow: var(--shadow-md);
 }
 
 .login-form h1 {
-  margin: 0 0 8px;
-  font-size: 20px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-  color: #475569;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .login-field input {
-  padding: 8px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: var(--space-2) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  box-sizing: border-box;
+}
+
+/* Kullanici adi input'u duz <input> oldugu icin flex sutununda kendiliginden tam genislige
+   geriyor (stretch) — Password bilesenininki ise kendi sarmalayici <span>'inin (goz ikonu
+   icin) icinde, o span'in de genisligi acikca belirtilmezse input'la ayni hizada durmuyordu.
+   Unstyled modda PrimeReact'in kendi ".p-password { position: relative }" gibi yapisal
+   kurallari da hic eklenmiyor (bkz. App.css'teki diger unstyled notlari) — goz ikonunun
+   input'un icinde, sagda durmasini saglayan position:relative/absolute cifti burada elle
+   kuruluyor. */
+.login-password input,
+.user-password input {
+  padding-right: 34px;
+}
+
+.login-password [data-pc-section="showicon"],
+.login-password [data-pc-section="hideicon"],
+.user-password [data-pc-section="showicon"],
+.user-password [data-pc-section="hideicon"] {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.login-password [data-pc-section="showicon"]:hover,
+.login-password [data-pc-section="hideicon"]:hover,
+.user-password [data-pc-section="showicon"]:hover,
+.user-password [data-pc-section="hideicon"]:hover {
+  color: var(--color-text-primary);
+}
+
+.login-field input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
 }
 
 .login-submit {
-  margin-top: 8px;
+  margin-top: var(--space-1);
 }
 
-.language-switcher-btn {
-  padding: 4px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background-color: #fff;
-  cursor: pointer;
-  font-size: 13px;
+.language-switcher-btn,
+.theme-switcher-btn {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast);
 }
 
-.language-switcher-btn.active {
-  background-color: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+.language-switcher-btn:hover,
+.theme-switcher-btn:hover {
+  border-color: var(--color-border-strong);
+}
+
+.language-switcher-btn.active,
+.theme-switcher-btn.active {
+  background-color: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+  color: var(--color-on-accent);
   cursor: default;
 }
 
-.dashboard {
-  display: flex;
-  flex: 1;
-}
-
 .workspace-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   width: 96px;
-  padding: 12px 8px;
-  border-right: 1px solid #e2e8f0;
-  background-color: #f8fafc;
+  padding: var(--space-3) var(--space-2);
+  border-right: 1px solid var(--color-border);
+  background-color: var(--color-surface);
 }
 
 .workspace-nav-btn {
-  padding: 8px 6px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: none;
-  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.workspace-nav-btn:active:not(.active) {
+  transform: scale(0.97);
+}
+
+.nav-icon {
   font-size: 13px;
-  text-align: left;
+  opacity: 0.85;
 }
 
 .workspace-nav-btn:hover {
-  background-color: #e2e8f0;
+  background-color: var(--color-surface-raised);
 }
 
 .workspace-nav-btn.active {
-  background-color: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+  background-color: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+  color: var(--color-on-accent);
+  font-weight: 500;
 }
 
 .sidebar {
   width: 240px;
-  border-right: 1px solid #e2e8f0;
-  padding: 12px;
-  background-color: #fff;
+  border-right: 1px solid var(--color-border);
+  padding: var(--space-3);
+  background-color: var(--color-surface);
 }
 
 .sidebar-search-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .sidebar-search {
-  display: block;
   flex: 1;
   min-width: 0;
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
   box-sizing: border-box;
 }
 
 .sidebar-search:focus-visible,
 .sidebar-sort:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-accent);
   outline-offset: 1px;
 }
 
 /* Sitelerde alisik oldugumuz "sirala" ikonlu secim kutusu: ikonu select'in ustune bindiriyoruz
    (position: absolute), select'in kendisinin sol padding'ini ikona yer acacak kadar genisletiyoruz. */
 .sidebar-sort-control {
-  position: relative;
   flex-shrink: 0;
 }
 
 .sidebar-sort-icon {
-  position: absolute;
   left: 7px;
   top: 50%;
   transform: translateY(-50%) rotate(90deg);
   font-size: 12px;
   line-height: 1;
-  color: #64748b;
+  color: var(--color-text-secondary);
   pointer-events: none;
 }
 
@@ -198,260 +309,482 @@
   -moz-appearance: none;
   width: 104px;
   padding: 6px 8px 6px 24px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #334155;
-  background-color: #fff;
-  cursor: pointer;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-raised);
   box-sizing: border-box;
 }
 
 .sidebar-sort:hover {
-  border-color: #94a3b8;
+  border-color: var(--color-border-strong);
 }
 
-.schema-list {
+/* Sidebar agaci artik PrimeReact'in Tree bileseni — unstyled modda p-* class'lari hic
+   eklenmedigi icin (bkz. NotificationProvider/ConfirmProvider'daki ayni not) Tree'nin kendi
+   yapisal parcalarini (liste/dugum/toggler) buradaki data-pc-section/role secicileriyle
+   kendimiz giydiriyoruz. Icerigin kendisi (isim, renk noktasi, Edit/Delete, surukle-birak)
+   hala tamamen bizim nodeTemplate'imizde (TabloSidebar.tsx).*/
+.schema-tree {
+  margin-top: var(--space-3);
+}
+
+.schema-tree [role="tree"],
+.schema-tree [role="group"] {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 0;
   padding: 0;
 }
 
-.schema-group {
+.schema-tree [role="treeitem"] {
+  list-style: none;
+}
+
+.schema-tree > [role="tree"] > [role="treeitem"] {
   margin-bottom: 2px;
-  border-radius: 6px;
+}
+
+.schema-tree [data-pc-section="content"] {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius-md);
   transition:
-    background-color 0.15s ease,
-    outline-color 0.15s ease;
+    background-color var(--transition-base),
+    outline-color var(--transition-base);
+}
+
+.schema-tree [data-pc-section="toggler"] {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.schema-tree [data-pc-section="toggler"]:hover {
+  background-color: var(--color-surface-raised);
+}
+
+.schema-tree [data-pc-section="togglericon"] {
+  width: 11px;
+  height: 11px;
+}
+
+/* Gercek yaprak dugumlerde (kolon/bos-durum/yukleniyor satirlari) de bir toggler butonu render
+   ediliyor (hizalama icin, temada normalde gorunmez kilinir) — bizde tema yok, elle gizliyoruz.
+   aria-level bu derinlikte PrimeReact tarafindan hic set edilmiyor (bir kutuphane garipligi),
+   o yuzden seviyeye gore degil ICERIGE gore hedefliyoruz — :has() ile "icinde kolon/bos-durum/
+   yukleniyor gorunumu olan content" secilip onun togglerini gizliyoruz. Schema ve tablo
+   dugumlerinin togglerlari boylece dokunulmadan gorunur/tiklanabilir kalir. */
+.schema-tree
+  [data-pc-section="content"]:has(> .sidebar-column-item, > .sidebar-column-loading, > .empty-hint)
+  [data-pc-section="toggler"] {
+  visibility: hidden;
+}
+
+/* min-width: 0 olmadan flex ogeleri varsayilan olarak kendi icerik genisliklerinin altina
+   kuculemiyor — sidebar'in dar (240px) alaninda uc seviyeli agacta (schema>tablo>kolon) bu,
+   PK/tip rozetlerinin tasmasina yol aciyordu. Bu tek satir butun agac icin kok neden duzeltmesi. */
+.schema-tree [data-pc-section="content"] {
+  min-width: 0;
+}
+
+.sidebar-column-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px var(--space-2);
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+
+.sidebar-column-item .mono {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.sidebar-column-item .type-badge,
+.sidebar-column-item .pk-badge {
+  flex-shrink: 0;
+}
+
+.sidebar-column-loading {
+  padding: 5px var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Uc seviyeye kadar inebilen bir agacta 24px'lik girinti cok hizli yer yiyordu (3 seviye =
+   72px, 240px'lik sidebar'in ucte birinden fazlasi) — 16px'e dusuruldu. */
+.schema-tree [role="group"] {
+  margin: 2px 0 4px;
+  padding: 0 0 0 10px;
+  border-left: 1px solid var(--color-border);
+  margin-left: 16px;
 }
 
 .schema-header-row {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
+/* Kucuk toggler oku YANI SIRA butun baslik satirina (isim/renk noktasi/sayi) tiklayinca da
+   ac/kapa oluyor — sadece minik oka tiklamak zorunda birakmak kullanislsiz kaliyordu. role=
+   "button" + tabIndex, span'i klavye/ekran okuyucu icin de bir dugme gibi davranacak sekilde
+   isaretliyor (bkz. TabloSidebar.tsx). */
 .schema-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   flex: 1;
   min-width: 0;
-  padding: 7px 8px;
-  border: none;
-  background: none;
-  border-radius: 6px;
-  text-align: left;
-  cursor: pointer;
-  font-size: 14px;
+  padding: 7px var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
   font-weight: 600;
-  color: #334155;
+  color: var(--color-text-primary);
 }
 
 .schema-header:hover {
-  background-color: #f1f5f9;
+  background-color: var(--color-surface-raised);
 }
 
-.schema-header span:not(.kolon-count):not(.schema-caret) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.schema-header:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 
-.schema-caret {
-  display: inline-block;
-  font-size: 10px;
-  color: #94a3b8;
-  transition: transform 0.15s ease;
+.schema-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.schema-caret.expanded {
-  transform: rotate(90deg);
+/* Bir tablo suruklenirken uzerine gelinen schema'nin baslik satirini vurgular — eskiden
+   .schema-group.drag-over (bkz. asagidaki not), artik drop handler'lari schema-header-row'un
+   uzerinde oldugu icin vurgu da dogrudan burada. */
+.schema-header-row.drag-over {
+  background-color: var(--color-accent-soft);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 
 .schema-header-row .btn-link {
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   text-decoration: none;
   padding: 4px 6px;
   white-space: nowrap;
 }
 
 .schema-header-row .btn-link:hover {
-  color: #475569;
+  color: var(--color-text-primary);
   text-decoration: underline;
 }
 
 .schema-header-row .btn-danger.btn-link:hover {
-  color: #dc2626;
+  color: var(--color-danger);
 }
 
-/* Bir tablo suruklenirken uzerine gelinen schema'nin tum alanini (baslik + tablo listesi)
-   vurgular — kullaniciya "burasi birakma hedefi" geri bildirimi verir. Dashed outline yerine
-   sol kenarlik + hafif zemin renginin sebebi: daha sakin/az "titrek" gorunmesi. */
-.schema-group.drag-over {
-  background-color: #eff6ff;
-  outline: 2px solid #93c5fd;
-  outline-offset: -2px;
-}
-
-.tablo-list {
-  list-style: none;
-  margin: 2px 0 4px;
-  padding: 0 0 0 14px;
-  border-left: 1px solid #e2e8f0;
-  margin-left: 10px;
-}
-
-.tablo-list-item {
+.table-list-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
+  min-width: 0;
   padding: 7px 10px;
   border: none;
   background: none;
-  border-radius: 5px;
-  text-align: left;
+  border-radius: var(--radius-md);
+  border-left: 3px solid transparent;
   cursor: grab;
-  font-size: 14px;
-  color: #475569;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
   transition:
-    background-color 0.15s ease,
-    opacity 0.15s ease;
+    background-color var(--transition-base),
+    opacity var(--transition-base),
+    transform var(--transition-fast);
 }
 
-.tablo-list-item:hover {
-  background-color: #f1f5f9;
+.table-name {
+  min-width: 0;
 }
 
-.tablo-list-item.selected {
-  background-color: #dbeafe;
-  color: #1d4ed8;
+.table-list-item:hover {
+  background-color: var(--color-surface-raised);
+  transform: translateX(2px);
+}
+
+.table-list-item.selected {
+  background-color: var(--color-accent-soft);
+  border-left: 3px solid var(--color-accent);
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18);
+  color: var(--color-accent);
+  font-weight: 600;
   font-weight: 500;
 }
 
-.tablo-list-item.dragging {
+.table-list-item.dragging {
   opacity: 0.4;
   cursor: grabbing;
 }
 
-.kolon-count {
-  color: #94a3b8;
-  font-size: 12px;
+.column-count {
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
   font-weight: 400;
   flex-shrink: 0;
 }
 
 .detail-panel {
   flex: 1;
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .detail-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.empty-state {
+  min-height: 320px;
+}
+
+.empty-state-line {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+}
+
+.empty-state-comment {
+  color: var(--color-type-text);
+}
+
+.empty-state-cursor {
+  color: var(--color-accent);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.detail-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-md);
 }
 
 .detail-header-actions {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
+  gap: var(--space-2);
 }
 
-.tablo-name-input {
-  font-size: 18px;
+.table-name-input {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
   font-weight: 600;
+  color: var(--color-text-primary);
+  background: none;
   padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
-.tablo-name-input:hover,
-.tablo-name-input:focus {
-  border-color: #cbd5e1;
+.table-name-input:hover,
+.table-name-input:focus {
+  border-color: var(--color-border-strong);
+}
+
+.table-name-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
 }
 
 .pending-move-hint {
-  font-size: 13px;
-  color: #92400e;
+  font-size: var(--text-sm);
+  color: var(--color-pk);
   font-style: italic;
 }
 
-.kolon-row-silinecek {
+.column-row-to-delete {
   opacity: 0.5;
   text-decoration: line-through;
 }
 
 .new-badge {
-  font-size: 11px;
-  color: #15803d;
+  font-size: var(--text-xs);
+  color: var(--color-type-text);
   margin-left: 6px;
 }
 
-.kolon-table {
-  width: 100%;
+.column-table {
   border-collapse: collapse;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
-.kolon-table th,
-.kolon-table td {
+.column-table th,
+.column-table td {
   text-align: left;
-  padding: 8px;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 14px;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-base);
+}
+
+.column-table th {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.column-table tbody tr {
+  transition:
+    background-color var(--transition-fast),
+    opacity var(--transition-base);
+  animation: row-enter 500ms ease;
+}
+
+.column-table tbody tr:hover {
+  background-color: var(--color-surface-raised);
 }
 
 .type-badge {
-  font-family: monospace;
-  background-color: #f1f5f9;
+  font-family: var(--font-mono);
   padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.type-badge-numeric {
+  color: var(--color-type-numeric);
+  background-color: var(--color-type-numeric-bg);
+}
+
+.type-badge-text {
+  color: var(--color-type-text);
+  background-color: var(--color-type-text-bg);
+}
+
+.type-badge-datetime {
+  color: var(--color-type-datetime);
+  background-color: var(--color-type-datetime-bg);
+}
+
+.type-badge-boolean {
+  color: var(--color-type-boolean);
+  background-color: var(--color-type-boolean-bg);
+}
+
+.tag-select {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.tag-select:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.tag-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tag-select option {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-weight: 400;
 }
 
 .pk-badge {
-  font-family: monospace;
-  background-color: #fef3c7;
-  color: #92400e;
+  font-family: var(--font-mono);
+  background-color: var(--color-pk-bg);
+  color: var(--color-pk);
   padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.add-kolon-form,
+.add-column-form,
 .add-tag-form {
-  display: flex;
   gap: 8px;
   margin-bottom: 8px;
-  align-items: center;
 }
 
 .inline-edit-form {
-  display: inline-flex;
   gap: 4px;
   align-items: center;
   /* .tagler-item-row grid'inin tek cocugu oldugunda tum satiri kaplasin diye (grid disi
-     kullanimlarda, ör. TabloSidebar, bu ozelligin hicbir etkisi yok). */
+     kullanimlarda, ör. TableSidebar, bu ozelligin hicbir etkisi yok). */
   grid-column: 1 / -1;
+  /* inline-flex varsayilan olarak sarmiyor (flex-wrap: nowrap) — TableSidebar'in 240px'lik
+     sabit genislikli kutusunda input + iki buton yan yana sigmayinca, tasan kismi sag
+     paneldeki (detail-panel/empty-state) icerik gorunurde ustunde kaliyor ama gercekte
+     tiklamalari o alamiyor (pointer-events tasan degil, altta kalan panelin oluyor) —
+     "Vazgeç" butonu gorunse de tiklanamaz hale geliyordu. Sarmayi acmak butonlari
+     ikinci satira dusurup hem gorunur hem tiklanabilir tutuyor.
+     */
+  flex-wrap: wrap;
+}
+
+.inline-edit-form input {
+  min-width: 0;
+  flex: 1 1 100%;
 }
 
 .btn {
-  padding: 6px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background-color: #fff;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-primary);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--text-base);
+  transition:
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .btn:focus-visible,
-.tablo-list-item:focus-visible {
-  outline: 2px solid #2563eb;
+.table-list-item:focus-visible {
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
@@ -461,13 +794,23 @@
 }
 
 .btn-primary {
-  background-color: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+  background-color: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+  color: var(--color-on-accent);
+  font-weight: 500;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .btn-danger {
-  color: #dc2626;
+  color: var(--color-danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  border-color: var(--color-danger);
 }
 
 .btn-link {
@@ -485,36 +828,146 @@
   padding: 20px;
 }
 
-.tagler-panel,
-.kullanicilar-panel {
-  flex: 1;
-  padding: 20px;
+.app-loading {
+  gap: var(--space-3);
+  min-height: 100vh;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
-.kullanici-table {
-  width: 100%;
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-surface-raised);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Skeleton yukleme gorunumu: gercek verinin kaplayacagi alani onceden dolduran, hafif
+   pulse'layan bloklar. Renkler tokens.css'teki yuzey hiyerarsisinden (surface-raised
+   surface'ten belirgin ama abartisiz) - prefers-reduced-motion global kurali (tokens.css)
+   bu animasyonu da otomatik durduruyor. */
+.skeleton {
+  background-color: var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-nav-btn {
+  height: 36px;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-schema-group {
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-indent {
+  width: 80%;
+  margin-left: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+/* Sekme (Semalar/Tagler/Kullanicilar) panelleri veya secili tablo detayi ilk kez DOM'a
+   girdiginde kisa bir fade+kaydirma - .sidebar/.detail-panel/.tagler-panel/.users-panel
+   class'larina dogrudan baglandigi icin sadece element MOUNT olunca (view degisince,
+   ya da bos durumdan tablo secilince) tetikleniyor; ayni panel icinde veri guncellenirken
+   (ör. baska bir tablo secilirken TabloDetail yeniden render olurken) tekrar oynamiyor. */
+/* Yeni eklenen bir satir (kolon/tag/kullanici) DOM'a girerken kisa bir vurgu: hafif yesil
+   zeminden seffafa, opaklik 0'dan 1'e - "az once eklendi" hissi. tr/li elementlerinde transform
+   yerine sadece opacity/background-color kullaniliyor (transform'un table-row'da tarayicilar
+   arasi destegi tutarsiz). Sadece MOUNT'ta oynuyor (bkz. view-fade'deki ayni not) - var olan
+   satirlar yeniden render olurken tekrar oynamiyor. */
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    background-color: var(--color-accent-soft);
+  }
+  to {
+    opacity: 1;
+    background-color: transparent;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.tagler-panel,
+.users-panel {
+  flex: 1;
+  padding: var(--space-5);
+}
+
+.user-table {
   max-width: 480px;
   border-collapse: collapse;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
-.kullanici-table th,
-.kullanici-table td {
+.user-table th,
+.user-table td {
   text-align: left;
-  padding: 8px;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 14px;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-base);
+}
+
+.user-table tbody tr {
+  animation: row-enter 500ms ease;
+}
+
+.user-table th {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .you-badge {
-  color: #64748b;
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
-.create-kullanici-form {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.role-badge {
+  margin-right: var(--space-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.role-badge-admin {
+  color: var(--color-role-admin);
+  background-color: var(--color-role-admin-bg);
+}
+
+.role-badge-editor {
+  color: var(--color-role-editor);
+  background-color: var(--color-role-editor-bg);
+}
+
+.role-badge-viewer {
+  color: var(--color-role-viewer);
+  background-color: var(--color-role-viewer-bg);
+}
+
+.create-user-form {
+  gap: var(--space-2);
 }
 
 .tagler-list {
@@ -524,8 +977,9 @@
 }
 
 .tagler-item {
-  border-bottom: 1px solid #e2e8f0;
-  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-2) 0;
+  animation: row-enter 500ms ease;
 }
 
 /* Eskiden flex + justify-content: space-between kullaniyordu: tagler-name'in genisligi
@@ -534,29 +988,51 @@
    olursa olsun butonlari hep ayni sutunlara oturtur. */
 .tagler-item-row {
   display: grid;
-  grid-template-columns: 1fr 90px 90px 90px;
+  grid-template-columns: 1fr 286px;
   align-items: center;
-  column-gap: 8px;
+  column-gap: var(--space-2);
 }
 
+/* Detail/Edit/Delete tek bir grid hucresinde, sag kenara yaslanmis flex grubu — VIEWER'da
+   Edit/Delete hic render edilmedigi icin (bkz. TaglerPanel) Detail ortada asili kalmasin diye:
+   butonlar kac tane olursa olsun hep sag kenarda durur, 286px'lik hucre genisligi de (3 buton +
+   2 bosluk) tum satirlarin ayni x konumunda hizalanmasini garanti eder. */
+.tagler-item-actions {
+  gap: var(--space-2);
+}
+
+/* Tiklanip ayrinti panelini ac/kapa yapiyor (bkz. TaglerPanel.tsx) — schema-header'daki ayni
+   desen: ayri bir "Ayrıntı" butonu yerine isme tiklamak yeterli. */
 .tagler-name {
+  font-family: var(--font-mono);
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  margin: -2px -6px;
+}
+
+.tagler-name:hover {
+  background-color: var(--color-surface-raised);
+}
+
+.tagler-name:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 
 .tagler-usage {
-  margin-top: 8px;
-  padding-left: 12px;
+  margin-top: var(--space-2);
+  padding-left: var(--space-3);
 }
 
 .tagler-usage-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-family: monospace;
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .tagler-usage-list li {
@@ -564,53 +1040,112 @@
 }
 
 .modal-overlay {
-  position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background-color: rgba(4, 6, 10, 1);
 }
 
 .modal {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
   width: 400px;
+  max-width: calc(100vw - var(--space-6));
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
+}
+
+.modal.create-table-form {
+  width: 560px;
 }
 
 .modal label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
+  gap: var(--space-1);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
 }
 
-.kolon-rows {
+.column-rows {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.kolon-row {
+.column-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.column-row input,
+.column-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.column-row .checkbox-label,
+.column-row .btn {
+  flex-shrink: 0;
 }
 
 label.checkbox-label {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  gap: 4px;
-  font-size: 14px;
+  gap: var(--space-1);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
 
-.modal-actions {
+/* PrimeReact Checkbox (unstyled mode): root wraps a visually-hidden native input + a "box" div
+   that we render as the visible square — no p-* classes exist to style against, so this is all
+   hand-built from data-pc-section attributes. */
+[data-pc-name="checkbox"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+[data-pc-name="checkbox"] [data-pc-section="input"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+[data-pc-name="checkbox"] [data-pc-section="box"] {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+[data-pc-name="checkbox"] [data-pc-section="box"][data-p-highlight="true"] {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+[data-pc-name="checkbox"] [data-pc-section="box"] svg {
+  width: 11px;
+  height: 11px;
+  color: var(--color-text-primary);
+}
+
+.modal-actions {
+  gap: var(--space-2);
 }

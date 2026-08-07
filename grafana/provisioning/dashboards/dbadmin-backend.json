@@ -500,6 +500,83 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Redis Cache Hit Rate (%) - kullanici rol",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(dbadmin_cache_rol_hits_total[5m])) / (sum(rate(dbadmin_cache_rol_hits_total[5m])) + sum(rate(dbadmin_cache_rol_misses_total[5m])))",
+          "legendFormat": "hit rate",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Cache Hits (total)",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "dbadmin_cache_rol_hits_total{application=\"backend\"}",
+          "legendFormat": "hits",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Cache Misses (total)",
+      "gridPos": {
+        "x": 18,
+        "y": 48,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "dbadmin_cache_rol_misses_total{application=\"backend\"}",
+          "legendFormat": "misses",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }

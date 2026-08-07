@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthProvider";
 
 /** Dashboard'un su an gosterdigi ana alan: schema/tablo agaci mi, etiket listesi mi, yoksa kullanici yonetimi mi. */
-export type WorkspaceView = "schemalar" | "tagler" | "kullanicilar";
+export type WorkspaceView = "schemas" | "tags" | "users";
 
 interface WorkspaceNavProps {
   active: WorkspaceView;
@@ -22,24 +22,33 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
   const { t } = useTranslation();
   const { isAdmin } = useAuth();
   return (
-    <nav className="workspace-nav">
+    <nav className="workspace-nav flex flex-column">
       <button
-        className={`workspace-nav-btn${active === "schemalar" ? " active" : ""}`}
-        onClick={() => onChange("schemalar")}
+        className={`workspace-nav-btn cursor-pointer text-left${active === "schemas" ? " active" : ""}`}
+        onClick={() => onChange("schemas")}
       >
+        <span className="nav-icon" aria-hidden="true">
+          ▦
+        </span>
         {t("nav.schemalar")}
       </button>
       <button
-        className={`workspace-nav-btn${active === "tagler" ? " active" : ""}`}
-        onClick={() => onChange("tagler")}
+        className={`workspace-nav-btn cursor-pointer text-left${active === "tags" ? " active" : ""}`}
+        onClick={() => onChange("tags")}
       >
+        <span className="nav-icon" aria-hidden="true">
+          ◈
+        </span>
         {t("nav.tagler")}
       </button>
       {isAdmin && (
         <button
-          className={`workspace-nav-btn${active === "kullanicilar" ? " active" : ""}`}
-          onClick={() => onChange("kullanicilar")}
+          className={`workspace-nav-btn cursor-pointer text-left${active === "users" ? " active" : ""}`}
+          onClick={() => onChange("users")}
         >
+          <span className="nav-icon" aria-hidden="true">
+            ◉
+          </span>
           {t("nav.kullanicilar")}
         </button>
       )}

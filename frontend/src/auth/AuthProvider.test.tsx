@@ -19,12 +19,12 @@ function mockFetchOnce(response: Partial<Response>) {
 
 /** AuthProvider'in durumunu ekrana yazan ve login/logout tetikleyen kucuk bir prob component. */
 function AuthProbe() {
-  const { status, kullaniciAdi, rol, canWrite, login, logout } = useAuth();
+  const { status, username, role, canWrite, login, logout } = useAuth();
   return (
     <div>
       <p>status:{status}</p>
-      <p>kullanici:{kullaniciAdi ?? "yok"}</p>
-      <p>rol:{rol ?? "yok"}</p>
+      <p>kullanici:{username ?? "yok"}</p>
+      <p>role:{role ?? "yok"}</p>
       <p>canWrite:{String(canWrite)}</p>
       <button onClick={() => login("admin", "admin123")}>giris-yap</button>
       <button onClick={logout}>cikis-yap</button>
@@ -52,7 +52,7 @@ test("basarili login sonrasi status authenticated olur ve token localStorage'a y
   mockFetchOnce({
     ok: true,
     status: 200,
-    json: async () => ({ token: "yeni-jwt", kullaniciAdi: "admin", rol: "ADMIN" }),
+    json: async () => ({ token: "yeni-jwt", username: "admin", role: "ADMIN" }),
   });
 
   renderProbe();
@@ -62,28 +62,28 @@ test("basarili login sonrasi status authenticated olur ve token localStorage'a y
 
   await waitFor(() => expect(screen.getByText("status:authenticated")).toBeInTheDocument());
   expect(screen.getByText("kullanici:admin")).toBeInTheDocument();
-  expect(screen.getByText("rol:ADMIN")).toBeInTheDocument();
+  expect(screen.getByText("role:ADMIN")).toBeInTheDocument();
   expect(screen.getByText("canWrite:true")).toBeInTheDocument();
   expect(localStorage.getItem(STORAGE_KEY)).toBe("yeni-jwt");
 });
 
-test("localStorage'da gecerli bir token varsa acilista /api/auth/ben ile onaylanir", async () => {
+test("localStorage'da gecerli bir token varsa acilista /api/auth/me ile onaylanir", async () => {
   localStorage.setItem(STORAGE_KEY, "onceden-kaydedilmis-token");
   mockFetchOnce({
     ok: true,
     status: 200,
-    json: async () => ({ token: null, kullaniciAdi: "ayse", rol: "VIEWER" }),
+    json: async () => ({ token: null, username: "ayse", role: "VIEWER" }),
   });
 
   renderProbe();
 
   await waitFor(() => expect(screen.getByText("status:authenticated")).toBeInTheDocument());
   expect(screen.getByText("kullanici:ayse")).toBeInTheDocument();
-  // VIEWER: canWrite false olmali — rol tabanli buton gizlemenin dayandigi temel kural.
+  // VIEWER: canWrite false olmali — role tabanli buton gizlemenin dayandigi temel kural.
   expect(screen.getByText("canWrite:false")).toBeInTheDocument();
 });
 
-test("localStorage'daki token gecersizse (ben() 401 doner) anonymous'a duser ve token silinir", async () => {
+test("localStorage'daki token gecersizse (me() 401 doner) anonymous'a duser ve token silinir", async () => {
   localStorage.setItem(STORAGE_KEY, "suresi-dolmus-token");
   mockFetchOnce({
     ok: false,
@@ -107,7 +107,7 @@ test("logout token'i ve state'i temizler", async () => {
   mockFetchOnce({
     ok: true,
     status: 200,
-    json: async () => ({ token: "yeni-jwt", kullaniciAdi: "admin", rol: "ADMIN" }),
+    json: async () => ({ token: "yeni-jwt", username: "admin", role: "ADMIN" }),
   });
   renderProbe();
   await waitFor(() => expect(screen.getByText("status:anonymous")).toBeInTheDocument());

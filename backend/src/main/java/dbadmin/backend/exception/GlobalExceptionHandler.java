@@ -108,7 +108,7 @@ public class GlobalExceptionHandler {
      * Postgres bir constraint'i reddetti ve bu, uygulamanin kendi exception'larindan biri
      * degil — bilinen ornek: {@code PATCH .../primary-key} sirasinda tabloda o kolonu NULL
      * olan ya da tekrar eden degerler iceren satirlar varsa {@code ADD CONSTRAINT ... PRIMARY
-     * KEY} Postgres tarafindan reddedilir (bkz. TabloService.changeKolonPrimaryKey javadoc'u).
+     * KEY} Postgres tarafindan reddedilir (bkz. TableService.changeColumnPrimaryKey javadoc'u).
      * Ham DB hatasi (tablo/kolon adlari, constraint ismi) istemciye degil sunucu loguna gider.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)

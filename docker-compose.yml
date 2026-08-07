@@ -36,8 +36,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: dbadmin_redis
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     networks:
       - dbadmin-net
     healthcheck:
@@ -61,6 +61,36 @@ services:
     networks:
       - dbadmin-net
 
+  tempo:
+    # 3.x, Kafka gerektiren yeni "live-store" mimarisine gecti (tek container'lik dev ortami
+    # icin gereksiz karmasik). 2.x serisi, local storage'a yazan klasik tek-binary mimariyi
+    # kullanmaya devam ediyor — bizim icin yeterli.
+    image: grafana/tempo:2.7.1
+    container_name: dbadmin_tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+      - tempo_data:/var/tempo
+    expose:
+      - "4317" # OTLP gRPC
+      - "4318" # OTLP HTTP (backend buraya gonderiyor)
+      - "3200" # Tempo'nun kendi API'si, Grafana buradan okuyor
+    networks:
+      - dbadmin-net
+
+  loki:
+    # Tempo'daki gibi Kafka gerektiren yeni mimarilerden kaçınmak için 2.x serisine sabitliyoruz.
+    image: grafana/loki:2.9.4
+    container_name: dbadmin_loki
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml
+      - loki_data:/loki
+    expose:
+      - "3100"
+    networks:
+      - dbadmin-net
+
   backend:
     build: ./backend
     container_name: dbadmin_backend
@@ -79,11 +109,22 @@ services:
       # Veritabani bossa acilista olusturulacak ilk ADMIN (bkz. config/KullaniciSeeder).
       APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-admin123}
+      # Saatlik rapor maili (bkz. requirement-scheduler-report.md). Gmail app password
+      # kullanilir, normal sifre degil — .env'den gelmeli, sabit yazilmamali.
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      APP_REPORT_ADMIN_EMAIL: ${APP_REPORT_ADMIN_EMAIL:-}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
     ports:
       - "8081:8081"
     networks:
@@ -125,6 +166,8 @@ services:
       - "3001:3000"
     depends_on:
       - prometheus
+      - tempo
+      - loki
     networks:
       - dbadmin-net
 
@@ -133,6 +176,8 @@ volumes:
   prometheus_data:
   grafana_data:
   redisinsight_data:
+  tempo_data:
+  loki_data:
 
 networks:
   dbadmin-net:

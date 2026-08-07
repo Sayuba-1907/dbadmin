@@ -9,6 +9,7 @@ npm start
 redisi çalıstırmak için bak:
 -Terminal: docker exec -it dbadmin_redis redis-cli → sonra KEYS user:role:*, HGETALL user:role:admin, TTL user:role:admin
 - Görsel arayüz (RedisInsight): tarayıcıda http://localhost:5540 → ilk açılışta "Add database" → Host: redis, Port: 6379, şifre yok
+docker start dbadmin_redisinsight
 
 https://www.baeldung.com/java-equals-hashcode-contracts hashcode equals siteye bak.
 http://localhost:8081/swagger-ui/index.html
@@ -73,4 +74,212 @@ http://localhost:3001/?orgId=1&from=now-6h&to=now&timezone=browser
     spring.datasource.username=postgres
     spring.datasource.password=guvenlisifre
     Terminalde backend klasörüne girip ./mvnw spring-boot:run komutunu çalıştırarak Spring Boot'u 8081 portunda sorunsuz başlattık.
+
+
+
+
+
+   HTTP status → bizim code'larımız
+
+  HTTP: 400 Bad Request
+  Genel/yaygın anlamı: İstek biçimsel olarak hatalı (eksik/yanlış tip alan, kural dışı değer)
+  Bizim projede kim üretiyor: ValidationException, ya da Spring'in kendi parse hataları
+  Bizim code'larımız: VALIDATION_INVALID_TABLE_NAME, VALIDATION_INVALID_COLUMN_NAME, VALIDATION_INVALID_SCHEMA_NAME, VALIDATION_INVALID_TAG_NAME, VALIDATION_INVALID_USERNAME, VALIDATION_INVALID_COLUMN_TYPE,
+  VALIDATION_TABLE_NEEDS_COLUMN, VALIDATION_MISSING_SCHEMA, VALIDATION_RESERVED_SCHEMA_NAME, VALIDATION_WEAK_PASSWORD, VALIDATION_MISSING_ROLE, VALIDATION_INVALID_PATH_PARAM, VALIDATION_MALFORMED_BODY
+  ────────────────────────────────────────
+  HTTP: 401 Unauthorized
+  Genel/yaygın anlamı: Kimlik yok/geçersiz (kim olduğun belirsiz)
+  Bizim projede kim üretiyor: RestSecurityErrorHandler.commence (token yok/bozuk), GlobalExceptionHandler.handleAuthentication (login'de yanlış şifre)
+  Bizim code'larımız: AUTH_REQUIRED, AUTH_INVALID_CREDENTIALS
+  ────────────────────────────────────────
+  HTTP: 403 Forbidden
+  Genel/yaygın anlamı: Kimlik biliniyor ama bu işlem için yetkin yok
+  Bizim projede kim üretiyor: RestSecurityErrorHandler.handle (path bazlı kural), GlobalExceptionHandler.handleAccessDenied (ileride method bazlı @PreAuthorize için yedek)
+  Bizim code'larımız: AUTH_FORBIDDEN
+  ────────────────────────────────────────
+  HTTP: 404 Not Found
+  Genel/yaygın anlamı: Kaynak yok (verilen id'de)
+  Bizim projede kim üretiyor: NotFoundException, ya da hiç öyle bir yol yok
+  Bizim code'larımız: NOT_FOUND_TABLE, NOT_FOUND_COLUMN, NOT_FOUND_SCHEMA, NOT_FOUND_TAG, NOT_FOUND_USER, NOT_FOUND_ENDPOINT
+  ────────────────────────────────────────
+  HTTP: 405 Method Not Allowed
+  Genel/yaygın anlamı: Yol var ama bu HTTP metodu desteklenmiyor
+  Bizim projede kim üretiyor: HttpRequestMethodNotSupportedException handler'ı
+  Bizim code'larımız: VALIDATION_METHOD_NOT_ALLOWED
+  ────────────────────────────────────────
+  HTTP: 409 Conflict
+  Genel/yaygın anlamı: İstek geçerli ama mevcut veri durumuyla çatışıyor
+  Bizim projede kim üretiyor: ConflictException, ya da Postgres constraint reddi
+  Bizim code'larımız: CONFLICT_DUPLICATE_TABLE_NAME, CONFLICT_DUPLICATE_COLUMN_NAME, CONFLICT_DUPLICATE_COLUMN_IN_REQUEST, CONFLICT_DUPLICATE_SCHEMA_NAME, CONFLICT_DUPLICATE_TAG_NAME,
+  CONFLICT_DUPLICATE_USERNAME,
+  CONFLICT_COLUMN_NOT_UNIQUE, CONFLICT_LAST_ADMIN
+  ────────────────────────────────────────
+  HTTP: 500 Internal Server Error
+  Genel/yaygın anlamı: Beklenmeyen, sunucu tarafı hata
+  Bizim projede kim üretiyor: son çare genel Exception handler'ı
+  Bizim code'larımız: INTERNAL_ERROR
+
+
+5)Redis için ekstra şeyler yapılabilir belki
+1. JWT Logout / Token Blacklist
+
+  Ne: Şu an logout endpoint'i yok — kullanıcı çıkış yapsa bile token süresi dolana kadar geçerli kalıyor. Redis'e token:blacklist:<jti> key'i, TTL = token'ın kalan ömrü kadar konur. JwtAuthenticationFilter her
+  istekte bu key'i kontrol eder.
+  Neden Redis: TTL otomatik temizlik yapıyor (Postgres'te tutsan cron ile silmen gerekirdi).
+  Zorluk/öğrenme değeri: Düşük-orta. Mevcut KullaniciRolCacheService'ten farklı bir desen: sadece TTL, evict yok — "gerçek bir güvenlik eksiğini kapatan" somut bir örnek.
+
+  2. Workspace/Schema Ağacı Cache'i
+
+  Ne: getWorkspace() (schema+tablo ağacı) her "Şemalar" sekmesine girişte DB'ye gidiyor. Bu veri sık değişmiyor; Redis'te cache'lenip create/rename/delete tablo/schema işlemlerinde evict edilebilir.
+  Neden Redis: Mevcut rol cache'iyle birebir aynı desen (get/put/evict + TTL güvenlik ağı) tekrarlanmış olur — pekiştirme amaçlı iyi ama "yeni bir şey öğrenme" açısından zayıf.
+  Risk: Cache invalidation'ı DDL executor'la senkron tutmak gerekiyor (dual-write mimarisinde üçüncü bir yazma noktası daha).
+
+  3. Rate Limiting (login denemeleri)
+
+  Ne: /api/auth/login'e Redis tabanlı bir sayaç (login:attempts:<username>, TTL'li) koyup art arda başarısız girişten sonra geçici kilitleme.
+  Neden Redis: Atomik INCR + EXPIRE ile klasik ve öğretici bir Redis pattern'i (brute-force koruması).
+  Öğrenme değeri: Yüksek — atomik operasyonlar, EXPIRE, farklı bir kullanım alanı (güvenlik/throttling) gösteriyor.
+
+
+
+
+OTel:
+    Hangi sql komutu neryee bağlı eskiden bilmiyorduk simdi istediğimiz veriyi Trace ıd ile o isteğe ait tüm loglar birbirine bağlandı.
+    Fail Open Mantığı:Trace ve log toplama arka plandaki backend'i (Tempo/Loki) çökse bile ana uygulama isteklere cevap vermeye devam eder (fail-open).
+    Yani gözlemlenebilirlik araçları ana sistemini bozamaz.
+    Metric=>saniyede kaç istek gidiyor diye baktığımız ölçümlerdir. Prometheus ve grafana üzerinde var olduğu için dokunmadık.
+    Log=>olan bitine kayıt altına aldık ama bu kalıcı değil, Loki'de sadece 48 saat duruyor, amacı debug. Kalıcı olan ayrı bir şey: Audit Log (Postgres'te, sınırsız süre).
+    Trace=>bir isteğin yolculuğu boyunca(controller,service,veritabanı,redis) hangi adımlardan geçtiğini ve her adımın kaç milisaniye sürdüğünü gösteriyor.
+    Eklenen araçlar:
+    OTel collector => EKLEMEDİK. Planda vardı ama bilerek eklenmedi, backend Tempo'ya ve Loki'ye dogrudan yaziyor. Tek bir trace/log backend'i oldugu icin (baska bir sisteme gecis yok) Collector'in asil faydasi bu projede ise yaramiyordu, gereksiz bir container/hata noktasi olurdu.
+    Tempo=> Sadece Traceleri saklyan veri tabanı
+    Loki=>Sadece logları saklyan veri tabanı
+Audit Log:
+    6ay önce bu tabloyu kim sildi gibi geçmişten kalan sorulara tam ceavp veriyor.Otel çökse bile yasamya devam eder.
+    Sistemin tüm yazma silme ve güncellleme işlemlerinin kim tarafından , ne zaman ,hangi hedefe yapıldıpının kalıcı kaydını tutar. veri okur.
+    Fail Closed: OTel in tam tersi olarak , eğer teknik bir sorundan dolayı autditlog veritabanına yazılmazsa, o logun ait olduğu işlem de tamamen iptal olur.
+    Kalıcı bir işlem denetimsiz kalamaz.
+    Değiştirlemezlik(Immutabillty) : yapılan her şey kaydeddildiği için her işlem kayıt altına alınır ve eski kayıtlar silinemez.
+    Entity ve Veritabanı Tablosu=> Auditlog adında yeni bir entity miz var dersek , bu varlık işlemi yapan kişinin ıd si silinse bile okunabilmesi şçşn kullanıcı
+        adını,işlem tipini ,hedefin tipini zaman damgasını ve detayları tutuyor.
+    Okuma ucu(API)=> verileri süzerek audit-loglar adında bir uç nokta tasarlandı. Tsarlanan bu uç nokta kullanıcıya ,
+        hedef tipe  veya tarih aralığına göre filtreleme ve sayfalama yapar.
+
+    test için swagger da sunu yaz: AUTH POST api/auth/login
+    {"kullaniciAdi":"admin","parola":"admin123"}
+Scheduler:
+    Belirlenen zaman çizelgesine göre arka planda çalışan bir programdır. Spring Boot'ta @Scheduled
+    anotasyonuyla bir metodu isaretleyip "her saat basi/her gun bunu calistir" diyoruz, Spring o
+    metodu kendi ayri bir thread'inde otomatik cagiriyor.
+    Spring Boot, varsayılan olarak tüm @Scheduled islemler için tek bir thread kullanır.
+    Eğer çalısan görevlerden biri (mesela agir bir DB sorgusu veya dıs bir sisteme baglanma) uzun
+    sürerse, arkaya bekleyen diğer zamanlanmıs görevler sıraya girip o işin bitmesini bekler ve
+    gecikir
+    Bizim projede ne yaptik (saatlik rapor maili):
+    - Amac: admin'e her saat basi, sistemin o anki durumunu (kac sema/tablo/kolon var) ve son 1
+      saatte audit log'a dusen islemleri ozetleyen bir mail atmak.
+    - RaporScheduler'daki @Scheduled metodu KENDISI @Async DEGIL -- zaten Spring'in kendi ayri
+      scheduler thread'inde calisiyor. Asil yavas/bekleyen kisim mail sunucusuna (SMTP) baglanip
+      mail atmak, o yuzden sadece o kismi (RaporService.raporGonder) @Async yaptik. Rapor
+      icerigini olusturma (DB sorgulari) senkron kaldi, cunku zaten hizli.
+    - Neden ayri bir thread havuzu (ThreadPoolTaskExecutor) tanimladik, Spring'in varsayilanini
+      kullanmadik: @Async icin elle bir havuz belirtilmezse Spring her cagrida yeni bir thread
+      acan (havuzlamayan) SimpleAsyncTaskExecutor'i kullanir -- bunun yerine kucuk, sabit boyutlu
+      bir havuz (core=1, max=2) tanimladik, ayni "varsayilani sorgulamadan kullanma" mantigi
+      Redis'teki 60sn timeout sorununda da vardi.
+    - Fail-open: SMTP'ye erisilemezse veya mail gonderimi basarisiz olursa uygulama çökmez, hata
+      sadece loglanir -- rapor bir bagimlilik degil bir ek ozellik (Redis cache'teki fail-open ile
+      ayni felsefe).
+    - Saat basini beklemeden manuel tetikleme icin bir uc da eklendi: POST /api/raporlar/gonder
+      (sadece ADMIN). Ayni RaporService'i cagirir, scheduler ile ayni kod yolu.
+    - Bu ozellik audit log'a bagimliydi: raporun "son 1 saatte ne oldu" kismi audit_log tablosundan
+      okunuyor, audit log olmadan yazilamazdi.
+React Custom Hooks:
+    Nedir: adı "use" ile başlayan, içinde useState/useEffect kullanan sıradan bir fonksiyon. Yeni bir API değil, var olanı paketlemek.
+    Amaç: bir domain'in (şema/tablo/tag/kullanıcı) okuma+yazma+loading state'ini Dashboard'dan ayırıp kendi dosyasına taşımak.
+    Kural: hata yutulmaz, fırlatılır (throw) — bildirim gösterme işi hep Dashboard'da kalır.
+    Önce 1 tanesini (useSchemalar) yazıp onayladık, sonra diğer 3'e geçtik (pilot yaklaşımı).
+    Saf UI state (taslak kolonlar gibi) hook'a girmez, Dashboard'da kalır.
+    Bulunan istisna: silme işlemlerinde aslında "optimistic update" var (5sn Geri Al penceresi) — bunun için her hook'ta özel bir "optimistic setter" bırakıldı.
+    React Query/SWR bilerek kullanılmadı — amaç o kütüphanelerin çözdüğü sıkıntıyı elle hissetmek.
+
+Web Socket/Notification:
+    Nedir: HTTP'deki "istemci sorar, sunucu cevaplar" modelinden farklı olarak; sunucunun, istemciyi
+    beklemeden kendi inisiyatifiyle kalıcı bir bağlantı üzerinden anlık veri göndermesidir (push).
+    Sunucuya sürekli "yeni bir şey var mı?" diye sormaya (polling) gerek kalmaz.
+
+    Tablo Sahipliği ve Kapsam:
+    Her tablonun bir olusturanKullaniciId (owner) alanı oldu. Biri tabloda değişiklik yaptığında,
+    işlemi yapan kişi tablonun sahibi değilse bildirim üretilir. Kişi kendi tablosunda işlem
+    yaparsa, gereksiz gürültüyü önlemek adına kendine bildirim gitmez.
+
+    Hedefli Mesajlaşma (Targeted):
+    Bildirimleri herkese yayın (broadcast) yapmak yerine, Java tarafında bellekte
+    ConcurrentHashMap tabanlı bir WebSocket Registry oluşturuldu. Bu yapı, kullaniciId ile o anki
+    açık session'ları eşleştirerek mesajın sadece ilgili kullanıcıya gitmesini sağlar.
+
+    Kimlik Doğrulama (Auth):
+    Tarayıcıların native WebSocket API'si özel header'ları desteklemediği için, JWT token'ı
+    bağlantı aşamasında URL'de query parametresi (?token=...) olarak taşınıp doğrulandı.
+
+    Fail-Closed (Kalıcı Kayıt) vs Fail-Open (Anlık Push):
+    Bildirimin PostgreSQL'e Bildirim entity'si olarak yazılması fail-closed bir işlemdir; tıpkı
+    audit log'da olduğu gibi, asıl işlem iptal olursa (rollback) veritabanına bildirim kaydı
+    atılmaz. Ancak WebSocket üzerinden anlık iletim fail-open'dır (best-effort); kullanıcının
+    session'ı yoksa veya hata oluşursa uygulama çökmez, iletim sessizce atlanır.
+
+    En Kritik Mimari (AFTER_COMMIT):
+    Bildirim itme (push) işlemi, Spring'in @TransactionalEventListener(phase = AFTER_COMMIT)
+    yapısı kullanılarak sadece işlem veritabanına kesin olarak yazıldıktan (commit) sonra
+    tetiklenir. Böylece hata alıp geri alınan bir işlem için frontend'e "yalan" bildirim
+    gitmesi engellendi.
+
+    Frontend (React) Hook'ları:
+    useWebSocket ve useBildirimler adında özel hook'lar yazıldı. Sayfa ilk açıldığında sunucudan
+    bildirim sayısı sadece bir kez çekilir. Sonrasında arayüz, yeni gelen WebSocket eventlerini
+    dinleyerek sunucuya tekrar HTTP isteği atmadan yerel sayacı ve listeyi kendi içinde günceller.
+
+    UI (Kullanıcı Arayüzü):
+    Sıfırdan bir toast/popup yazmak yerine, gelen olaylar mevcut NotificationProvider yapısına
+    bağlanarak kod tekrarından kaçınıldı.
+
+OKUMA:
+1-)SpringBoot -> Autowired, dependecy of injection, inversion of control
+    Inversion of Control (IoC):
+    Kodlama aracı değil yazılım prensibidir.
+    IOC=Kontrolün tersine çevrilmesi.
+    Geleneksel programlamada , bir sınıfın baska bir sınıfa ihtiyacı varsa onu kendisi yapar. kontrol yazılımcıdadır.
+    IOC prensibinde ise Nesneleri olusturma ve yönetme işini sen yapma, bunu bir merkeze (spring Framework) bırak.
+    Dependency Injection (DI):
+    IOC felsefesini gerçeğe dönüştüren tasarım desenidir=> Design Pattern.
+    DI=Bağımlılık enjeksiyonu
+    IOC nin olusturdğu nesneleri koda ulaştırmak için kullanıyoruz.Dışarıdan hazır bir şekilde koda yerleştirmiş oluyoruz.
+    @Autowired - Araç:
+    Spring e Dı işlemini yapmasını söyleyen anotasyondur.
+    Spring'e benim bir nesneye ihtiyacım var, sepetinde (Container) varsa onu bana bağla komutunu @Autowired ile veriyoruz.
+    özetle Spring Boot a new kelimesini ne kadar az kullanıyorsak IOC ve DI mantığını okadar doğru uyguluyoruz demektir.
+2)Hibernate -> Bir objenin lifecycle'ını öğren. transient, persist vs. -> Hibernate Lifecycle
+    Hibernate: veritabano ile nesnelerin arasındaki köprüdür(orm). Ancak hibernate bir nesneyi veritabanına kaydederken veya güncellerken ,
+    o nesneye sadece bir veri olarak bakmaz; nesnenin bir yaşam döngüsü(Lifecycle)olduğuna inanir.
+    Hibernate Lifecycle'ın 4 temel durumu:
+    1-transient(Geçici/yeni doğan)
+    Yeni bir nesne olusturduğumuz zaman , bu nesnenin veri tabanında bir karsılığı yoktur(ID). Hibernate bu ıd den habesizdir.
+    Eğer bu nesne silinirse veya kaybolursa veritabanı bunu bilemez.
+    Basit Örnekle: Hastanede yeni doğan bebek henüz nufus müdürlüğüne bildirilmemiş ve kimliğinin olmaması durumudur.
+    2-Persistend/Managed(Kalıcı/Yönetilen)
+    Nesne artık Hibernate Session ile ilişkilendirdik.
+    Artık ID si var ve Hibernate bunu görebiliyor ve takip ediyor(Dirty Checking). Eğer bu nesnenin bir özeliğini değiştirisek,
+    tekrardan save etmemize gerek yoktur. Hibernate bunu ototmatik yapar.(Transaction bitince).
+    Basit örnek:Bebeğin kimliğini aldık ve adres değişikliğinde devletin bunu sisteme otomatik girmesidir.
+    3-Detached(Kopuk/Bağımsız)
+    Nesne veri tabanında ID si var ama Hibernatein Session u kapandı veya nesne sessiondan cıkarıldığı zaman olusur.
+    Nesnede yapılan değişiklikler veritabanına otomatik yansımaz. Tekrar takip edilmesi için nesneyi tekrardan session a bağlamak (merge-update) gerekir.
+    Basit örnek: vatandas yurt dısına cıktı kimliği duruyor ama adres değişikliğini devlet artık takip etmiyor.
+    4-Removed
+    Nesnenin veritabanından silinmesi için hibernatee talimat verme durumudur.
+    Nesne hala RAM'de duruyor olabilir ama Hibernate bu nesneyi silinecekler lsitesine aldı. Transaction tamamlandığında veri tabanından kalıcı olarak silinir.
+    Basit örnek: Ölüm belgesi çıkartılmıs bir kişiyi devletin artık takip etmeyi bırakması.
+3)Testcontainer
+    Test kütüphanesidir. Arka planda Docker il konusur. Sahte veri tabanlarıyla gelme durumlarının önüne geçmeye çalısır.
+    Testi çalıstıdığımız anda Yeni bir ortam kurulur ve işimiz bitince bu ortamı çöpe atarız.
 

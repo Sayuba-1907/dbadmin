@@ -2,7 +2,7 @@ package dbadmin.backend.controller;
 
 import dbadmin.backend.dto.*;
 import dbadmin.backend.service.SchemaService;
-import dbadmin.backend.service.TabloService;
+import dbadmin.backend.service.TableService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,9 +26,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Schema icin HTTP endpoint'leri — {@link TabloController} ile ayni mantik, bkz. oradaki aciklama. */
+/** Schema icin HTTP endpoint'leri — {@link TableController} ile ayni mantik, bkz. oradaki aciklama. */
 @RestController
-@RequestMapping("/api/schemalar")
+@RequestMapping("/api/schemas")
 @Tag(name = "Schemalar", description = "Postgres schema'larini (tablo gruplarini) yonetir; her yazma "
         + "islemi ayni anda gercek Postgres schema'sini da (CREATE/ALTER/DROP SCHEMA) degistirir. "
         + "'public' schema'si bu API'de hic gorunmez: listelenmez, id'siyle sorulursa 404 doner, bu "
@@ -35,19 +37,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class SchemaController {
 
     private final SchemaService schemaService;
-    private final TabloService tabloService;
+    private final TableService tableService;
 
-    public SchemaController(SchemaService schemaService, TabloService tabloService) {
+    public SchemaController(SchemaService schemaService, TableService tableService) {
         this.schemaService = schemaService;
-        this.tabloService = tabloService;
+        this.tableService = tableService;
     }
 
-    @Operation(summary = "Tum schema'lari listele", description = "Kullanicinin olusturdugu tum "
-            + "schema'lari doner. Altyapiya ait 'public' schema'si listeye dahil edilmez.")
-    @ApiResponse(responseCode = "200", description = "Schema listesi (hicbir schema olusturulmamissa bos).")
+    @Operation(summary = "Tum schema'lari sayfalanmis olarak listele", description = "Kullanicinin olusturdugu tum "
+            + "schema'lari sayfalanmis olarak doner. Altyapiya ait 'public' schema'si listeye dahil edilmez. "
+            + "Standart Spring parametreleri gecerlidir: page, size, sort (ör. sort=name,desc).")
+    @ApiResponse(responseCode = "200", description = "Schema sayfasi (hicbir schema olusturulmamissa icerik bos).")
     @GetMapping
-    public List<SchemaResponse> list() {
-        return schemaService.listSchemalar();
+    public Page<SchemaResponse> list(Pageable pageable) {
+        return schemaService.listSchemas(pageable);
     }
 
     @GetMapping("/schemaList")
@@ -71,7 +74,7 @@ public class SchemaController {
         return schemaService.toResponse(schemaService.getSchema(id));
     }
 
-    /** GET /api/schemalar/{id}/tablolar — sidebar'daki schema -> tablo hiyerarsisi icin, bir schema'nin altindaki tablolar. Schema yoksa 404. */
+    /** GET /api/schemas/{id}/tables — sidebar'daki schema -> tablo hiyerarsisi icin, bir schema'nin altindaki tablolar. Schema yoksa 404. */
     @Operation(summary = "Bir schema'nin altindaki tablolari listele",
             description = "Sadece verilen schema'ya ait tablolari (kolonlariyla birlikte) doner. "
                     + "Frontend'deki sidebar'daki schema -> tablo hiyerarsisi icin kullanilir.")
@@ -84,12 +87,12 @@ public class SchemaController {
                                 summary = "Schema bulunamadi",
                                 value = ErrorExamples.NOT_FOUND_SCHEMA)))
     })
-    @GetMapping("/{id}/tablolar")
-    public List<TabloSummaryResponse> listTablolar(
+    @GetMapping("/{id}/tables")
+    public List<TableSummaryResponse> listTables(
             @Parameter(description = "Schema'nin id'si.", example = "1") @PathVariable Long id) {
         schemaService.getSchema(id);
-        return tabloService.listTablolarBySchema(id).stream()
-                .map(TabloSummaryResponse::from)
+        return tableService.listTablesBySchema(id).stream()
+                .map(TableSummaryResponse::from)
                 .toList();
     }
 
@@ -123,7 +126,7 @@ public class SchemaController {
         return schemaService.toResponse(schemaService.createSchema(request.name()));
     }
 
-    /** PATCH /api/schemalar/{id} — sadece ismi degistirir; yeni isim olarak "public" reddedilir (bkz. SchemaService.renameSchema). */
+    /** PATCH /api/schemas/{id} — sadece ismi degistirir; yeni isim olarak "public" reddedilir (bkz. SchemaService.renameSchema). */
     @Operation(summary = "Schema'yi yeniden adlandir",
             description = "Hem metadata'daki hem gercek Postgres schema'sinin adini degistirir "
                     + "(ALTER SCHEMA ... RENAME TO). Hicbir schema 'public' ismine yeniden "

@@ -4,12 +4,50 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#0f172a" />
     <meta
       name="description"
       content="DBAdmin - a lightweight database admin panel"
     />
+    <!-- Tema secimini (localStorage tercihi, yoksa isletim sisteminin prefers-color-scheme
+         ayari) React hic yuklenmeden, sayfa ilk boyanmadan once <html> uzerine yaziyoruz —
+         aksi halde her zaman koyu temayla baslayip React mount olduktan sonra acik temaya
+         zipliyor olurduk (goze batan bir FOUC). ThemeProvider (src/theme/ThemeProvider.tsx)
+         React tarafinda ayni degeri ikinci kez HESAPLAMAZ, sadece burada yazilan attribute'u
+         okur — tek dogruluk kaynagi burasi. -->
+    <script>
+      (function () {
+        var stored = localStorage.getItem("dbadmin-theme");
+        var theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <!-- index.css yuklenmeden once tarayicinin beyaz zemini gostermemesi icin: yukaridaki
+         script'in yazdigi data-theme'e gore dogru zemin rengi burada donuk sekilde ilk
+         boyada uygulaniyor (FOUC onlemi). -->
+    <style>
+      html,
+      body {
+        background-color: #0f172a;
+      }
+
+      html[data-theme="light"],
+      html[data-theme="light"] body {
+        background-color: #f8fafc;
+      }
+    </style>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/

@@ -2,7 +2,7 @@ package dbadmin.backend.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** POST /api/schemalar icin request govdesi: "bu isimde schema kur". */
+/** POST /api/schemas icin request govdesi: "bu isimde schema kur". */
 public record CreateSchemaRequest(
         @Schema(
                         description = "Yeni schema'nin adi. 2-30 karakter, kucuk harf/rakam/alt cizgi, "

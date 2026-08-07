@@ -9,8 +9,8 @@ import { ApiError } from "../api/client";
 function renderLoginPage(login: AuthContextValue["login"]) {
   const auth: AuthContextValue = {
     status: "anonymous",
-    kullaniciAdi: null,
-    rol: null,
+    username: null,
+    role: null,
     canWrite: false,
     isAdmin: false,
     login,

@@ -31,10 +31,10 @@ import tools.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 // Bu testler uclara HTTP uzerinden gidiyor, yani artik Spring Security'nin filtre
 // zincirinden de geciyorlar — kimliksiz her istek 401 donerdi. @WithMockUser guvenlik
-// baglamina hazir bir kullanici koyar (gercek bir token uretmeye gerek kalmaz); ADMIN
+// baglamina hazir bir user koyar (gercek bir token uretmeye gerek kalmaz); ADMIN
 // secildi cunku bu siniflarin derdi yetki degil, uclarin kendi davranisi. Yetki
 // kurallarinin kendisi ayrica SecurityRulesIntegrationTest'te sinaniyor.
-@WithMockUser(roles = "ADMIN")
+@WithMockUser(username = "admin", roles = "ADMIN")
 class ErrorMessageI18nIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -48,7 +48,7 @@ class ErrorMessageI18nIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void notFound_withTurkishAcceptLanguage_returnsTurkishMessage() throws Exception {
-        mockMvc.perform(get("/api/tablolar/999999").header(HttpHeaders.ACCEPT_LANGUAGE, "tr"))
+        mockMvc.perform(get("/api/tables/999999").header(HttpHeaders.ACCEPT_LANGUAGE, "tr"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code", is("NOT_FOUND_TABLE")))
                 .andExpect(jsonPath("$.message", is("Tablo bulunamadı: 999999")));
@@ -56,26 +56,26 @@ class ErrorMessageI18nIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void notFound_withEnglishAcceptLanguage_returnsEnglishMessage() throws Exception {
-        mockMvc.perform(get("/api/tablolar/999999").header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
+        mockMvc.perform(get("/api/tables/999999").header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code", is("NOT_FOUND_TABLE")))
-                .andExpect(jsonPath("$.message", is("tablo not found: 999999")));
+                .andExpect(jsonPath("$.message", is("table not found: 999999")));
     }
 
     @Test
     void notFound_withoutAcceptLanguage_fallsBackToEnglish() throws Exception {
-        mockMvc.perform(get("/api/tablolar/999999"))
+        mockMvc.perform(get("/api/tables/999999"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", is("tablo not found: 999999")));
+                .andExpect(jsonPath("$.message", is("table not found: 999999")));
     }
 
     @Test
     void notFound_withUnsupportedLanguage_fallsBackToEnglish() throws Exception {
         // Almanca cevirimiz yok; sunucunun kendi diline degil, varsayilan dosyaya dusmeli
         // (spring.messages.fallback-to-system-locale=false).
-        mockMvc.perform(get("/api/tablolar/999999").header(HttpHeaders.ACCEPT_LANGUAGE, "de"))
+        mockMvc.perform(get("/api/tables/999999").header(HttpHeaders.ACCEPT_LANGUAGE, "de"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", is("tablo not found: 999999")));
+                .andExpect(jsonPath("$.message", is("table not found: 999999")));
     }
 
     @Test
@@ -112,7 +112,7 @@ class ErrorMessageI18nIntegrationTest extends AbstractIntegrationTest {
     void errorCodeAndStatus_areIdenticalAcrossLanguages() throws Exception {
         // Dil sadece "message" alanini etkilemeli; makinenin baktigi alanlar sabit kalmali.
         for (String lang : new String[] {"tr", "en", "de"}) {
-            mockMvc.perform(get("/api/tablolar/999999").header(HttpHeaders.ACCEPT_LANGUAGE, lang))
+            mockMvc.perform(get("/api/tables/999999").header(HttpHeaders.ACCEPT_LANGUAGE, lang))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(jsonPath("$.error", is("Not Found")))
@@ -130,7 +130,7 @@ class ErrorMessageI18nIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void invalidPathParam_returnsOwnCodeInsteadOfDefaultSpringBody() throws Exception {
-        mockMvc.perform(get("/api/tablolar/{id}", "abc").header(HttpHeaders.ACCEPT_LANGUAGE, "tr"))
+        mockMvc.perform(get("/api/tables/{id}", "abc").header(HttpHeaders.ACCEPT_LANGUAGE, "tr"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code", is("VALIDATION_INVALID_PATH_PARAM")))
                 .andExpect(jsonPath("$.message", containsString("abc")))
@@ -155,7 +155,7 @@ class ErrorMessageI18nIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void unsupportedHttpMethod_returnsOwnCode() throws Exception {
-        mockMvc.perform(put("/api/tablolar"))
+        mockMvc.perform(put("/api/tables"))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.code", is("VALIDATION_METHOD_NOT_ALLOWED")))
                 .andExpect(jsonPath("$.details.method", is("PUT")));
@@ -167,23 +167,23 @@ class ErrorMessageI18nIntegrationTest extends AbstractIntegrationTest {
         // (changeKolonPrimaryKey_columnWithNullValues_isRejectedAndLeavesMetadataUnchanged) —
         // burada HTTP katmaninin bunu artik Spring'in cigplak 500'u degil, kendi kodu ve
         // 409 status'uyle dondurdugunu dogruluyoruz.
-        String schemaResponse = mockMvc.perform(post("/api/schemalar")
+        String schemaResponse = mockMvc.perform(post("/api/schemas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateSchemaRequest("i18n_pk_sema"))))
                 .andReturn().getResponse().getContentAsString();
         long schemaId = objectMapper.readTree(schemaResponse).path("id").asLong();
 
-        String createResponse = mockMvc.perform(post("/api/tablolar")
+        String createResponse = mockMvc.perform(post("/api/tables")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"i18n_pk_tablo\",\"schemaId\":" + schemaId
-                                + ",\"kolonlar\":[{\"name\":\"kolona\",\"type\":\"text\",\"primaryKey\":true},"
+                                + ",\"columns\":[{\"name\":\"kolona\",\"type\":\"text\",\"primaryKey\":true},"
                                 + "{\"name\":\"kolonb\",\"type\":\"text\"}]}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         JsonNode created = objectMapper.readTree(createResponse);
-        long tabloId = created.path("id").asLong();
+        long tableId = created.path("id").asLong();
         long kolonbId = -1;
-        for (JsonNode k : created.path("kolonlar")) {
+        for (JsonNode k : created.path("columns")) {
             if ("kolonb".equals(k.path("name").asString())) {
                 kolonbId = k.path("id").asLong();
             }
@@ -193,7 +193,7 @@ class ErrorMessageI18nIntegrationTest extends AbstractIntegrationTest {
         // NOT NULL yapildigi icin ADD CONSTRAINT bu satir yuzunden reddedilecek.
         jdbcTemplate.update("INSERT INTO \"i18n_pk_sema\".\"i18n_pk_tablo\" (kolona) VALUES ('x')");
 
-        mockMvc.perform(patch("/api/tablolar/{id}/kolonlar/{kolonId}/primary-key", tabloId, kolonbId)
+        mockMvc.perform(patch("/api/tables/{id}/columns/{kolonId}/primary-key", tableId, kolonbId)
                         .header(HttpHeaders.ACCEPT_LANGUAGE, "tr")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"primaryKey\":true}"))

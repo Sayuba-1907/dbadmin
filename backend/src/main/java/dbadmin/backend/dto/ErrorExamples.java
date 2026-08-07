@@ -12,9 +12,10 @@ package dbadmin.backend.dto;
  * acilir listede gosterir).
  * <p>
  * Buradaki her sabit, {@link dbadmin.backend.exception.GlobalExceptionHandler}'in gercekten
- * urettigi govdenin birebir ayni sekli: {@code timestamp/status/error/message/code/details}.
- * Yeni bir hata kodu eklerken buraya da ornegini eklemek gerekir — kod ile dokumantasyonun
- * ayrisip ayrismadigi tek bakista buradan gorulur.
+ * urettigi govdenin birebir ayni sekli: {@code timestamp/status/error/message/code/errorCode/
+ * details}. Yeni bir hata kodu eklerken buraya da ornegini eklemek gerekir — kod ile
+ * dokumantasyonun ayrisip ayrismadigi tek bakista buradan gorulur. {@code errorCode} degerleri
+ * {@link dbadmin.backend.exception.ErrorCodeRegistry} ile birebir eslesir.
  */
 public final class ErrorExamples {
 
@@ -30,6 +31,7 @@ public final class ErrorExamples {
               "error": "Not Found",
               "message": "tablo not found: 42",
               "code": "NOT_FOUND_TABLE",
+              "errorCode": 40401,
               "details": { "id": "42" }
             }""";
 
@@ -41,6 +43,7 @@ public final class ErrorExamples {
               "error": "Not Found",
               "message": "schema not found: 7",
               "code": "NOT_FOUND_SCHEMA",
+              "errorCode": 40403,
               "details": { "id": "7" }
             }""";
 
@@ -52,6 +55,7 @@ public final class ErrorExamples {
               "error": "Not Found",
               "message": "column not found in this table: 5",
               "code": "NOT_FOUND_COLUMN",
+              "errorCode": 40402,
               "details": { "id": "5" }
             }""";
 
@@ -63,7 +67,20 @@ public final class ErrorExamples {
               "error": "Not Found",
               "message": "tag not found: 3",
               "code": "NOT_FOUND_TAG",
+              "errorCode": 40404,
               "details": { "id": "3" }
+            }""";
+
+    public static final String NOT_FOUND_USER =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 404,
+              "error": "Not Found",
+              "message": "user not found: 12",
+              "code": "NOT_FOUND_USER",
+              "errorCode": 40405,
+              "details": { "id": "12" }
             }""";
 
     // ---------------------------------------------------------------- 400
@@ -75,6 +92,7 @@ public final class ErrorExamples {
               "error": "Bad Request",
               "message": "table name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
               "code": "VALIDATION_INVALID_TABLE_NAME",
+              "errorCode": 40001,
               "details": {}
             }""";
 
@@ -86,6 +104,7 @@ public final class ErrorExamples {
               "error": "Bad Request",
               "message": "column name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
               "code": "VALIDATION_INVALID_COLUMN_NAME",
+              "errorCode": 40002,
               "details": {}
             }""";
 
@@ -97,6 +116,7 @@ public final class ErrorExamples {
               "error": "Bad Request",
               "message": "schema name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
               "code": "VALIDATION_INVALID_SCHEMA_NAME",
+              "errorCode": 40003,
               "details": {}
             }""";
 
@@ -108,6 +128,7 @@ public final class ErrorExamples {
               "error": "Bad Request",
               "message": "tag name must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
               "code": "VALIDATION_INVALID_TAG_NAME",
+              "errorCode": 40004,
               "details": {}
             }""";
 
@@ -119,6 +140,7 @@ public final class ErrorExamples {
               "error": "Bad Request",
               "message": "type must be one of: numeric, text, datetime, boolean",
               "code": "VALIDATION_INVALID_COLUMN_TYPE",
+              "errorCode": 40005,
               "details": {}
             }""";
 
@@ -130,6 +152,7 @@ public final class ErrorExamples {
               "error": "Bad Request",
               "message": "a table needs at least one column",
               "code": "VALIDATION_TABLE_NEEDS_COLUMN",
+              "errorCode": 40006,
               "details": {}
             }""";
 
@@ -141,6 +164,7 @@ public final class ErrorExamples {
               "error": "Bad Request",
               "message": "a schema must be specified",
               "code": "VALIDATION_MISSING_SCHEMA",
+              "errorCode": 40007,
               "details": {}
             }""";
 
@@ -152,7 +176,69 @@ public final class ErrorExamples {
               "error": "Bad Request",
               "message": "'public' is a reserved schema name and cannot be used",
               "code": "VALIDATION_RESERVED_SCHEMA_NAME",
+              "errorCode": 40008,
               "details": { "name": "public" }
+            }""";
+
+    public static final String VALIDATION_INVALID_USERNAME =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "username must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
+              "code": "VALIDATION_INVALID_USERNAME",
+              "errorCode": 40009,
+              "details": {}
+            }""";
+
+    public static final String VALIDATION_WEAK_PASSWORD =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "password must be at least 8 characters",
+              "code": "VALIDATION_WEAK_PASSWORD",
+              "errorCode": 40010,
+              "details": { "min": "8" }
+            }""";
+
+    public static final String VALIDATION_MISSING_ROLE =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "a role must be specified",
+              "code": "VALIDATION_MISSING_ROLE",
+              "errorCode": 40011,
+              "details": {}
+            }""";
+
+    // ---------------------------------------------------------------- 401 / 403
+    public static final String AUTH_INVALID_CREDENTIALS =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 401,
+              "error": "Unauthorized",
+              "message": "invalid username or password",
+              "code": "AUTH_INVALID_CREDENTIALS",
+              "errorCode": 40101,
+              "details": {}
+            }""";
+
+    public static final String AUTH_REQUIRED =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 401,
+              "error": "Unauthorized",
+              "message": "authentication is required, send a valid Bearer token",
+              "code": "AUTH_REQUIRED",
+              "errorCode": 40102,
+              "details": {}
             }""";
 
     // ---------------------------------------------------------------- 409
@@ -164,6 +250,7 @@ public final class ErrorExamples {
               "error": "Conflict",
               "message": "a table named 'ogrenciler' already exists",
               "code": "CONFLICT_DUPLICATE_TABLE_NAME",
+              "errorCode": 40901,
               "details": { "name": "ogrenciler" }
             }""";
 
@@ -175,6 +262,7 @@ public final class ErrorExamples {
               "error": "Conflict",
               "message": "a column named 'yas' already exists in this table",
               "code": "CONFLICT_DUPLICATE_COLUMN_NAME",
+              "errorCode": 40902,
               "details": { "name": "yas" }
             }""";
 
@@ -186,6 +274,7 @@ public final class ErrorExamples {
               "error": "Conflict",
               "message": "duplicate column name in request: yas",
               "code": "CONFLICT_DUPLICATE_COLUMN_IN_REQUEST",
+              "errorCode": 40903,
               "details": { "name": "yas" }
             }""";
 
@@ -197,6 +286,7 @@ public final class ErrorExamples {
               "error": "Conflict",
               "message": "a schema named 'ogrenciler' already exists",
               "code": "CONFLICT_DUPLICATE_SCHEMA_NAME",
+              "errorCode": 40904,
               "details": { "name": "ogrenciler" }
             }""";
 
@@ -208,12 +298,13 @@ public final class ErrorExamples {
               "error": "Conflict",
               "message": "a tag named 'onemli' already exists",
               "code": "CONFLICT_DUPLICATE_TAG_NAME",
+              "errorCode": 40905,
               "details": { "name": "onemli" }
             }""";
 
     /**
      * PK yapilmak istenen kolonda tabloda zaten NULL/tekrar eden deger varsa Postgres
-     * {@code ADD CONSTRAINT ... PRIMARY KEY}'i reddeder (bkz. TabloService.changeKolonPrimaryKey).
+     * {@code ADD CONSTRAINT ... PRIMARY KEY}'i reddeder (bkz. TableService.changeColumnPrimaryKey).
      */
     public static final String CONFLICT_COLUMN_NOT_UNIQUE =
             """
@@ -223,6 +314,108 @@ public final class ErrorExamples {
               "error": "Conflict",
               "message": "the operation conflicts with the table's current data (e.g. a column being made primary key contains null or duplicate values)",
               "code": "CONFLICT_COLUMN_NOT_UNIQUE",
+              "errorCode": 40907,
+              "details": {}
+            }""";
+
+    public static final String CONFLICT_DUPLICATE_USERNAME =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 409,
+              "error": "Conflict",
+              "message": "a user named 'ahmet' already exists",
+              "code": "CONFLICT_DUPLICATE_USERNAME",
+              "errorCode": 40906,
+              "details": { "name": "ahmet" }
+            }""";
+
+    public static final String CONFLICT_LAST_ADMIN =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 409,
+              "error": "Conflict",
+              "message": "the last remaining admin cannot be removed or demoted",
+              "code": "CONFLICT_LAST_ADMIN",
+              "errorCode": 40908,
+              "details": {}
+            }""";
+
+    // ---------------------------------------------------------------- genel / framework
+    // Bunlar tek bir controller'a degil HER uca uygulanabildigi icin (bkz.
+    // GlobalExceptionHandler), hicbir @ApiResponse'a tek tek baglanmiyor — sadece burada,
+    // ErrorResponse.code'un allowableValues listesiyle bire bir eslesecek sekilde bulunuyorlar.
+
+    public static final String AUTH_FORBIDDEN =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 403,
+              "error": "Forbidden",
+              "message": "your role is not allowed to perform this operation",
+              "code": "AUTH_FORBIDDEN",
+              "errorCode": 40301,
+              "details": {}
+            }""";
+
+    public static final String NOT_FOUND_ENDPOINT =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 404,
+              "error": "Not Found",
+              "message": "no endpoint at this path",
+              "code": "NOT_FOUND_ENDPOINT",
+              "errorCode": 40406,
+              "details": { "path": "/api/yanlis-yol" }
+            }""";
+
+    public static final String VALIDATION_INVALID_PATH_PARAM =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "id must be a valid Long: abc",
+              "code": "VALIDATION_INVALID_PATH_PARAM",
+              "errorCode": 40012,
+              "details": { "parameter": "id", "type": "Long", "value": "abc" }
+            }""";
+
+    public static final String VALIDATION_MALFORMED_BODY =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "request body is missing or not valid JSON",
+              "code": "VALIDATION_MALFORMED_BODY",
+              "errorCode": 40013,
+              "details": {}
+            }""";
+
+    public static final String VALIDATION_METHOD_NOT_ALLOWED =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 405,
+              "error": "Method Not Allowed",
+              "message": "method PUT is not supported here, use one of: GET, POST",
+              "code": "VALIDATION_METHOD_NOT_ALLOWED",
+              "errorCode": 40501,
+              "details": { "method": "PUT", "supported": "GET, POST" }
+            }""";
+
+    public static final String INTERNAL_ERROR =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 500,
+              "error": "Internal Server Error",
+              "message": "an unexpected error occurred",
+              "code": "INTERNAL_ERROR",
+              "errorCode": 50001,
               "details": {}
             }""";
 }

@@ -36,7 +36,7 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void kimliksizIstek_korunanUcta_401DonerVeAyniHataSeklindeGelir() throws Exception {
-        mockMvc.perform(get("/api/tablolar"))
+        mockMvc.perform(get("/api/tables"))
                 .andExpect(status().isUnauthorized())
                 // Asil sinav bu: 401 Spring Security'nin filtre zincirinden geliyor, yani
                 // GlobalExceptionHandler'a hic ugramiyor. Yine de code/message alanlari dolu
@@ -48,14 +48,14 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void kimliksizIstek_bozukTokenla_401Doner() throws Exception {
-        mockMvc.perform(get("/api/tablolar").header("Authorization", "Bearer bu-token-uydurma"))
+        mockMvc.perform(get("/api/tables").header("Authorization", "Bearer bu-token-uydurma"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code", is("AUTH_REQUIRED")));
     }
 
     @Test
     void hataMesajiAcceptLanguageBasligina_gore_cevrilir() throws Exception {
-        mockMvc.perform(get("/api/tablolar").header("Accept-Language", "tr"))
+        mockMvc.perform(get("/api/tables").header("Accept-Language", "tr"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Bu işlem için giriş yapmalısınız")));
     }
@@ -63,13 +63,13 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     // --- VIEWER: okuyabilir, yazamaz -----------------------------------------
 
     @Test
-    @WithMockUser(roles = "VIEWER")
+    @WithMockUser(username = "admin", roles = "VIEWER")
     void viewer_okuyabilir() throws Exception {
-        mockMvc.perform(get("/api/tablolar")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/tables")).andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(roles = "VIEWER")
+    @WithMockUser(username = "admin", roles = "VIEWER")
     void viewer_yazamaz_403Doner() throws Exception {
         mockMvc.perform(post("/api/tags")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -79,17 +79,47 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "VIEWER")
+    @WithMockUser(username = "admin", roles = "VIEWER")
     void viewer_kullaniciYonetimineGiremez() throws Exception {
-        mockMvc.perform(get("/api/kullanicilar"))
+        mockMvc.perform(get("/api/users"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
 
-    // --- EDITOR: yazabilir, kullanici yonetemez ------------------------------
+    @Test
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_auditLoglaraGiremez() throws Exception {
+        mockMvc.perform(get("/api/audit-logs"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
 
     @Test
-    @WithMockUser(roles = "EDITOR")
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_raporTetikleyemez() throws Exception {
+        mockMvc.perform(post("/api/reports/send"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
+    /**
+     * requirement-websocket-notifications.md Req-3.6: bildirimler rol kisitli DEGIL — genel
+     * "PATCH /api/** sadece EDITOR/ADMIN" kuralindan VIEWER icin de muaf olmali. Kural sirasinin
+     * dogru oldugunu sinar: {@code /api/notifications/**} o genel kuraldan ONCE gelmezse VIEWER
+     * burada 403 alirdi.
+     */
+    @Test
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_bildirimleriniOkunduIsaretleyebilir() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/notifications/read"))
+                .andExpect(status().isNoContent());
+    }
+
+    // --- EDITOR: yazabilir, user yonetemez ------------------------------
+
+    @Test
+    @WithMockUser(username = "admin", roles = "EDITOR")
     void editor_yazabilir() throws Exception {
         mockMvc.perform(post("/api/tags")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -98,13 +128,29 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * Kurallarin sirasinin dogru oldugunu da sinar: {@code /api/kullanicilar/**} kurali genel
+     * Kurallarin sirasinin dogru oldugunu da sinar: {@code /api/users/**} kurali genel
      * {@code GET /api/**} kuralindan once gelmezse, EDITOR bu ucu okuyabilir hale gelirdi.
      */
     @Test
-    @WithMockUser(roles = "EDITOR")
+    @WithMockUser(username = "admin", roles = "EDITOR")
     void editor_kullaniciYonetimineGiremez() throws Exception {
-        mockMvc.perform(get("/api/kullanicilar"))
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "EDITOR")
+    void editor_auditLoglaraGiremez() throws Exception {
+        mockMvc.perform(get("/api/audit-logs"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "EDITOR")
+    void editor_raporTetikleyemez() throws Exception {
+        mockMvc.perform(post("/api/reports/send"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
@@ -112,9 +158,22 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     // --- ADMIN ----------------------------------------------------------------
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void admin_kullaniciYonetiminiGorebilir() throws Exception {
-        mockMvc.perform(get("/api/kullanicilar")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/users")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void admin_auditLoglariGorebilir() throws Exception {
+        mockMvc.perform(get("/api/audit-logs")).andExpect(status().isOk());
+    }
+
+    /** app.report.admin-email test ortaminda bos oldugu icin sendReport gercek SMTP'ye hic gitmez (bkz. ReportService). */
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void admin_raporTetikleyebilir() throws Exception {
+        mockMvc.perform(post("/api/reports/send")).andExpect(status().isAccepted());
     }
 
     // --- Kimliksiz kalmasi GEREKEN uclar -------------------------------------

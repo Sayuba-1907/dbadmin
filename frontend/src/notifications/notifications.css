@@ -1,16 +1,44 @@
-.notification {
+/* PrimeReact unstyled modda hicbir p-* class'i EKLEMIYOR (sadece data-pc-* nitelikleri kalir) —
+   .p-toast-bottom-right gibi tema class'larina guvenilemez. Onun yerine <Toast pt={{root:
+   {className:"toast-stack"}}}> ile kendi class'imizi acikca veriyoruz (bkz.
+   NotificationProvider.tsx), sabit konumlandirma buraya bagli. Ayni sebeple giris/cikis
+   gecisleri de react-transition-group'un unstyled'da kullandigi CIPLAK "enter"/"exit"
+   class'larini (p-toast-message-enter degil) hedefliyor. */
+.toast-stack {
   position: fixed;
   bottom: 20px;
   right: 20px;
+  z-index: 50;
+}
+
+.toast-stack .enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.toast-stack .enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+
+.toast-stack .exit-active {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.notification {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 18px;
-  border-radius: 6px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-md);
   color: #fff;
-  font-size: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  max-width: 360px;
+  font-size: var(--text-base);
+  box-shadow: var(--shadow-md);
 }
 
 .notification-icon {

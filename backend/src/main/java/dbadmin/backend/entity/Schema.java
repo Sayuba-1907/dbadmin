@@ -7,15 +7,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Kullanicinin olusturdugu bir Postgres schema'sinin metadata karsiligi — {@link Tablo} ile ayni
+ * Kullanicinin olusturdugu bir Postgres schema'sinin metadata karsiligi — {@link DataTable} ile ayni
  * mantik: bu class gercek Postgres schema'si degil, onu tanimlayan kayittir; gercek
  * {@code CREATE SCHEMA} islemini {@link dbadmin.backend.ddl.SchemaDdlExecutor} yapar.
  * <p>
- * {@code name} benzersizligi de {@link Tablo#name} ile ayni sebeple DB constraint'i degil,
+ * {@code name} benzersizligi de {@link DataTable#name} ile ayni sebeple DB constraint'i degil,
  * uygulama katiminda ({@link dbadmin.backend.service.SchemaService#createSchema}) saglanir.
  */
 @Entity
-@Table(name = "sema")
+@Table(name = "schemas")
 public class Schema {
 
     @Id

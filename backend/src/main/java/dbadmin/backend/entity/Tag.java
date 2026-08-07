@@ -8,8 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Bir kolona iliştirilebilen basit etiket. Kolon'a gore bagimsiz yasar: bir kolon ya da
- * tablo silinse de Tag silinmez (Kolon->Tag iliskisinde cascade YOK, bkz. {@link Kolon#getTag()}).
+ * Bir kolona iliştirilebilen basit etiket. DataColumn'a gore bagimsiz yasar: bir kolon ya da
+ * tablo silinse de Tag silinmez (DataColumn->Tag iliskisinde cascade YOK, bkz. {@link DataColumn#getTag()}).
  */
 @Entity
 @Table(name = "tag", uniqueConstraints = @jakarta.persistence.UniqueConstraint(columnNames = "name"))

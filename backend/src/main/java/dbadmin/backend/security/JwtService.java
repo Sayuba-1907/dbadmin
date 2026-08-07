@@ -1,6 +1,6 @@
 package dbadmin.backend.security;
 
-import dbadmin.backend.entity.Kullanici;
+import dbadmin.backend.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -40,18 +40,18 @@ import org.springframework.stereotype.Service;
 public class JwtService {
 
     /** Rolun payload'da tutuldugu alan. Kullanici adi ayrica JWT'nin standart "subject" alanindadir. */
-    private static final String CLAIM_ROL = "rol";
+    private static final String CLAIM_ROLE = "rol";
 
     private final SecretKey key;
-    private final Duration gecerlilikSuresi;
+    private final Duration expiration;
 
     public JwtService(
             @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.expiration}") Duration gecerlilikSuresi) {
+            @Value("${app.jwt.expiration}") Duration expiration) {
         // Keys.hmacShaKeyFor 32 bayttan kisa bir sir verilirse WeakKeyException firlatir,
         // yani zayif bir anahtarla uygulama hic acilmaz (sessizce guvensiz calismaz).
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.gecerlilikSuresi = gecerlilikSuresi;
+        this.expiration = expiration;
     }
 
     /**
@@ -59,13 +59,13 @@ public class JwtService {
      * istekte yetki icin veritabanina gitmeye gerek kalmasin — bunun bedeli, rolu degistirilen
      * bir kullanicinin elindeki eski token'in suresi dolana kadar eski rolle gecerli olmasidir.
      */
-    public String tokenUret(Kullanici kullanici) {
-        Instant simdi = Instant.now();
+    public String generateToken(User user) {
+        Instant now = Instant.now();
         return Jwts.builder()
-                .subject(kullanici.getKullaniciAdi())
-                .claim(CLAIM_ROL, kullanici.getRol().name())
-                .issuedAt(Date.from(simdi))
-                .expiration(Date.from(simdi.plus(gecerlilikSuresi)))
+                .subject(user.getUsername())
+                .claim(CLAIM_ROLE, user.getRole().name())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(expiration)))
                 .signWith(key)
                 .compact();
     }
@@ -75,12 +75,12 @@ public class JwtService {
      * ya da bicimi bozuksa {@link JwtException} firlatir — cagiran taraf
      * ({@link JwtAuthenticationFilter}) bunu 401'e cevirir.
      */
-    public String kullaniciAdiCikar(String token) {
+    public String extractUsername(String token) {
         return claims(token).getSubject();
     }
 
     /** Token gecerli mi — sadece evet/hayir isteyen yerler icin (istisna firlatmaz). */
-    public boolean gecerliMi(String token) {
+    public boolean isValid(String token) {
         try {
             claims(token);
             return true;

@@ -60,24 +60,24 @@ public class RestSecurityErrorHandler implements AuthenticationEntryPoint, Acces
     public void commence(
             HttpServletRequest request, HttpServletResponse response, AuthenticationException ex)
             throws IOException {
-        yaz(request, response, HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED",
+        write(request, response, HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED",
                 "authentication is required, send a valid Bearer token");
     }
 
     /**
      * Kimlik var ama yetki yetmiyor → 403. Ornek: VIEWER rolundeki bir kullanicinin
-     * {@code POST /api/tablolar} denemesi.
+     * {@code POST /api/tables} denemesi.
      */
     @Override
     public void handle(
             HttpServletRequest request, HttpServletResponse response, AccessDeniedException ex)
             throws IOException {
-        yaz(request, response, HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN",
+        write(request, response, HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN",
                 "your role is not allowed to perform this operation");
     }
 
     /** Govdeyi {@link ErrorResponse} seklinde, istegin dilinde yazar. */
-    private void yaz(
+    private void write(
             HttpServletRequest request,
             HttpServletResponse response,
             HttpStatus status,
@@ -92,7 +92,7 @@ public class RestSecurityErrorHandler implements AuthenticationEntryPoint, Acces
         ErrorResponse body = ErrorResponse.of(
                 status.value(),
                 status.getReasonPhrase(),
-                cevir(request, code, fallbackMessage),
+                translate(request, code, fallbackMessage),
                 code,
                 Map.of());
 
@@ -102,7 +102,7 @@ public class RestSecurityErrorHandler implements AuthenticationEntryPoint, Acces
     }
 
     /** Hata kodunu istegin dilindeki metne cevirir; ceviri yoksa Ingilizce metne duser. */
-    private String cevir(HttpServletRequest request, String code, String fallbackMessage) {
+    private String translate(HttpServletRequest request, String code, String fallbackMessage) {
         Locale locale = localeResolver.resolveLocale(request);
         try {
             // args = null: {0} yerine {{...}} sozdizimi kullaniyoruz (bkz. GlobalExceptionHandler).
