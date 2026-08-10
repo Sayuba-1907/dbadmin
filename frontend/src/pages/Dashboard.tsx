@@ -13,12 +13,14 @@ import { Role } from "../api/auth";
 import { CreateSchemaForm } from "../components/CreateSchemaForm";
 import { CreateTableForm } from "../components/CreateTableForm";
 import { DashboardSkeleton } from "../components/DashboardSkeleton";
+import { MaintenancePanel } from "../components/MaintenancePanel";
 import { UsersPanel } from "../components/UsersPanel";
 import { TableDetail } from "../components/TableDetail";
 import { TableSidebar } from "../components/TableSidebar";
 import { TagsPanel } from "../components/TagsPanel";
 import { WorkspaceNav, WorkspaceView } from "../components/WorkspaceNav";
 import { useAuth } from "../auth/AuthProvider";
+import { useMaintenance } from "../hooks/useMaintenance";
 import { useSchemas } from "../hooks/useSchemas";
 import { useTables } from "../hooks/useTables";
 import { useTags } from "../hooks/useTags";
@@ -107,6 +109,23 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
     refresh: refreshUsers,
     setUsersOptimistic,
   } = useUsers();
+  // Maintenance sayfasinin (bkz. requirement-maintenance-audit-backup.md) tum okuma+yazma
+  // sorumlulugu useMaintenance hook'una tasindi (useUsers/useTags'le ayni kalip).
+  const {
+    summary: maintenanceSummary,
+    health: maintenanceHealth,
+    auditLogs,
+    auditLogsTotal,
+    page: auditLogsPage,
+    pageSize: auditLogsPageSize,
+    loading: maintenanceLoading,
+    backingUp,
+    backupList,
+    refresh: refreshMaintenance,
+    changeFilters: changeAuditLogFilters,
+    changePage: changeAuditLogPage,
+    backup: backupAuditLogsHook,
+  } = useMaintenance();
   const { isAdmin } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -256,6 +275,10 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
       refreshTags().catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")));
     } else if (view === "users" && isAdmin) {
       refreshUsers().catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")));
+    } else if (view === "maintenance" && isAdmin) {
+      refreshMaintenance().catch((err) =>
+        notifyFromError(notify, t, err, t("notifications.loadFailed"))
+      );
     }
   }
 
@@ -616,6 +639,15 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
     });
   }
 
+  async function handleBackupAuditLogs() {
+    try {
+      const result = await backupAuditLogsHook();
+      notify(200, t("notifications.auditLogBackupSucceeded", { count: result.rowCount }));
+    } catch (err) {
+      notifyFromError(notify, t, err, t("notifications.auditLogBackupFailed"));
+    }
+  }
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -639,6 +671,23 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
           onCreate={handleCreateUser}
           onChangeRole={handleChangeUserRole}
           onDelete={handleDeleteKullanici}
+        />
+      )}
+
+      {activeView === "maintenance" && (
+        <MaintenancePanel
+          summary={maintenanceSummary}
+          health={maintenanceHealth}
+          auditLogs={auditLogs}
+          auditLogsTotal={auditLogsTotal}
+          page={auditLogsPage}
+          pageSize={auditLogsPageSize}
+          loading={maintenanceLoading}
+          backingUp={backingUp}
+          backupList={backupList}
+          onFilterChange={changeAuditLogFilters}
+          onPageChange={changeAuditLogPage}
+          onBackup={handleBackupAuditLogs}
         />
       )}
 

@@ -33,6 +33,7 @@ public final class ErrorCodeRegistry {
             Map.entry("VALIDATION_MISSING_ROLE", 40011),
             Map.entry("VALIDATION_INVALID_PATH_PARAM", 40012),
             Map.entry("VALIDATION_MALFORMED_BODY", 40013),
+            Map.entry("VALIDATION_AUDIT_LOG_BACKUP_EMPTY", 40014),
             // 401
             Map.entry("AUTH_INVALID_CREDENTIALS", 40101),
             Map.entry("AUTH_REQUIRED", 40102),
@@ -58,7 +59,9 @@ public final class ErrorCodeRegistry {
             Map.entry("CONFLICT_COLUMN_NOT_UNIQUE", 40907),
             Map.entry("CONFLICT_LAST_ADMIN", 40908),
             // 500
-            Map.entry("INTERNAL_ERROR", 50001));
+            Map.entry("INTERNAL_ERROR", 50001),
+            // 502 — disaridaki bir bagimlilik basarisiz oldu (uygulamanin kendi hatasi degil)
+            Map.entry("EXTERNAL_BACKUP_UPLOAD_FAILED", 50201));
 
     /** Kayitli olmayan bir {@code code} icin patlar — yeni bir kod eklenip buraya yazilmasi unutulursa sessizce 0 donmez. */
     public static int numberFor(String code) {

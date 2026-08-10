@@ -91,6 +91,30 @@ services:
     networks:
       - dbadmin-net
 
+  minio:
+    # Audit log yedeklerinin (bkz. requirement-maintenance-audit-backup.md) yazildigi object
+    # storage. Console (9001) Redisinsight/Grafana gibi tarayicidan gorsel incelemek icin host'a
+    # aciliyor; API portu (9000) sadece backend'in erisebilecegi sekilde expose ediliyor.
+    image: minio/minio:latest
+    container_name: dbadmin_minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    expose:
+      - "9000"
+    ports:
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - dbadmin-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     container_name: dbadmin_backend
@@ -116,10 +140,18 @@ services:
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
       APP_REPORT_ADMIN_EMAIL: ${APP_REPORT_ADMIN_EMAIL:-}
+      # MinIO'ya audit log yedegi yazarken kullanilan kimlik (bkz.
+      # requirement-maintenance-audit-backup.md). Root credential'la ayni deger, .env'den gelir.
+      APP_MINIO_ENDPOINT: http://minio:9000
+      APP_MINIO_ACCESS_KEY: ${APP_MINIO_ACCESS_KEY:-}
+      APP_MINIO_SECRET_KEY: ${APP_MINIO_SECRET_KEY:-}
+      APP_MINIO_BUCKET: ${APP_MINIO_BUCKET:-audit-log-backups}
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
       tempo:
         condition: service_started
@@ -178,6 +210,7 @@ volumes:
   redisinsight_data:
   tempo_data:
   loki_data:
+  minio_data:
 
 networks:
   dbadmin-net:

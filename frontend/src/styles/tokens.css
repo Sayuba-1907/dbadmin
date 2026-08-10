@@ -20,6 +20,7 @@
   --color-badge-new: var(--color-accent);
 
   --color-success: #16a34a;
+  --color-success-bg: rgba(22, 163, 74, 0.14);
   --color-conflict: #d97706;
   --color-danger: #ef4444; /* eski: #f87171 */
   --color-danger-bg: rgba(239, 68, 68, 0.14);

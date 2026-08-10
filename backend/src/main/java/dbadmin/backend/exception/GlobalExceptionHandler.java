@@ -62,6 +62,13 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), ex.getCode(), ex.getDetails());
     }
 
+    /** MinIO'ya yedek yuklenemedi (Req-3.3, fail-closed) — hata disaridaki bir bagimliliktan geldigi icin 502. */
+    @ExceptionHandler(BackupFailedException.class)
+    public ResponseEntity<ErrorResponse> handleBackupFailed(BackupFailedException ex) {
+        log.error("audit log yedegi MinIO'ya yuklenemedi", ex);
+        return build(HttpStatus.BAD_GATEWAY, ex.getMessage(), ex.getCode(), Map.of());
+    }
+
     /** {@code GET /api/tablolar/abc} — {@code id} path parametresi Long'a cevrilemiyor. */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {

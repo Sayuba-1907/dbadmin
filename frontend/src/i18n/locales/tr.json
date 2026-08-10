@@ -9,7 +9,8 @@
   "nav": {
     "schemalar": "Şemalar",
     "tagler": "Etiketler",
-    "kullanicilar": "Kullanıcılar"
+    "kullanicilar": "Kullanıcılar",
+    "maintenance": "Bakım"
   },
   "theme": {
     "switcherLabel": "Tema seçici",
@@ -102,6 +103,40 @@
     "passwordPlaceholder": "parola",
     "create": "Kullanıcı Oluştur"
   },
+  "maintenance": {
+    "title": "Bakım",
+    "schemaCount": "Şema",
+    "tableCount": "Tablo",
+    "columnCount": "Kolon",
+    "userCount": "Kullanıcı",
+    "service": {
+      "postgres": "Postgres",
+      "redis": "Redis",
+      "tempo": "Tempo",
+      "loki": "Loki"
+    },
+    "auditLogTitle": "Audit Log",
+    "backup": "Yedekle",
+    "filterUserId": "Kullanıcı id",
+    "filterAllTargetTypes": "Tüm hedef tipleri",
+    "filterTargetId": "Hedef id",
+    "filterFrom": "Başlangıç tarihi",
+    "filterTo": "Bitiş tarihi",
+    "applyFilters": "Filtrele",
+    "clearFilters": "Temizle",
+    "auditLogEmpty": "Kayıt yok",
+    "colCreatedAt": "Zaman",
+    "colUsername": "Kullanıcı",
+    "colOperationType": "İşlem",
+    "colTarget": "Hedef",
+    "colDetail": "Detay",
+    "backupListTitle": "Geçmiş Yedekler",
+    "backupListEmpty": "Henüz yedek yok",
+    "colBackedUpAt": "Yedekleme Zamanı",
+    "colBackedUpBy": "Kim",
+    "colRowCount": "Satır Sayısı",
+    "colBackupFile": "Dosya"
+  },
   "notificationBell": {
     "buttonLabel": "Bildirimler",
     "title": "Bildirimler",
@@ -149,7 +184,9 @@
     "kullaniciRolChanged": "Rol güncellendi",
     "kullaniciRolChangeFailed": "Rol güncellenemedi",
     "kullaniciDeleted": "Kullanıcı silindi",
-    "kullaniciDeleteFailed": "Kullanıcı silinemedi"
+    "kullaniciDeleteFailed": "Kullanıcı silinemedi",
+    "auditLogBackupSucceeded": "{{count}} audit log kaydı yedeklendi",
+    "auditLogBackupFailed": "Audit log yedeklenemedi"
   },
   "validation": {
     "required": "Lütfen bu alanı doldurun"
@@ -187,6 +224,8 @@
     "VALIDATION_MALFORMED_BODY": "İstek gövdesi eksik ya da geçerli bir JSON değil",
     "VALIDATION_INVALID_PATH_PARAM": "{{parameter}} geçerli bir {{type}} olmalı: {{value}}",
     "CONFLICT_COLUMN_NOT_UNIQUE": "Bu işlem tablodaki mevcut veriyle çelişiyor (ör. birincil anahtar yapılmak istenen kolonda boş veya tekrar eden değerler var)",
-    "INTERNAL_ERROR": "Beklenmeyen bir hata oluştu"
+    "INTERNAL_ERROR": "Beklenmeyen bir hata oluştu",
+    "VALIDATION_AUDIT_LOG_BACKUP_EMPTY": "Yedeklenecek audit log kaydı yok",
+    "EXTERNAL_BACKUP_UPLOAD_FAILED": "Audit log yedeği depolama alanına yüklenemedi, tablo temizlenmedi"
   }
 }

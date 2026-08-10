@@ -36,9 +36,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <li>GET {@code /api/**} → giris yapmis <b>herkes</b> (VIEWER dahil) okuyabilir.
  *   <li>Diger metodlar {@code /api/**} → EDITOR veya ADMIN ("kimisi update edebilsin kimisi
  *       edemesin").
- *   <li>{@code /api/users/**}, {@code /api/audit-logs/**} ve {@code /api/reports/**} →
- *       sadece ADMIN. Bu kurallar digerlerinden <b>once</b> yazilmalidir: kurallar sirayla
- *       degerlendirilir, ilk eslesen kazanir.
+ *   <li>{@code /api/users/**}, {@code /api/audit-logs/**}, {@code /api/reports/**} ve
+ *       {@code /api/maintenance/**} → sadece ADMIN. Bu kurallar digerlerinden <b>once</b>
+ *       yazilmalidir: kurallar sirayla degerlendirilir, ilk eslesen kazanir.
  *   <li>{@code /api/notifications/**} → rol kisiti yok, PATCH dahil giris yapmis herkes (bkz.
  *       requirement-websocket-notifications.md Req-3.6) — filtre rol degil, {@code
  *       NotificationService}'in her sorguda uyguladigi "sadece kendi bildirimi" kurali.
@@ -83,10 +83,11 @@ public class SecurityConfig {
                         .requestMatchers("/ws").permitAll()
                         // Tarayici preflight istegi kimlik tasimaz; reddedilirse asil istek hic atilmaz.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Kullanici yonetimi, audit log ve rapor tetikleme sadece ADMIN — genel /api/** kuralindan ONCE gelmeli.
+                        // Kullanici yonetimi, audit log, rapor tetikleme ve maintenance sadece ADMIN — genel /api/** kuralindan ONCE gelmeli.
                         .requestMatchers("/api/users/**").hasRole(Role.ADMIN.name())
                         .requestMatchers("/api/audit-logs/**").hasRole(Role.ADMIN.name())
                         .requestMatchers("/api/reports/**").hasRole(Role.ADMIN.name())
+                        .requestMatchers("/api/maintenance/**").hasRole(Role.ADMIN.name())
                         // Bildirimler rol kisitli degil (Req-3.6): PATCH dahil herhangi bir
                         // kimlikli kullanici (VIEWER dahil) kendi bildirimini okundu isaretleyebilir
                         // — genel "/api/** PATCH/POST/DELETE sadece EDITOR/ADMIN" kuralindan ONCE

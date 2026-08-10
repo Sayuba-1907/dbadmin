@@ -11,6 +11,13 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 60000,
   fullyParallel: false,
+  // fullyParallel:false sadece TEK bir dosya icindeki testleri serilestirir — birden fazla
+  // spec dosyasi varsayilan olarak yine de ayri worker'larda PARALEL calisir. Hepsi ayni
+  // gercek backend'e (dolayisiyla ayni Postgres'e) yazdigi icin (mock yok, yukaridaki javadoc)
+  // paralel dosyalar birbirinin verisini degistirebilir — ör. bir dosya audit_log'u "bos"
+  // bekliyorken baska bir dosya es zamanli yeni satir yazabilir. workers:1 tum suite'i
+  // dosyalar arasinda da serilestirir (CI'nin zaten varsayilan davranisi, burada local run'a da uygulanir).
+  workers: 1,
   retries: 0,
   reporter: "list",
   use: {

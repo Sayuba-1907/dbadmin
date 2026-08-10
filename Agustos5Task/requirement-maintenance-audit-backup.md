@@ -82,4 +82,12 @@ tabloyu temizleyen bir bölüm.
 
 ## 5. Durum
 
-Henüz implemente edilmedi — bu doküman tasarım/kapsam onayı için yazıldı.
+2026-08-10'da implemente edildi (backend/week4): `plan-maintenance-audit-backup-implementation.md`'deki
+Faz 1-6 tamamlandı — MinIO servisi (docker-compose + `.env`), `MinioClient`/`MinioBucketInitializer`,
+`AuditLogBackupService` (önce MinIO'ya yaz, sonra cutoff-id'ye göre sil), `MaintenanceService`
+(sistem özeti + Postgres/Redis/Tempo/Loki sağlık göstergesi), `MaintenanceController`
+(`GET /api/maintenance/summary`, `GET /api/maintenance/health`,
+`POST /api/maintenance/audit-logs/backup`, hepsi ADMIN), frontend `MaintenancePanel` (özet
+kartları, sağlık rozetleri, filtrelenebilir audit log tablosu, "Yedekle" butonu), backend
+entegrasyon testleri (cutoff-id garantisi, fail-closed, yetki) ve Playwright e2e testi. Yol
+boyunca bulunan/çözülen sorunlar için bkz. `DECISIONS.md`.

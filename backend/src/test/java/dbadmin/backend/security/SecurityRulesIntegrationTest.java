@@ -102,6 +102,22 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
 
+    @Test
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_maintenanceOzetineGiremez() throws Exception {
+        mockMvc.perform(get("/api/maintenance/summary"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_auditLogYedekleyemez() throws Exception {
+        mockMvc.perform(post("/api/maintenance/audit-logs/backup"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
     /**
      * requirement-websocket-notifications.md Req-3.6: bildirimler rol kisitli DEGIL — genel
      * "PATCH /api/** sadece EDITOR/ADMIN" kuralindan VIEWER icin de muaf olmali. Kural sirasinin
@@ -155,6 +171,14 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
 
+    @Test
+    @WithMockUser(username = "admin", roles = "EDITOR")
+    void editor_maintenanceSagliginaGiremez() throws Exception {
+        mockMvc.perform(get("/api/maintenance/health"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
     // --- ADMIN ----------------------------------------------------------------
 
     @Test
@@ -174,6 +198,45 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     @WithMockUser(username = "admin", roles = "ADMIN")
     void admin_raporTetikleyebilir() throws Exception {
         mockMvc.perform(post("/api/reports/send")).andExpect(status().isAccepted());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void admin_maintenanceOzetiniGorebilir() throws Exception {
+        mockMvc.perform(get("/api/maintenance/summary")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void admin_maintenanceSagliginiGorebilir() throws Exception {
+        mockMvc.perform(get("/api/maintenance/health")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void admin_yedekListesiniGorebilir() throws Exception {
+        mockMvc.perform(get("/api/maintenance/audit-logs/backups")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_yedekListesiniGoremez() throws Exception {
+        mockMvc.perform(get("/api/maintenance/audit-logs/backups"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
+    /** Paylasilan container'da audit_log bos olabilecegi icin yedeklenecek en az bir satir once garanti edilir. */
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void admin_auditLogYedekleyebilir() throws Exception {
+        mockMvc.perform(post("/api/tags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new CreateTagRequest("maintenance_backup_yetki_testi"))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/maintenance/audit-logs/backup")).andExpect(status().isOk());
     }
 
     // --- Kimliksiz kalmasi GEREKEN uclar -------------------------------------

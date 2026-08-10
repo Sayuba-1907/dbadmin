@@ -3,11 +3,14 @@ package dbadmin.backend.repository;
 import dbadmin.backend.entity.AuditLog;
 import dbadmin.backend.entity.TargetType;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Spring Data JPA repository — {@code GET /api/audit-logs}'in (Req-2.4) filtreleri hepsi
@@ -35,4 +38,25 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
             @Param("from") Instant from,
             @Param("to") Instant to,
             Pageable pageable);
+
+    /**
+     * Yedekleme icin (bkz. requirement-maintenance-audit-backup.md Req-2.4.1) tum tabloyu id
+     * sirasiyla okur — son elemanin id'si bir sonraki adimdaki (silme) cutoff'u belirler.
+     */
+    List<AuditLog> findAllByOrderByIdAsc();
+
+    /**
+     * Yedekleme sonrasi temizlik (Req-2.5): blanket {@code DELETE FROM audit_log} DEGIL, sadece
+     * okuma anindaki en yuksek id'ye kadar. Okuma (yukaridaki metod) ile bu silme arasinda yeni
+     * bir satir yazilmissa (id > cutoffId), bu satir silinmez — bir sonraki yedeklemede o da
+     * dahil edilir.
+     * <p>
+     * {@code @Transactional} burada, {@code @Modifying} sorgularin (base CRUD metodlarindan
+     * farkli olarak) kendiliginden bir transaction acmamasi yuzunden gerekli — cagiran zaten
+     * {@code @Transactional} olsa da (bkz. AuditLogBackupService#backup), bu metod boylece tek
+     * basina da (ör. testte) guvenle cagrilabilir.
+     */
+    @Modifying
+    @Transactional
+    long deleteByIdLessThanEqual(Long cutoffId);
 }

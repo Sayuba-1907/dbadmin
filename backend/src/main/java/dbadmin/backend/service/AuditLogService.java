@@ -77,7 +77,8 @@ public class AuditLogService {
         return auditLogRepository.search(userId, targetType, targetId, from, to, pageable);
     }
 
-    private String currentUsername() {
+    /** {@link dbadmin.backend.service.AuditLogBackupService} icin: "kim yedekledi" bilgisi ayni SYSTEM_USER fallback'iyle okunur. */
+    public String currentUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null ? authentication.getName() : SYSTEM_USER;
     }

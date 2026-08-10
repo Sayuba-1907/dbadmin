@@ -14,7 +14,7 @@ docker start dbadmin_redisinsight
 https://www.baeldung.com/java-equals-hashcode-contracts hashcode equals siteye bak.
 http://localhost:8081/swagger-ui/index.html
 http://localhost:3001/?orgId=1&from=now-6h&to=now&timezone=browser
-
+http://localhost:9001/browser/audit-log-backups/backup-2026-08-10T11-24-33Z.json
     Kapatirken/Acarken sirasi (backend docker'da, frontend npm start ile):
     KAPAT:
     1) npm start terminalinde Ctrl+C

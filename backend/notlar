@@ -103,21 +103,16 @@ Okuma:
     Testcontainer -> Fikir oluşması için.
 
 
-10 Ağustos:
-
-Bir tane admin sayfası olacak -> Maintenance için
-1)
-  - Sistem özet bilgisi — schema/tablo/kolon/kullanıcı sayısı gibi (ReportService zaten bunu hesaplıyor, buildReportContent içinde) — bir dashboard kartı gibi gösterilebilir
-  - Servis sağlık durumu — Postgres/Redis/Tempo/Loki bağlantı durumu (basit ping/health check)
-2)
-!id tablodan silinsin ->audit tablosunun kolonu (dbeaverdan bakınca cıkan ıd kolonuna bakarak söyledi)
-
-a)audit log database'de değil bir json dosyası
-b)Audit Log için admine özel bir sayfa olsun, table'da logları göstersin ilgili filtrelerle.
-bir buton ile de(sağ üstte olabilir) dump alsın. Yani şu ana kadarki logları yedeklesin -> dosya oluştur, json->minio'ya at.
-d)Yedeği alınan tablo temizlensin.f)Json dosyasının içinde bu tarihte şu kullanıcı tarafından yedeklendi de olsun.
-
-
+Ağustos 10:
+    Bir tane admin sayfası olacak -> Maintenance için
+    1)+- Sistem özet bilgisi — schema/tablo/kolon/kullanıcı sayısı gibi (ReportService zaten bunu hesaplıyor, buildReportContent içinde) — bir dashboard kartı gibi gösterilebilir
+      +- Servis sağlık durumu — Postgres/Redis/Tempo/Loki bağlantı durumu (basit ping/health check)
+    2)+!id tablodan silinsin ->audit tablosunun kolonu
+    +a)audit log database'de değil bir json dosyası
+    +b)Audit Log için admine özel bir sayfa olsun, table'da logları göstersin ilgili filtrelerle.
+    bir buton ile de(sağ üstte olabilir) dump alsın. Yani şu ana kadarki logları yedeklesin -> dosya oluştur, json->minio'ya at.
+    +c)Yedeği alınan tablo temizlensin.
+    +d)Json dosyasının içinde bu tarihte şu kullanıcı tarafından yedeklendi de olsun.
 
 
 

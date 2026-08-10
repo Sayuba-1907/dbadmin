@@ -505,3 +505,65 @@ kapsamli manuel/otomatik tiklama testi.
 - Bunlarin disinda (bildirim zili, tema/dil degistirici, arama/sirala, schema/table/column CRUD,
   drag-drop yerine PATCH akisi, tag kullanim detayi, kullanici olustur/rol degistir/sil) hepsi
   ayrintili tiklanarak dogrulandi, baska bug bulunmadi.
+
+## Maintenance sayfasi + audit log yedekleme (MinIO) (2026-08-10)
+
+`requirement-maintenance-audit-backup.md` / `plan-maintenance-audit-backup-implementation.md`
+implementasyonu sirasinda bulunan/cozulen surprizler:
+
+- **`io.minio:minio:9.0.3`, transitive `com.squareup.okhttp3:okhttp:5.x`'i cekince derleme
+  `class file for okhttp3.HttpUrl not found` hatasi verdi.** Neden: OkHttp 5.x Kotlin
+  Multiplatform'a gecti, `com.squareup.okhttp3:okhttp` artifact'i artik sinifsiz bir "facade"
+  (gercek JVM siniflari ayri bir `okhttp-jvm` artifact'inde, Gradle module metadata ile
+  yonlendiriliyor) — Maven bu yonlendirmeyi anlamiyor, bos facade'i indirip birakiyor.
+  **Duzeltme**: `minio`'nun `okhttp` transitive bagimliligi `<exclusions>` ile disleyip
+  `com.squareup.okhttp3:okhttp-jvm:5.3.2`'yi elle eklendi (bkz. `backend/pom.xml`).
+
+- **Redis servis sagligi (`/api/maintenance/health`) her zaman `false` donuyordu, Redis
+  gercekten calisiyor olsa bile.** Neden: uygulama WebFlux kullanmadigi halde
+  `spring-data-redis` otomatik olarak hem sync hem reactive bir `RedisConnectionFactory`
+  autoconfigure ediyor; ikisinin health-contributor autoconfigurasyonu da AYNI bean adini
+  (`redisHealthContributor`) uretmeye calisiyor — reactive olan once devreye girip
+  `@ConditionalOnMissingBean` ile sync olani susturuyordu, bu yuzden `HealthContributorRegistry`
+  icinde "redis" anahtari hic olusmuyordu (reactive contributor ayri, `ReactiveHealthContributorRegistry`'ye
+  gidiyor, `MaintenanceService`'in okudugu registry'ye degil). Teshis: `debug=true` ile
+  acilan condition-evaluation raporunda `DataRedisHealthContributorAutoConfiguration#redisHealthContributor`
+  satirinin "Did not match: found beans named redisHealthContributor" dedigi goruldu.
+  **Duzeltme**: kullanilmayan reactive Redis autoconfigurasyonu (`DataRedisReactiveAutoConfiguration`,
+  `DataRedisReactiveHealthContributorAutoConfiguration`) `spring.autoconfigure.exclude` ile
+  disendi — cache/rol mekanizmasi (sync `RedisTemplate`) etkilenmedi, dogrulandi.
+
+- **`AuditLogRepository.deleteByIdLessThanEqual` (custom `@Modifying` sorgu), servisin kendi
+  `@Transactional`'inin DISINDA (ör. bir testte dogrudan) cagrilinca `No EntityManager with
+  actual transaction available` hatasi verdi.** Base `JpaRepository` metodlarindan (save,
+  deleteAll, ...) farkli olarak, interface'e elle yazilmis `@Modifying` sorgular kendiliginden
+  bir transaction acmiyor — ya cagiranin transaction'ina guveniyor (production'da oldugu gibi,
+  `AuditLogBackupService.backup()` zaten `@Transactional`) ya da metodun kendisine
+  `@Transactional` eklenmesi gerekiyor. Repository metoduna `@Transactional` eklenerek hem
+  production hem testte (tek basina cagrilsa da) guvenli hale getirildi.
+
+- **MinIO icin de (Redis/Postgres'teki gibi) mock degil gercek bir Testcontainer eklendi**
+  (`AbstractIntegrationTest`'e `minio/minio` container'i, `app.minio.*` property'leri container'in
+  portuna dinamik baglaniyor) — cunku `MinioBucketInitializer` acilista GERCEKTEN
+  `bucketExists()` cagirdigi icin (bkz. asagi), MinIO olmadan hicbir entegrasyon testi
+  ApplicationContext'i yukleyemiyordu (`AccessKey and SecretKey must not be empty` /
+  bagliantı hatasi). Fail-closed senaryosu (Req-3.3) ise BILEREK ayri bir sinifta
+  (`AuditLogBackupServiceFailureIntegrationTest`) `MinioService`'i mock'luyor — projenin genel
+  "gercek DB, mock yok" ilkesinden burada bilerek sapildi, ayni `ReportServiceIntegrationTest`'in
+  `JavaMailSender`'i mock'lama gerekcesiyle ayni (dis sistem, gercek hatasini kararli sekilde
+  tetiklemenin baska bir yolu yok).
+
+- **Playwright e2e'de yeni `maintenance.spec.ts`, `table-lifecycle.spec.ts` ile PARALEL
+  calisinca ara sira basarisiz oluyordu** ("Kayıt yok" beklenirken audit log'da satir
+  bulunuyordu). Neden: `playwright.config.ts`'teki `fullyParallel: false` sadece TEK BIR
+  dosya icindeki testleri serilestiriyor — birden fazla spec dosyasi varsayilan olarak yine de
+  ayri worker'larda paralel calisiyor, ikisi de AYNI gercek backend'e (dolayisiyla ayni
+  Postgres'e) yaziyor. `table-lifecycle.spec.ts`'in olusturdugu audit satirlari,
+  `maintenance.spec.ts`'in "yedekten sonra tablo tamamen bos" varsayimini bozdu.
+  **Duzeltme**: `workers: 1` eklendi (CI'da zaten varsayilan davranis, sadece local run'a da
+  uygulanmis oldu) — dosyalar arasi da serilestiriyor.
+
+- Dis kimlik yonetimi kapsam disi birakildi: MinIO icin ayri bir access-key/secret-key
+  (`mc admin user add`) olusturulmadi, backend root credential'i (`.env`'deki
+  `MINIO_ROOT_USER`/`PASSWORD`) ile ayni degeri kullaniyor — bu olcekte (tek uygulama, tek
+  bucket) ayrimin getirisi kurulum karmasikligini karsilamiyor.

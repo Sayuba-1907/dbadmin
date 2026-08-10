@@ -9,7 +9,8 @@
   "nav": {
     "schemalar": "Schemas",
     "tagler": "Tags",
-    "kullanicilar": "Users"
+    "kullanicilar": "Users",
+    "maintenance": "Maintenance"
   },
   "theme": {
     "switcherLabel": "Theme selector",
@@ -102,6 +103,40 @@
     "passwordPlaceholder": "password",
     "create": "Create User"
   },
+  "maintenance": {
+    "title": "Maintenance",
+    "schemaCount": "Schemas",
+    "tableCount": "Tables",
+    "columnCount": "Columns",
+    "userCount": "Users",
+    "service": {
+      "postgres": "Postgres",
+      "redis": "Redis",
+      "tempo": "Tempo",
+      "loki": "Loki"
+    },
+    "auditLogTitle": "Audit Log",
+    "backup": "Back Up",
+    "filterUserId": "User id",
+    "filterAllTargetTypes": "All target types",
+    "filterTargetId": "Target id",
+    "filterFrom": "From date",
+    "filterTo": "To date",
+    "applyFilters": "Filter",
+    "clearFilters": "Clear",
+    "auditLogEmpty": "No records",
+    "colCreatedAt": "Time",
+    "colUsername": "User",
+    "colOperationType": "Operation",
+    "colTarget": "Target",
+    "colDetail": "Detail",
+    "backupListTitle": "Past Backups",
+    "backupListEmpty": "No backups yet",
+    "colBackedUpAt": "Backed Up At",
+    "colBackedUpBy": "By",
+    "colRowCount": "Row Count",
+    "colBackupFile": "File"
+  },
   "notificationBell": {
     "buttonLabel": "Notifications",
     "title": "Notifications",
@@ -149,7 +184,9 @@
     "kullaniciRolChanged": "Role updated",
     "kullaniciRolChangeFailed": "Failed to update role",
     "kullaniciDeleted": "User deleted",
-    "kullaniciDeleteFailed": "Failed to delete user"
+    "kullaniciDeleteFailed": "Failed to delete user",
+    "auditLogBackupSucceeded": "Backed up {{count}} audit log entries",
+    "auditLogBackupFailed": "Failed to back up audit log"
   },
   "validation": {
     "required": "Please fill out this field"
@@ -187,6 +224,8 @@
     "VALIDATION_MALFORMED_BODY": "Request body is missing or not valid JSON",
     "VALIDATION_INVALID_PATH_PARAM": "{{parameter}} must be a valid {{type}}: {{value}}",
     "CONFLICT_COLUMN_NOT_UNIQUE": "The operation conflicts with the table's current data (e.g. a column being made primary key contains null or duplicate values)",
-    "INTERNAL_ERROR": "An unexpected error occurred"
+    "INTERNAL_ERROR": "An unexpected error occurred",
+    "VALIDATION_AUDIT_LOG_BACKUP_EMPTY": "There are no audit log rows to back up",
+    "EXTERNAL_BACKUP_UPLOAD_FAILED": "Could not upload the audit log backup to storage, the table was not cleared"
   }
 }

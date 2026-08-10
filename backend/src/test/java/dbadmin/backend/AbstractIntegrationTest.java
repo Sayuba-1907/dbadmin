@@ -5,6 +5,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
 // Shared real Postgres for every integration test - not H2, not a mock,
 // per the assignment's testing requirement. Uses Testcontainers' documented
@@ -30,9 +31,22 @@ public abstract class AbstractIntegrationTest {
     static final GenericContainer<?> REDIS =
             new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
+    // Audit log yedekleme (bkz. requirement-maintenance-audit-backup.md) icin: mock'lanmis bir
+    // MinioClient yerine Redis'teki gibi gercek bir container. MinioBucketInitializer acilista
+    // gercekten bucketExists() cagirdigi icin (bkz. config/MinioBucketInitializer), endpoint'in
+    // erisilebilir olmasi bean olusturma asamasinda zaten sart.
+    static final GenericContainer<?> MINIO =
+            new GenericContainer<>("minio/minio:latest")
+                    .withCommand("server", "/data")
+                    .withEnv("MINIO_ROOT_USER", "testminioadmin")
+                    .withEnv("MINIO_ROOT_PASSWORD", "testminiosecret")
+                    .withExposedPorts(9000)
+                    .waitingFor(Wait.forHttp("/minio/health/live").forPort(9000));
+
     static {
         POSTGRES.start();
         REDIS.start();
+        MINIO.start();
     }
 
     @DynamicPropertySource
@@ -42,5 +56,9 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
+        registry.add("app.minio.endpoint",
+                () -> "http://" + MINIO.getHost() + ":" + MINIO.getMappedPort(9000));
+        registry.add("app.minio.access-key", () -> "testminioadmin");
+        registry.add("app.minio.secret-key", () -> "testminiosecret");
     }
 }
