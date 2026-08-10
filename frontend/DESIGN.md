@@ -9,10 +9,11 @@ uygulanacak.
 DBAdmin gerçek bir PostgreSQL'i yöneten iç araç — hedef kitle geliştirici/admin, iş bir
 pazarlama sitesi değil, yoğun veri yönetimi (bkz. `DECISIONS.md` → Frontend/Layout: phpMyAdmin
 / Supabase / Prisma Studio kategorisi). O yüzden tasarım yönü "cesur/dekoratif" değil,
-**teknik, sakin, yoğunluk kaldırabilen** bir kimlik. Karanlık tema varsayılan ve tek tema
-oluyor (light/dark toggle eklenmiyor) — bu kategorideki tüm referanslar (Supabase, Prisma
-Studio, DBeaver dark, pgAdmin dark) zaten öyle, ayrıca iki temayı senkron tutmak bu projenin
-ölçeğine göre gereksiz bakım yükü.
+**teknik, sakin, yoğunluk kaldırabilen** bir kimlik. Karanlık tema varsayılan — bu kategorideki
+tüm referanslar (Supabase, Prisma Studio, DBeaver dark, pgAdmin dark) zaten öyle — ama tek tema
+ile sınırlı kalınmadı: `ThemeProvider`/`ThemeSwitcher` ile bir light/dark toggle desteklenir,
+`tokens.css`'teki `[data-theme="light"]` bloğu açık temanın karşılık gelen token değerlerini
+tanımlar.
 
 **İmza fikri — "kod kimliği" ayrımı:** Uygulamada iki tür isim var: gerçek bir Postgres
 nesnesinin adı (schema, tablo, kolon, tag — hepsi `NameValidator`'dan geçen, DB'de karşılığı
