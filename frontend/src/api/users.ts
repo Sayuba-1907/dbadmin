@@ -1,5 +1,6 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
 import { Role } from "./auth";
+import { Page } from "./notifications";
 
 /** Backend'in {@code KullaniciResponse} DTO'suyla ayni sekil — parola hash'i hic gelmez. */
 export interface User {
@@ -8,9 +9,14 @@ export interface User {
   role: Role;
 }
 
-/** {@code /api/users} altindaki uc uc — hepsi sadece ADMIN icin acik (bkz. SecurityConfig). */
+/**
+ * {@code /api/users} altindaki uc uc — hepsi sadece ADMIN icin acik (bkz. SecurityConfig). GET
+ * /api/users artik sayfalanmis donuyor (bkz. UserController#list) ama "Kullanicilar" gorunumu
+ * tum kullanicilari tek dizide bekliyor — schemas.ts'teki Page<T> desenindeki gibi size=1000 ile
+ * tek istekte hepsini cekip content'i acariyoruz.
+ */
 export function getUsers(): Promise<User[]> {
-  return apiGet<User[]>("/api/users");
+  return apiGet<Page<User>>("/api/users?size=1000").then((page) => page.content);
 }
 
 /** {@code role} verilmezse backend VIEWER atar. */

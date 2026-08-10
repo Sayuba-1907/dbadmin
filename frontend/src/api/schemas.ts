@@ -29,9 +29,19 @@ interface WorkspaceSchema {
   tableResponseList: WorkspaceTableSummary[];
 }
 
-/** SchemaController'daki endpoint'lerin frontend karsiligi. */
+/** Only the fields used from Spring Data's Page<T> JSON — the rest (sort, pageable, ...) is unused here. */
+interface Page<T> {
+  content: T[];
+}
+
+/**
+ * SchemaController'daki endpoint'lerin frontend karsiligi. GET /api/schemas artik sayfalanmis
+ * donuyor (bkz. SchemaController#list) ama sidebar/schema-secimi TUM schema'lari tek dizide
+ * bekliyor — size=1000 ile (Spring'in varsayilan max sayfa boyutu 2000) tek istekte hepsini cekip
+ * content'i acariyoruz, notifications.ts'teki Page<T> desenindeki gibi.
+ */
 export function getSchemas(): Promise<Schema[]> {
-  return apiGet<Schema[]>("/api/schemas");
+  return apiGet<Page<Schema>>("/api/schemas?size=1000").then((page) => page.content);
 }
 
 /** GET /api/schemas/{id}/tables — bir schema'nin altindaki tablolarin ozet listesi (sidebar icin). */

@@ -16,8 +16,8 @@ function mockFetch(seed: FakeTag[]) {
     const jsonResponse = (status: number, body: unknown) =>
       ({ ok: status < 400, status, json: async () => body }) as Response;
 
-    if (url.endsWith("/api/tags") && method === "GET") {
-      return jsonResponse(200, tags);
+    if (url.includes("/api/tags?") && method === "GET") {
+      return jsonResponse(200, { content: tags });
     }
     if (url.endsWith("/api/tags") && method === "POST") {
       const { name } = JSON.parse(init!.body as string);

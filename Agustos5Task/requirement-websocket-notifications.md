@@ -105,6 +105,12 @@ sunucudan sürekli sorulmadan, WebSocket push'uyla anlık güncellensin.
 
 ## 5. Durum
 
-Henüz implemente edilmedi. `requirement-react-custom-hooks.md`'ye **blocking bağımlı değil** ama
-aynı öğrenilen custom-hook desenini (`useBildirimler`) doğal olarak takip edecek. Uygulama planı
-için `plan-websocket-notifications-implementation.md`'ye bakınız.
+İmplemente edildi: tablo sahipliği (`DataTable.createdByUserId` + `TableOwnerBackfillRunner`),
+`Notification` entity/servis (owner değilse kayıt + `AFTER_COMMIT` push, Req-3.3/3.5), ham
+`TextWebSocketHandler` tabanlı `/ws` + `WebSocketSessionRegistry` (targeted push), okuma/okundu
+uçları (`/api/notifications/**`, `authenticated()`, rol kısıtı yok), frontend'de `useWebSocket` +
+`useNotifications` hook'ları + `NotificationBell` bileşeni. Testler (owner/self-notify, rollback,
+AFTER_COMMIT zamanlaması, cross-user erişim, WebSocket handler, frontend push senaryoları) yeşil.
+Aynı öğrenilen custom-hook desenini (`useNotifications`) doğal olarak takip etti
+(`requirement-react-custom-hooks.md`). Uygulama planı için
+`plan-websocket-notifications-implementation.md`'ye bakınız.

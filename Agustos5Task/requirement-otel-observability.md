@@ -99,6 +99,11 @@ ve mevcut Prometheus metrikleriyle Grafana üzerinden ilişkilendirebilmek.
 
 ## 5. Durum
 
-Henüz implemente edilmedi. Bu doküman, Redis cache'inde izlenen sıra ("Requirement çıkart → Plan
-oluştur → Implementasyon") ile, implementasyondan **önce** yazıldı. Uygulama planı için
+2026-08-05/06'da implemente edildi (backend/week3): Faz 1-6 tamamlandı — Tempo/Loki container'ları,
+`micrometer-tracing` + OTel bridge, `SpanRunner` ile `metadata-write`/`ddl-execute` span ayrımı,
+MDC üzerinden log-trace köprüsü, `@BusinessLog`/`BusinessLogAspect`, Redis span hata görünürlüğü
+(`UserRoleCacheService`), Grafana Explore üzerinden uçtan uca doğrulama. Yol boyunca alınan kararlar
+(OTel Collector'ın bilinçli olarak atlanması, `TracingAwareRedisCacheWriter`'in neden gerektiği) için
+bkz. `DECISIONS.md` "OpenTelemetry gozlemlenebilirlik" bölümü. `tempo.yaml`'e `loki.yaml` ile
+tutarlı 48 saatlik `compactor.compaction.block_retention` eklendi (Req-3.6). Uygulama planı için
 `plan-otel-implementation.md` dosyasına bakınız.

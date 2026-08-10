@@ -68,5 +68,8 @@ asenkron çalışsın — scheduler thread'i mail sunucusunu beklerken kilitlenm
 
 ## 5. Durum
 
-Henüz implemente edilmedi. **Audit log implementasyonunun tamamlanmasını bekliyor** (Req-3.3).
-Uygulama planı için `plan-scheduler-report-implementation.md`'ye bakınız.
+İmplemente edildi: `ReportScheduler` (saatlik cron), `ReportService` (içerik + async gönderim),
+`ReportController` (`POST /api/reports/send`, ADMIN), özel `reportTaskExecutor` (`AsyncConfig`).
+Testler: rapor içeriği (gerçek Postgres), mail gönderimi (mock `JavaMailSender`), fail-open, ve
+security rules (VIEWER/EDITOR 403, ADMIN 202) — hepsi yeşil. Uygulama planı için
+`plan-scheduler-report-implementation.md`'ye bakınız.

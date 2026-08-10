@@ -72,8 +72,9 @@ public class AuditLogService {
 
     /** {@code GET /api/audit-logs} icin — hepsi opsiyonel filtreler, bkz. AuditLogRepository#search. */
     @Transactional(readOnly = true)
-    public Page<AuditLog> search(Long userId, TargetType targetType, Instant from, Instant to, Pageable pageable) {
-        return auditLogRepository.search(userId, targetType, from, to, pageable);
+    public Page<AuditLog> search(
+            Long userId, TargetType targetType, Long targetId, Instant from, Instant to, Pageable pageable) {
+        return auditLogRepository.search(userId, targetType, targetId, from, to, pageable);
     }
 
     private String currentUsername() {

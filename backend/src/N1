@@ -280,6 +280,6 @@ OKUMA:
     Nesne hala RAM'de duruyor olabilir ama Hibernate bu nesneyi silinecekler lsitesine aldı. Transaction tamamlandığında veri tabanından kalıcı olarak silinir.
     Basit örnek: Ölüm belgesi çıkartılmıs bir kişiyi devletin artık takip etmeyi bırakması.
 3)Testcontainer
-    Test kütüphanesidir. Arka planda Docker il konusur. Sahte veri tabanlarıyla gelme durumlarının önüne geçmeye çalısır.
+    Test kütüphanesidir. Arka planda Docker ile konusur. Sahte veri tabanlarıyla gelme durumlarının önüne geçmeye çalısır.
     Testi çalıstıdığımız anda Yeni bir ortam kurulur ve işimiz bitince bu ortamı çöpe atarız.
 

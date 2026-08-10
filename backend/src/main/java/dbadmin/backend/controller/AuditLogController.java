@@ -41,12 +41,14 @@ public class AuditLogController {
                     @RequestParam(required = false) Long userId,
             @Parameter(description = "Sadece bu turden hedeflere yapilan islemler.", example = "TABLE")
                     @RequestParam(required = false) TargetType targetType,
+            @Parameter(description = "Sadece bu hedefe (ör. belirli bir tablo id'sine) yapilan islemler.", example = "1")
+                    @RequestParam(required = false) Long targetId,
             @Parameter(description = "Bu zamandan sonra (dahil).", example = "2026-08-01T00:00:00Z")
                     @RequestParam(required = false) Instant from,
             @Parameter(description = "Bu zamana kadar (dahil).", example = "2026-08-31T23:59:59Z")
                     @RequestParam(required = false) Instant to,
             Pageable pageable) {
-        return auditLogService.search(userId, targetType, from, to, pageable)
+        return auditLogService.search(userId, targetType, targetId, from, to, pageable)
                 .map(AuditLogResponse::from);
     }
 }

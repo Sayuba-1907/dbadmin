@@ -17,8 +17,8 @@ function mockFetch(seed: FakeKullanici[]) {
     const jsonResponse = (status: number, body: unknown) =>
       ({ ok: status < 400, status, json: async () => body }) as Response;
 
-    if (url.endsWith("/api/users") && method === "GET") {
-      return jsonResponse(200, users);
+    if (url.includes("/api/users?") && method === "GET") {
+      return jsonResponse(200, { content: users });
     }
     if (url.endsWith("/api/users") && method === "POST") {
       const body = JSON.parse(init!.body as string);

@@ -24,12 +24,14 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
             SELECT a FROM AuditLog a
             WHERE (:userId IS NULL OR a.userId = :userId)
               AND (CAST(:targetType AS string) IS NULL OR a.targetType = :targetType)
+              AND (:targetId IS NULL OR a.targetId = :targetId)
               AND (CAST(:from AS timestamp) IS NULL OR a.createdAt >= :from)
               AND (CAST(:to AS timestamp) IS NULL OR a.createdAt <= :to)
             """)
     Page<AuditLog> search(
             @Param("userId") Long userId,
             @Param("targetType") TargetType targetType,
+            @Param("targetId") Long targetId,
             @Param("from") Instant from,
             @Param("to") Instant to,
             Pageable pageable);

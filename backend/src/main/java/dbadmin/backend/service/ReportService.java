@@ -76,7 +76,7 @@ public class ReportService {
 
         Instant oneHourAgo = Instant.now().minus(Duration.ofHours(1));
         List<AuditLog> recentOperations = auditLogRepository
-                .search(null, null, oneHourAgo, null,
+                .search(null, null, null, oneHourAgo, null,
                         Pageable.unpaged(Sort.by(Sort.Direction.ASC, "createdAt")))
                 .getContent();
 

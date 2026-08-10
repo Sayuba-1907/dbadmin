@@ -17,3 +17,8 @@ storage:
       path: /var/tempo/traces
     wal:
       path: /var/tempo/wal
+
+# Dev/staj ortami: kalici saklamaya gerek yok, loki.yaml'deki 48 saatlik retention ile tutarli.
+compactor:
+  compaction:
+    block_retention: 48h

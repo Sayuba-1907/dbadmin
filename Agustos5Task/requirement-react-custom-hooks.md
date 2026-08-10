@@ -85,5 +85,7 @@ Dashboard component'i sadece UI ve kullanıcı etkileşimine odaklanacak; state 
 
 ## 5. Durum
 
-Henüz implemente edilmedi. Uygulama planı için `plan-react-custom-hooks-implementation.md`'ye
+İmplemente edildi: Faz 1-3 tamamlandı — `useSchemas`, `useTables`, `useTags`, `useUsers` hook'ları
+(`frontend/src/hooks/`), her biri kendi `renderHook` testiyle. Draft-kolon state'i (Req-3.1) hook'lara
+sızmadan `Dashboard.tsx`'te kaldı. Uygulama planı için `plan-react-custom-hooks-implementation.md`'ye
 bakınız.

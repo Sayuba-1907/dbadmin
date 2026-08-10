@@ -116,11 +116,11 @@ function createFakeBackend(seed: {
       return Promise.resolve(override.response);
     }
 
-    if (method === "GET" && path === "/api/schemas") {
+    if (method === "GET" && path.startsWith("/api/schemas?")) {
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: async () => schemalar.map(schemaResponse),
+        json: async () => ({ content: schemalar.map(schemaResponse) }),
       });
     }
     if (method === "GET" && path === "/api/schemas/schemaList") {
@@ -144,11 +144,15 @@ function createFakeBackend(seed: {
       const tablo = tablolar.find((t) => t.id === Number(match![1]));
       return Promise.resolve({ ok: true, status: 200, json: async () => tabloResponse(tablo!) });
     }
-    if (method === "GET" && path === "/api/tags") {
-      return Promise.resolve({ ok: true, status: 200, json: async () => [] });
+    if (method === "GET" && path.startsWith("/api/tags?")) {
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ content: [] }) });
     }
-    if (method === "GET" && path === "/api/users") {
-      return Promise.resolve({ ok: true, status: 200, json: async () => kullanicilar });
+    if (method === "GET" && path.startsWith("/api/users?")) {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ content: kullanicilar }),
+      });
     }
     if (method === "POST" && path === "/api/tables") {
       const body = JSON.parse(options!.body as string);

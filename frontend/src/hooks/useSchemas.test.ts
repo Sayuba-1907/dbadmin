@@ -26,8 +26,8 @@ function mockFetch(seed: FakeSchema[]) {
         json: async () => body,
       }) as Response;
 
-    if (url.endsWith("/api/schemas") && method === "GET") {
-      return jsonResponse(200, schemas);
+    if (url.includes("/api/schemas?") && method === "GET") {
+      return jsonResponse(200, { content: schemas });
     }
     if (url.endsWith("/api/schemas") && method === "POST") {
       const { name } = JSON.parse(init!.body as string);

@@ -1,4 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
+import { Page } from "./notifications";
 
 /** Backend'in TagResponse DTO'suyla ayni sekil. */
 export interface Tag {
@@ -15,9 +16,14 @@ export interface ColumnUsage {
   columnName: string;
 }
 
-/** TagController'daki uc endpoint'in (list/create/usage) frontend karsiligi. */
+/**
+ * TagController'daki uc endpoint'in (list/create/usage) frontend karsiligi. GET /api/tags artik
+ * sayfalanmis donuyor (bkz. TagController#list) ama "Tagler" gorunumu tum etiketleri tek dizide
+ * bekliyor — schemas.ts'teki Page<T> desenindeki gibi size=1000 ile tek istekte hepsini cekip
+ * content'i acariyoruz.
+ */
 export function getTags(): Promise<Tag[]> {
-  return apiGet<Tag[]>("/api/tags");
+  return apiGet<Page<Tag>>("/api/tags?size=1000").then((page) => page.content);
 }
 
 export function createTag(name: string): Promise<Tag> {

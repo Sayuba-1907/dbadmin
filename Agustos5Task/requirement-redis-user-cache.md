@@ -33,10 +33,8 @@ kullanıcı rol/yetki doğrulama işlemini PostgreSQL yerine geçici hafızadan 
   uyumluluk değil; olası bir evict (silme) çağrısının atlanması veya hata alması ihtimaline karşı,
   bayat verinin sistemde en fazla ne kadar süre geçerli kalabileceğini (senkronizasyon farkının üst
   sınırını) garanti eden bir güvenlik ağı oluşturmaktır.
-- **Req-3.5 (Gözlemlenebilirlik) [Gelecek Adım / Henüz Yapılmadı]:** Sistemin Redis'i ne kadar
-  verimli kullandığını Grafana üzerinden izleyebilmek için, uygulamanın Cache Hit ve Cache Miss
-  durumları ölçülebilir olmalıdır. Bu metrik entegrasyonu mevcut kodda yoktur, bir sonraki aşamada
-  eklenecektir.
+- **Req-3.5 (Gözlemlenebilirlik):** Sistemin Redis'i ne kadar verimli kullandığını Grafana üzerinden
+  izleyebilmek için, uygulamanın Cache Hit ve Cache Miss durumları ölçülebilir olmalıdır.
 - **Req-3.6 (Veri Formatı / Serialization):** Sadece iki alanlık basit bir kayıt tutulacağı için
   JSON serileştirme gibi gereksiz karmaşıklıklardan kaçınılacaktır. Veriler Redis'te düz metin
   (StringRedisSerializer) ve Hash yapısı kullanılarak saklanacaktır.
@@ -75,11 +73,12 @@ kullanıcı rol/yetki doğrulama işlemini PostgreSQL yerine geçici hafızadan 
 
 ## 5. Durum
 
-Faz 1-4'ün büyük kısmı zaten implemente edilmiş (`9e8bf67`, 2026-07-31) — bkz. `DECISIONS.md`
-"Redis: kullanici rol cache'i" bölümü. Bu doküman, süreç sırasının ("Requirement çıkart → Plan
-oluştur → Implementasyon") atlanmasından sonra geriye dönük yazıldı. Yazılırken tespit edilen iki
-gap:
+Tüm fazlar implemente edilmiş (`9e8bf67`, 2026-07-31) — bkz. `DECISIONS.md` "Redis: kullanici rol
+cache'i" bölümü. Bu doküman, süreç sırasının ("Requirement çıkart → Plan oluştur → İmplementasyon")
+atlanmasından sonra geriye dönük yazıldı. Yazılırken tespit edilen iki gap, ikisi de artık kapalı:
 
 - **Req-3.7** — `docker-compose.yml` `ports` kullanıyordu, `expose`'a çevrildi (bu doküman
   yazıldıktan sonra).
-- **Req-3.5** — henüz implemente edilmedi, bilinçli olarak sonraki aşamaya bırakıldı.
+- **Req-3.5** — o sırada eksikti; OTel çalışması sırasında `UserRoleCacheService`'e
+  `dbadmin.cache.rol.hits`/`dbadmin.cache.rol.misses` sayaçları (Micrometer → Prometheus) eklendi,
+  artık karşılanıyor.
