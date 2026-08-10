@@ -38,10 +38,15 @@ tabloyu temizleyen bir bölüm.
      "kim temizledi" bilgisi de silinmiş olurdu.
   4. Dosya MinIO'ya yüklenir (bucket: `audit-log-backups`, key: zaman damgalı, ör.
      `backup-2026-08-10T11-31-00Z.json`).
-- **Req-2.5 (Yükleme başarılıysa temizlik):** MinIO'ya yükleme başarıyla tamamlandıktan **sonra**
-  yedeklenen satırlar `audit_log` tablosundan silinir. Yükleme herhangi bir sebeple başarısız
-  olursa tabloya dokunulmaz, hata döner — CLAUDE.md'deki dual-write ilkesiyle aynı: iki yazımdan
-  biri (MinIO) başarısızken diğerine (DB silme) geçilmez.
+- **Req-2.5 (Yükleme başarılıysa temizlik — cutoff'a göre, tüm tabloya göre değil):** MinIO'ya
+  yükleme başarıyla tamamlandıktan **sonra**, yedeklenen satırlar `audit_log` tablosundan silinir.
+  Silme, adım 1'de okunan **en yüksek `id`'ye kadar** (`DELETE WHERE id <= cutoffId`) yapılır —
+  blanket `DELETE FROM audit_log` **değil**. Sebep: adım 1 (satırları oku) ile bu adım arasında
+  geçen sürede (JSON oluşturma + MinIO'ya network upload — göz ardı edilebilir kısa bir an değil)
+  başka bir kullanıcının işlemi yeni bir audit satırı yazabilir; cutoff olmadan yapılan bir
+  "tüm satırları sil" bu satırı da silip hiç yedeklenmemiş bir kaydı kaybettirir. Yükleme herhangi
+  bir sebeple başarısız olursa tabloya dokunulmaz, hata döner — CLAUDE.md'deki dual-write
+  ilkesiyle aynı: iki yazımdan biri (MinIO) başarısızken diğerine (DB silme) geçilmez.
 - **Req-2.6 (Yedeklere erişim):** Yedek dosyalarını listeleyen/indiren ayrı bir ekran bu aşamada
   **yapılmayacak** (bkz. §4) — dosyalara MinIO console üzerinden bakılacak.
 
