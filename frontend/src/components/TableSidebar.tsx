@@ -354,7 +354,10 @@ export function TableSidebar({
               const column = data.column;
               return (
                 <span className="sidebar-column-item w-full">
-                  <span className="mono overflow-hidden text-overflow-ellipsis white-space-nowrap">
+                  <span
+                    className="mono overflow-hidden text-overflow-ellipsis white-space-nowrap"
+                    title={column.name}
+                  >
                     {column.name}
                   </span>
                   <span className={`type-badge type-badge-${column.type}`}>{column.type}</span>
@@ -393,7 +396,10 @@ export function TableSidebar({
                   }}
                   title={t("sidebar.dragToMoveHint")}
                 >
-                  <span className="table-name overflow-hidden text-overflow-ellipsis white-space-nowrap">
+                  <span
+                    className="table-name overflow-hidden text-overflow-ellipsis white-space-nowrap"
+                    title={table.name}
+                  >
                     {table.name}
                   </span>
                   <span className="column-count">{table.columnCount}</span>
@@ -463,7 +469,10 @@ export function TableSidebar({
                     style={{ backgroundColor: schemaColor(schema.name) }}
                     aria-hidden="true"
                   />
-                  <span className="mono overflow-hidden text-overflow-ellipsis white-space-nowrap">
+                  <span
+                    className="mono overflow-hidden text-overflow-ellipsis white-space-nowrap"
+                    title={schema.name}
+                  >
                     {schema.name}
                   </span>
                   <span className="column-count">{schema.tableCount}</span>

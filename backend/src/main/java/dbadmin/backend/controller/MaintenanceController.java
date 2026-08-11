@@ -42,7 +42,7 @@ public class MaintenanceController {
         return maintenanceService.systemSummary();
     }
 
-    @Operation(summary = "Postgres/Redis/Tempo/Loki icin basit erisilebilirlik gostergesi (Req-2.2)")
+    @Operation(summary = "Postgres/Redis/MinIO/Backend icin basit erisilebilirlik gostergesi (Req-2.2)")
     @GetMapping("/health")
     public ServiceHealthResponse health() {
         return maintenanceService.serviceHealth();

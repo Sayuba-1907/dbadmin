@@ -112,9 +112,13 @@
     "service": {
       "postgres": "Postgres",
       "redis": "Redis",
-      "tempo": "Tempo",
-      "loki": "Loki"
+      "minio": "MinIO",
+      "backend": "Backend"
     },
+    "tabEntities": "Entities",
+    "tabServiceStatus": "Service Status",
+    "serviceUp": "Up",
+    "serviceDown": "Down",
     "auditLogTitle": "Audit Log",
     "backup": "Back Up",
     "filterUserId": "User id",

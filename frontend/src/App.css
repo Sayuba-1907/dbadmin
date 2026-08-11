@@ -214,7 +214,7 @@ select:disabled {
 
 .workspace-nav {
   gap: var(--space-1);
-  width: 96px;
+  width: 140px;
   padding: var(--space-3) var(--space-2);
   border-right: 1px solid var(--color-border);
   background-color: var(--color-surface);
@@ -256,7 +256,7 @@ select:disabled {
 }
 
 .sidebar {
-  width: 264px;
+  width: 300px;
   border-right: 1px solid var(--color-border);
   padding: var(--space-3);
   background-color: var(--color-surface);
@@ -977,17 +977,48 @@ select:disabled {
   margin-bottom: 0;
 }
 
-.maintenance-status-card,
-.maintenance-audit-card,
-.maintenance-backups-card {
+.maintenance-audit-header h3 {
+  margin: 0;
+}
+
+.maintenance-tabs-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-.maintenance-audit-card h3,
-.maintenance-backups-card h3 {
-  margin: 0;
+.maintenance-tabs {
+  display: flex;
+  gap: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.maintenance-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: var(--space-2) 0 var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.maintenance-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.maintenance-tab-active,
+.maintenance-tab-active:hover {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.maintenance-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .maintenance-summary-cards {
@@ -1037,34 +1068,26 @@ select:disabled {
   letter-spacing: 0.03em;
 }
 
-.maintenance-health {
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.health-badge {
-  display: inline-flex;
+/* Servis Durumları karlari (Entities'teki summary-card'la ayni gorsel dil) — ikon yerine
+   UP/DOWN'a gore renklenen bir nokta gosterir. */
+.summary-card-icon.health-icon {
+  display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 500;
+  justify-content: center;
+  width: 1em;
 }
 
 .health-up {
   color: var(--color-success);
-  background-color: var(--color-success-bg);
 }
 
 .health-down {
   color: var(--color-danger);
-  background-color: var(--color-danger-bg);
 }
 
 .health-dot {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background-color: currentColor;
 }

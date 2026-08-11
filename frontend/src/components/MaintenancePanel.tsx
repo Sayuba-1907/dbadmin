@@ -11,13 +11,28 @@ import {
   AuditLogFilters,
   AuditOperationType,
   AuditTargetType,
-  downloadBackupFile,
 } from "../api/auditLogs";
 import { ServiceHealth, SystemSummary } from "../api/maintenance";
 import { translateAuditDetail } from "../utils/translateAuditDetail";
 
 const TARGET_TYPES: AuditTargetType[] = ["TABLE", "COLUMN", "SCHEMA", "TAG", "USER"];
-const HEALTH_SERVICES = ["postgres", "redis", "tempo", "loki"] as const;
+const HEALTH_SERVICES = ["postgres", "redis", "minio", "backend"] as const;
+
+/**
+ * PrimeReact `TabView` "unstyled" modda (bkz. App.tsx'teki PrimeReactProvider) kendi p-tabview-*
+ * class'larini basmiyor, ciplak bir <ul><li> listesi olarak render oluyor — projenin diger
+ * bilesenleri (Button, DataTable) gibi kendi CSS'imizi yazan basit bir tab bar tercih edildi,
+ * PrimeReact'in unstyled pt (passthrough) API'siyle ugrasmak yerine.
+ */
+const MAINTENANCE_TABS = ["entities", "serviceStatus", "auditLog", "backups"] as const;
+type MaintenanceTab = (typeof MAINTENANCE_TABS)[number];
+
+const TAB_LABEL_KEYS: Record<MaintenanceTab, string> = {
+  entities: "tabEntities",
+  serviceStatus: "tabServiceStatus",
+  auditLog: "auditLogTitle",
+  backups: "backupListTitle",
+};
 
 /** Aynı ikon kümesi WorkspaceNav'da da kullanılıyor (▦ Şemalar, ◉ Kullanıcılar) — burada tabloya/kolona genişletildi. */
 const SUMMARY_ICONS = {
@@ -89,6 +104,7 @@ export function MaintenancePanel({
   onDownloadBackup,
 }: MaintenancePanelProps) {
   const { t, i18n } = useTranslation();
+  const [activeTab, setActiveTab] = useState<MaintenanceTab>("entities");
   const [userIdInput, setUserIdInput] = useState("");
   const [targetTypeInput, setTargetTypeInput] = useState<AuditTargetType | "">("");
   const [targetIdInput, setTargetIdInput] = useState("");
@@ -121,178 +137,220 @@ export function MaintenancePanel({
     <section className="maintenance-panel fadeinup animation-duration-200">
       <div className="maintenance-header flex align-items-center justify-content-between">
         <h2>{t("maintenance.title")}</h2>
-        <Button
-          className="btn btn-primary"
-          label={t("maintenance.backup")}
-          loading={backingUp}
-          onClick={onBackup}
-        />
       </div>
 
-      <div className="maintenance-status-card detail-card">
-        <div className="maintenance-summary-cards flex">
-          {(["schemaCount", "tableCount", "columnCount", "userCount"] as const).map((field) => (
-            <div key={field} className="summary-card">
-              <span className="summary-card-icon" aria-hidden="true">
-                {SUMMARY_ICONS[field]}
-              </span>
-              <div className="summary-card-body">
-                <span className="summary-card-value">{summary?.[field] ?? "-"}</span>
-                <span className="summary-card-label">{t(`maintenance.${field}`)}</span>
-              </div>
-            </div>
+      <div className="maintenance-tabs-card detail-card">
+        <div className="maintenance-tabs" role="tablist">
+          {MAINTENANCE_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              className={`maintenance-tab ${activeTab === tab ? "maintenance-tab-active" : ""}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {t(`maintenance.${TAB_LABEL_KEYS[tab]}`)}
+            </button>
           ))}
         </div>
 
-        <div className="maintenance-health flex">
-          {HEALTH_SERVICES.map((service) => {
-            const up = health?.[service] ?? false;
-            return (
-              <span key={service} className={`health-badge ${up ? "health-up" : "health-down"}`}>
-                <span className="health-dot" aria-hidden="true" />
-                {t(`maintenance.service.${service}`)}
-              </span>
-            );
-          })}
-        </div>
-      </div>
+        {activeTab === "entities" && (
+          <div className="maintenance-tab-panel">
+            <div className="maintenance-summary-cards flex">
+              {(["schemaCount", "tableCount", "columnCount", "userCount"] as const).map((field) => (
+                <div key={field} className="summary-card">
+                  <span className="summary-card-icon" aria-hidden="true">
+                    {SUMMARY_ICONS[field]}
+                  </span>
+                  <div className="summary-card-body">
+                    <span className="summary-card-value">{summary?.[field] ?? "-"}</span>
+                    <span className="summary-card-label">{t(`maintenance.${field}`)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-      <div className="maintenance-audit-card detail-card">
-        <h3>{t("maintenance.auditLogTitle")}</h3>
+        {activeTab === "serviceStatus" && (
+          <div className="maintenance-tab-panel">
+            <div className="maintenance-summary-cards flex">
+              {HEALTH_SERVICES.map((service) => {
+                const up = health?.[service] ?? false;
+                return (
+                  <div key={service} className="summary-card">
+                    <span
+                      className={`summary-card-icon health-icon ${up ? "health-up" : "health-down"}`}
+                      aria-hidden="true"
+                    >
+                      <span className="health-dot" />
+                    </span>
+                    <div className="summary-card-body">
+                      <span className="summary-card-value">
+                        {t(up ? "maintenance.serviceUp" : "maintenance.serviceDown")}
+                      </span>
+                      <span className="summary-card-label">
+                        {t(`maintenance.service.${service}`)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-        <form
-          className="maintenance-filters flex align-items-center flex-wrap"
-          onSubmit={handleFilterSubmit}
-        >
-          <InputText
-            type="number"
-            placeholder={t("maintenance.filterUserId")}
-            value={userIdInput}
-            onChange={(e) => setUserIdInput(e.target.value)}
-          />
-          <select
-            value={targetTypeInput}
-            onChange={(e) => setTargetTypeInput(e.target.value as AuditTargetType | "")}
-          >
-            <option value="">{t("maintenance.filterAllTargetTypes")}</option>
-            {TARGET_TYPES.map((tt) => (
-              <option key={tt} value={tt}>
-                {tt}
-              </option>
-            ))}
-          </select>
-          <InputText
-            type="number"
-            placeholder={t("maintenance.filterTargetId")}
-            value={targetIdInput}
-            onChange={(e) => setTargetIdInput(e.target.value)}
-          />
-          <input
-            type="date"
-            aria-label={t("maintenance.filterFrom")}
-            value={fromInput}
-            onChange={(e) => setFromInput(e.target.value)}
-          />
-          <input
-            type="date"
-            aria-label={t("maintenance.filterTo")}
-            value={toInput}
-            onChange={(e) => setToInput(e.target.value)}
-          />
-          <Button
-            className="btn btn-secondary"
-            type="submit"
-            label={t("maintenance.applyFilters")}
-          />
-          <button type="button" className="btn btn-link" onClick={handleClearFilters}>
-            {t("maintenance.clearFilters")}
-          </button>
-        </form>
+        {activeTab === "auditLog" && (
+          <div className="maintenance-tab-panel">
+            <div className="maintenance-audit-header flex align-items-center justify-content-between">
+              <h3>{t("maintenance.auditLogTitle")}</h3>
+              <Button
+                className="btn btn-primary"
+                label={t("maintenance.backup")}
+                loading={backingUp}
+                onClick={onBackup}
+              />
+            </div>
 
-        <DataTable
-          // "Detail" hucresi (translateAuditDetail) dil disindaki bir kaynaga (i18n.language)
-          // bagli — DataTable'in kendisi bunu bir prop olarak izlemedigi icin (satirlar sadece
-          // `value` referansi degisince yeniden render ediliyor), dil degisince tabloyu
-          // key ile yeniden monte ederek satirlarin taze cevirtilmesini garanti ediyoruz.
-          key={i18n.language}
-          value={auditLogs}
-          dataKey="id"
-          loading={loading}
-          className="audit-log-table w-full"
-          emptyMessage={t("maintenance.auditLogEmpty")}
-        >
-          <Column
-            field="createdAt"
-            header={t("maintenance.colCreatedAt")}
-            body={(row: AuditLog) => new Date(row.createdAt).toLocaleString()}
-          />
-          <Column field="username" header={t("maintenance.colUsername")} />
-          <Column
-            field="operationType"
-            header={t("maintenance.colOperationType")}
-            body={(row: AuditLog) => (
-              <span className={`operation-badge operation-${operationCategory(row.operationType)}`}>
-                {row.operationType}
-              </span>
-            )}
-          />
-          <Column
-            header={t("maintenance.colTarget")}
-            body={(row: AuditLog) => (
-              <span className="mono">{`${row.targetType}#${row.targetId}`}</span>
-            )}
-          />
-          <Column
-            field="detail"
-            header={t("maintenance.colDetail")}
-            body={(row: AuditLog) => translateAuditDetail(row.detail, i18n.language)}
-          />
-        </DataTable>
-
-        <Paginator
-          first={page * pageSize}
-          rows={pageSize}
-          totalRecords={auditLogsTotal}
-          onPageChange={(e: PaginatorPageChangeEvent) => onPageChange(e.page)}
-        />
-      </div>
-
-      <div className="maintenance-backups-card detail-card">
-        <h3>{t("maintenance.backupListTitle")}</h3>
-        <DataTable
-          value={backupList}
-          dataKey="key"
-          className="backup-list-table w-full"
-          emptyMessage={t("maintenance.backupListEmpty")}
-        >
-          <Column
-            field="backedUpAt"
-            header={t("maintenance.colBackedUpAt")}
-            body={(row: AuditLogBackupListItem) => new Date(row.backedUpAt).toLocaleString()}
-          />
-          <Column field="backedUpBy" header={t("maintenance.colBackedUpBy")} />
-          <Column
-            field="rowCount"
-            header={t("maintenance.colRowCount")}
-            body={(row: AuditLogBackupListItem) => (
-              <span className="backup-row-count">{row.rowCount}</span>
-            )}
-          />
-          <Column
-            field="key"
-            header={t("maintenance.colBackupFile")}
-            body={(row: AuditLogBackupListItem) => (
-              <button
-                type="button"
-                className="mono backup-file-key backup-file-download"
-                title={t("maintenance.downloadBackup")}
-                onClick={() => onDownloadBackup(row.key)}
+            <form
+              className="maintenance-filters flex align-items-center flex-wrap"
+              onSubmit={handleFilterSubmit}
+            >
+              <InputText
+                type="number"
+                placeholder={t("maintenance.filterUserId")}
+                value={userIdInput}
+                onChange={(e) => setUserIdInput(e.target.value)}
+              />
+              <select
+                value={targetTypeInput}
+                onChange={(e) => setTargetTypeInput(e.target.value as AuditTargetType | "")}
               >
-                {row.key}
+                <option value="">{t("maintenance.filterAllTargetTypes")}</option>
+                {TARGET_TYPES.map((tt) => (
+                  <option key={tt} value={tt}>
+                    {tt}
+                  </option>
+                ))}
+              </select>
+              <InputText
+                type="number"
+                placeholder={t("maintenance.filterTargetId")}
+                value={targetIdInput}
+                onChange={(e) => setTargetIdInput(e.target.value)}
+              />
+              <input
+                type="date"
+                aria-label={t("maintenance.filterFrom")}
+                value={fromInput}
+                onChange={(e) => setFromInput(e.target.value)}
+              />
+              <input
+                type="date"
+                aria-label={t("maintenance.filterTo")}
+                value={toInput}
+                onChange={(e) => setToInput(e.target.value)}
+              />
+              <Button
+                className="btn btn-secondary"
+                type="submit"
+                label={t("maintenance.applyFilters")}
+              />
+              <button type="button" className="btn btn-link" onClick={handleClearFilters}>
+                {t("maintenance.clearFilters")}
               </button>
-            )}
-          />
-        </DataTable>
+            </form>
+
+            <DataTable
+              // "Detail" hucresi (translateAuditDetail) dil disindaki bir kaynaga (i18n.language)
+              // bagli — DataTable'in kendisi bunu bir prop olarak izlemedigi icin (satirlar sadece
+              // `value` referansi degisince yeniden render ediliyor), dil degisince tabloyu
+              // key ile yeniden monte ederek satirlarin taze cevirtilmesini garanti ediyoruz.
+              key={i18n.language}
+              value={auditLogs}
+              dataKey="id"
+              loading={loading}
+              className="audit-log-table w-full"
+              emptyMessage={t("maintenance.auditLogEmpty")}
+            >
+              <Column
+                field="createdAt"
+                header={t("maintenance.colCreatedAt")}
+                body={(row: AuditLog) => new Date(row.createdAt).toLocaleString()}
+              />
+              <Column field="username" header={t("maintenance.colUsername")} />
+              <Column
+                field="operationType"
+                header={t("maintenance.colOperationType")}
+                body={(row: AuditLog) => (
+                  <span
+                    className={`operation-badge operation-${operationCategory(row.operationType)}`}
+                  >
+                    {row.operationType}
+                  </span>
+                )}
+              />
+              <Column
+                header={t("maintenance.colTarget")}
+                body={(row: AuditLog) => (
+                  <span className="mono">{`${row.targetType}#${row.targetId}`}</span>
+                )}
+              />
+              <Column
+                field="detail"
+                header={t("maintenance.colDetail")}
+                body={(row: AuditLog) => translateAuditDetail(row.detail, i18n.language)}
+              />
+            </DataTable>
+
+            <Paginator
+              first={page * pageSize}
+              rows={pageSize}
+              totalRecords={auditLogsTotal}
+              onPageChange={(e: PaginatorPageChangeEvent) => onPageChange(e.page)}
+            />
+          </div>
+        )}
+
+        {activeTab === "backups" && (
+          <div className="maintenance-tab-panel">
+            <DataTable
+              value={backupList}
+              dataKey="key"
+              className="backup-list-table w-full"
+              emptyMessage={t("maintenance.backupListEmpty")}
+            >
+              <Column
+                field="backedUpAt"
+                header={t("maintenance.colBackedUpAt")}
+                body={(row: AuditLogBackupListItem) => new Date(row.backedUpAt).toLocaleString()}
+              />
+              <Column field="backedUpBy" header={t("maintenance.colBackedUpBy")} />
+              <Column
+                field="rowCount"
+                header={t("maintenance.colRowCount")}
+                body={(row: AuditLogBackupListItem) => (
+                  <span className="backup-row-count">{row.rowCount}</span>
+                )}
+              />
+              <Column
+                field="key"
+                header={t("maintenance.colBackupFile")}
+                body={(row: AuditLogBackupListItem) => (
+                  <button
+                    type="button"
+                    className="mono backup-file-key backup-file-download"
+                    title={t("maintenance.downloadBackup")}
+                    onClick={() => onDownloadBackup(row.key)}
+                  >
+                    {row.key}
+                  </button>
+                )}
+              />
+            </DataTable>
+          </div>
+        )}
       </div>
     </section>
   );

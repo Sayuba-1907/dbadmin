@@ -112,9 +112,13 @@
     "service": {
       "postgres": "Postgres",
       "redis": "Redis",
-      "tempo": "Tempo",
-      "loki": "Loki"
+      "minio": "MinIO",
+      "backend": "Backend"
     },
+    "tabEntities": "Entities",
+    "tabServiceStatus": "Servis Durumları",
+    "serviceUp": "Çalışıyor",
+    "serviceDown": "Kapalı",
     "auditLogTitle": "Audit Log",
     "backup": "Yedekle",
     "filterUserId": "Kullanıcı id",

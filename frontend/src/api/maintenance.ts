@@ -12,8 +12,8 @@ export interface SystemSummary {
 export interface ServiceHealth {
   postgres: boolean;
   redis: boolean;
-  tempo: boolean;
-  loki: boolean;
+  minio: boolean;
+  backend: boolean;
 }
 
 export function getSystemSummary(): Promise<SystemSummary> {
