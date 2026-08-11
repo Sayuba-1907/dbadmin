@@ -5,6 +5,7 @@ import io.minio.GetObjectArgs;
 import io.minio.ListObjectsArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.RemoveObjectArgs;
 import io.minio.Result;
 import io.minio.messages.Item;
 import java.io.ByteArrayInputStream;
@@ -68,6 +69,15 @@ public class MinioService {
             return stream.readAllBytes();
         } catch (Exception ex) {
             throw new BackupFailedException("MinIO'dan '" + key + "' indirilemedi", ex);
+        }
+    }
+
+    /** Bir nesneyi siler — profil fotografi kaldirilirken kullanilir (bkz. UserService#removeAvatar). */
+    public void delete(String key) {
+        try {
+            minioClient.removeObject(RemoveObjectArgs.builder().bucket(bucket).object(key).build());
+        } catch (Exception ex) {
+            throw new BackupFailedException("MinIO'dan '" + key + "' silinemedi", ex);
         }
     }
 }

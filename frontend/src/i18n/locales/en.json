@@ -10,7 +10,8 @@
     "schemalar": "Schemas",
     "tagler": "Tags",
     "kullanicilar": "Users",
-    "maintenance": "Maintenance"
+    "maintenance": "Maintenance",
+    "profile": "Profile"
   },
   "theme": {
     "switcherLabel": "Theme selector",
@@ -142,6 +143,33 @@
     "colBackupFile": "File",
     "downloadBackup": "Download"
   },
+  "profile": {
+    "title": "Profile",
+    "avatarTitle": "Profile Photo",
+    "changeAvatar": "Choose Photo",
+    "avatarHint": "PNG, JPEG or WEBP — max 2MB",
+    "viewAvatar": "Enlarge photo",
+    "avatarInvalidType": "Only PNG, JPEG or WEBP can be uploaded",
+    "avatarSaved": "Profile photo updated",
+    "avatarSaveFailed": "Failed to update profile photo",
+    "removeAvatar": "Remove",
+    "avatarRemoved": "Profile photo removed",
+    "avatarRemoveFailed": "Failed to remove profile photo",
+    "infoTitle": "Full Name and Username",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "e.g. Salih Bayraktar",
+    "username": "Username",
+    "profileSaved": "Profile updated",
+    "profileSaveFailed": "Failed to update profile",
+    "passwordTitle": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "changePassword": "Change Password",
+    "passwordMismatch": "New passwords don't match",
+    "passwordSaved": "Password changed",
+    "passwordSaveFailed": "Failed to change password"
+  },
   "notificationBell": {
     "buttonLabel": "Notifications",
     "title": "Notifications",
@@ -220,6 +248,7 @@
     "AUTH_FORBIDDEN": "Your role is not allowed to perform this operation",
     "VALIDATION_INVALID_USERNAME": "Username must be 2-30 characters, must not start with an uppercase letter, and may only contain letters, digits and underscore",
     "VALIDATION_WEAK_PASSWORD": "Password must be at least {{min}} characters",
+    "VALIDATION_PASSWORD_UNCHANGED": "New password must be different from the current password",
     "VALIDATION_MISSING_ROLE": "A role must be specified",
     "NOT_FOUND_USER": "User not found (id: {{id}})",
     "NOT_FOUND_NOTIFICATION": "Notification not found (id: {{id}})",

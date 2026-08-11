@@ -10,7 +10,8 @@
     "schemalar": "Şemalar",
     "tagler": "Etiketler",
     "kullanicilar": "Kullanıcılar",
-    "maintenance": "Bakım"
+    "maintenance": "Bakım",
+    "profile": "Profil"
   },
   "theme": {
     "switcherLabel": "Tema seçici",
@@ -142,6 +143,33 @@
     "colBackupFile": "Dosya",
     "downloadBackup": "İndir"
   },
+  "profile": {
+    "title": "Profil",
+    "avatarTitle": "Profil Fotoğrafı",
+    "changeAvatar": "Fotoğraf Seç",
+    "avatarHint": "PNG, JPEG veya WEBP — en fazla 2MB",
+    "viewAvatar": "Fotoğrafı büyüt",
+    "avatarInvalidType": "Sadece PNG, JPEG veya WEBP yüklenebilir",
+    "avatarSaved": "Profil fotoğrafı güncellendi",
+    "avatarSaveFailed": "Profil fotoğrafı güncellenemedi",
+    "removeAvatar": "Kaldır",
+    "avatarRemoved": "Profil fotoğrafı kaldırıldı",
+    "avatarRemoveFailed": "Profil fotoğrafı kaldırılamadı",
+    "infoTitle": "Ad Soyad ve Kullanıcı Adı",
+    "fullName": "Ad Soyad",
+    "fullNamePlaceholder": "ör. Salih Bayraktar",
+    "username": "Kullanıcı Adı",
+    "profileSaved": "Profil güncellendi",
+    "profileSaveFailed": "Profil güncellenemedi",
+    "passwordTitle": "Parola Değiştir",
+    "currentPassword": "Mevcut Parola",
+    "newPassword": "Yeni Parola",
+    "confirmPassword": "Yeni Parola (Tekrar)",
+    "changePassword": "Parolayı Değiştir",
+    "passwordMismatch": "Yeni parolalar birbiriyle uyuşmuyor",
+    "passwordSaved": "Parola değiştirildi",
+    "passwordSaveFailed": "Parola değiştirilemedi"
+  },
   "notificationBell": {
     "buttonLabel": "Bildirimler",
     "title": "Bildirimler",
@@ -220,6 +248,7 @@
     "AUTH_FORBIDDEN": "Rolünüz bu işlem için yetkili değil",
     "VALIDATION_INVALID_USERNAME": "Kullanıcı adı 2-30 karakter olmalı, büyük harfle başlayamaz ve sadece harf, rakam, alt çizgi içerebilir",
     "VALIDATION_WEAK_PASSWORD": "Parola en az {{min}} karakter olmalı",
+    "VALIDATION_PASSWORD_UNCHANGED": "Yeni parola mevcut paroladan farklı olmalı",
     "VALIDATION_MISSING_ROLE": "Bir rol belirtilmeli",
     "NOT_FOUND_USER": "Kullanıcı bulunamadı (id: {{id}})",
     "NOT_FOUND_NOTIFICATION": "Bildirim bulunamadı (id: {{id}})",

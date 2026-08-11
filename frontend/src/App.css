@@ -255,6 +255,12 @@ select:disabled {
   font-weight: 500;
 }
 
+/* En alta sabitlenmis tek buton — flex-column icinde margin-top:auto, ustundeki butonlarin
+   itmesiyle geri kalan tum bosluk buraya "harcanir", buton en dibe yapisir. */
+.workspace-nav-profile {
+  margin-top: auto;
+}
+
 .sidebar {
   width: 300px;
   border-right: 1px solid var(--color-border);
@@ -1043,6 +1049,19 @@ select:disabled {
   border-color: var(--color-border-strong);
 }
 
+/* Sadece Schemas/Users kartlari tiklanabilir (bkz. SUMMARY_NAV_TARGETS) — <button> oldugu icin
+   tarayicinin varsayilan buton stilini (font/hizalama) sifirlayip .summary-card'in gorunumune
+   geri donduruyoruz, sadece hover'da tiklanabilir oldugunu belli eden bir vurgu ekliyoruz. */
+.summary-card-link {
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.summary-card-link:hover {
+  border-color: var(--color-accent);
+}
+
 .summary-card-icon {
   font-size: var(--text-xl);
   color: var(--color-accent);
@@ -1330,4 +1349,130 @@ label.checkbox-label {
 
 .modal-actions {
   gap: var(--space-2);
+}
+
+.profile-panel {
+  flex: 1;
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 560px;
+}
+
+.profile-avatar-card,
+.profile-info-card,
+.profile-password-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.profile-avatar-card h3,
+.profile-info-card h3,
+.profile-password-card h3 {
+  margin: 0;
+}
+
+.profile-avatar-row {
+  gap: var(--space-4);
+}
+
+.profile-avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  cursor: default;
+}
+
+.profile-avatar-preview-clickable {
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.profile-avatar-preview-clickable:hover {
+  border-color: var(--color-accent);
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Lightbox: .modal-overlay zaten tam ekran karartma + ortalama sagliyor (bkz. CreateSchemaForm),
+   burada sadece foto icin ozel bir boyut sinirlamasi gerekiyor. */
+.profile-avatar-lightbox-img {
+  max-width: min(80vw, 480px);
+  max-height: 80vh;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  cursor: default;
+}
+
+.profile-avatar-placeholder {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.profile-avatar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+/* Gercek dosya secici gizli — "Fotoğraf Seç" butonu tiklaninca input.click() ile tetiklenir
+   (bkz. ProfilePanel), boylece tarayicinin cirkin varsayilan file input gorunumu yerine
+   projenin kendi .btn stili kullanilabiliyor. */
+.profile-avatar-file-input {
+  display: none;
+}
+
+.profile-avatar-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.profile-avatar-hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  max-width: 320px;
+}
+
+.profile-field span {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.profile-field input {
+  width: 100%;
+  box-sizing: border-box;
 }

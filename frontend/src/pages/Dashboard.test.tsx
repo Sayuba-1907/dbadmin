@@ -202,12 +202,16 @@ function createFakeBackend(seed: {
  */
 const EDITOR_AUTH: AuthContextValue = {
   status: "authenticated",
+  id: 1,
   username: "test_kullanici",
+  fullName: null,
+  hasAvatar: false,
   role: "EDITOR",
   canWrite: true,
   isAdmin: false,
   login: jest.fn(),
   logout: jest.fn(),
+  applyProfileUpdate: jest.fn(),
 };
 
 function renderDashboard(auth: AuthContextValue = EDITOR_AUTH) {

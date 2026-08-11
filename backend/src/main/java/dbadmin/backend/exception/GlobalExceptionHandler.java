@@ -19,6 +19,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -97,6 +98,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex) {
         return build(HttpStatus.NOT_FOUND, "no endpoint at this path", "NOT_FOUND_ENDPOINT",
                 Map.of("path", ex.getResourcePath()));
+    }
+
+    /** Yuklenen dosya application.properties'teki spring.servlet.multipart.max-file-size'i astiginda —
+     * UserService kendi 2MB kontrolune hic ulasmadan Spring bunu daha erken firlatir (bkz. avatar yuklemesi). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        return build(HttpStatus.BAD_REQUEST, "uploaded file is too large", "VALIDATION_AVATAR_TOO_LARGE", Map.of());
     }
 
     /** Yol var ama bu HTTP metoduyla desteklenmiyor (ör. GET-only bir uca PUT atmak). */

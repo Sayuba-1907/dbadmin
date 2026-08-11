@@ -9,12 +9,16 @@ import { ApiError } from "../api/client";
 function renderLoginPage(login: AuthContextValue["login"]) {
   const auth: AuthContextValue = {
     status: "anonymous",
+    id: null,
     username: null,
+    fullName: null,
+    hasAvatar: false,
     role: null,
     canWrite: false,
     isAdmin: false,
     login,
     logout: jest.fn(),
+    applyProfileUpdate: jest.fn(),
   };
   return render(
     <NotificationProvider>

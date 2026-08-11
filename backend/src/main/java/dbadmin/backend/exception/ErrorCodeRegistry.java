@@ -34,6 +34,12 @@ public final class ErrorCodeRegistry {
             Map.entry("VALIDATION_INVALID_PATH_PARAM", 40012),
             Map.entry("VALIDATION_MALFORMED_BODY", 40013),
             Map.entry("VALIDATION_AUDIT_LOG_BACKUP_EMPTY", 40014),
+            Map.entry("VALIDATION_PASSWORD_UNCHANGED", 40015),
+            Map.entry("VALIDATION_MISSING_AVATAR", 40016),
+            Map.entry("VALIDATION_INVALID_AVATAR_TYPE", 40017),
+            Map.entry("VALIDATION_AVATAR_TOO_LARGE", 40018),
+            Map.entry("VALIDATION_INVALID_AVATAR", 40019),
+            Map.entry("VALIDATION_AUDIT_LOG_BACKUP_KEY", 40020),
             // 401
             Map.entry("AUTH_INVALID_CREDENTIALS", 40101),
             Map.entry("AUTH_REQUIRED", 40102),
@@ -47,6 +53,7 @@ public final class ErrorCodeRegistry {
             Map.entry("NOT_FOUND_USER", 40405),
             Map.entry("NOT_FOUND_ENDPOINT", 40406),
             Map.entry("NOT_FOUND_NOTIFICATION", 40407),
+            Map.entry("NOT_FOUND_AVATAR", 40408),
             // 405
             Map.entry("VALIDATION_METHOD_NOT_ALLOWED", 40501),
             // 409

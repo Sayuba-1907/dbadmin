@@ -120,9 +120,9 @@ Ağustos 10:
     +0)RabbitMQ koyulacak notification için
     +1)Minio'dan listeleme işleri için Client kullanılsın -> minio client veya AWS S3 Client
     +2)Download json koyalım.
-    3)Tablar ekleyelim. Servis Durumları, Entities
-    4)Servis Durumlarında -> Minio, Backend -> Tempo ve Loki kaldır buradan
-    5)Entities -> Ekrandakiler durabilir (Tablo, schema, kolon vs)
+    +3)Tablar ekleyelim. Servis Durumları, Entities
+    +4)Servis Durumlarında -> Minio, Backend -> Tempo ve Loki kaldır buradan
+    +5)Entities -> Ekrandakiler durabilir (Tablo, schema, kolon vs)
     6)User sayfası -> User Profile olsun. Kullanıcı kendisininkine baksın. İsim, password değiştirebilsin. Ayrıca profil fotoğrafı ekleyebilsin. -> Photo minio tutulacak(bunu claudeye sor niye minio'da tutulmalı, postgre'de niye tutmuyoruz)
     7)Veri (satır) görüntüleme -> dbeaverdaki gibi. Tablonun içindeyken Show Data olacak. Ama bunun paginationlı gelmesi lazım. Yani bütün veriyi değil de sayfa sayfa limite göre. İlk 20'yi getir. Sonraki 20 vs vs (20,50,100,200,500)
     -select * from "tables" t

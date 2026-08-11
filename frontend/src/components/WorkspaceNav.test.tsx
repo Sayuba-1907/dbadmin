@@ -7,12 +7,16 @@ import { AuthContext, AuthContextValue } from "../auth/AuthProvider";
 function renderNav(role: AuthContextValue["role"]) {
   const auth: AuthContextValue = {
     status: "authenticated",
+    id: 1,
     username: "test",
+    fullName: null,
+    hasAvatar: false,
     role,
     canWrite: role === "EDITOR" || role === "ADMIN",
     isAdmin: role === "ADMIN",
     login: jest.fn(),
     logout: jest.fn(),
+    applyProfileUpdate: jest.fn(),
   };
   return render(
     <AuthContext.Provider value={auth}>

@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Role, me, login as apiLogin } from "../api/auth";
+import { LoginResult, Role, me, login as apiLogin } from "../api/auth";
 import { setAuthToken, setOnUnauthorized } from "../api/client";
 import { useNotify } from "../notifications/NotificationProvider";
 
@@ -24,13 +24,23 @@ type AuthStatus = "loading" | "anonymous" | "authenticated";
 
 export interface AuthContextValue {
   status: AuthStatus;
+  id: number | null;
   username: string | null;
+  fullName: string | null;
+  hasAvatar: boolean;
   role: Role | null;
   /** role EDITOR ya da ADMIN ise true — "kimisi update edebilsin kimisi edemesin" burada okunur. */
   canWrite: boolean;
   isAdmin: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  /**
+   * ProfilePanel'in updateProfile/uploadAvatar sonrasi cagirdigi kanca — sunucudan gelen
+   * TAZE {@link LoginResult}'u context state'ine yansitir. {@code token} doluysa (kullanici
+   * adi degistiyse, bkz. AuthController#updateProfile javadoc'u) localStorage'daki eski
+   * token'in yerine SESSIZCE yazilir — logout/tekrar-login gerekmez.
+   */
+  applyProfileUpdate: (result: LoginResult) => void;
 }
 
 /**
@@ -50,7 +60,10 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const [id, setId] = useState<number | null>(null);
   const [username, setKullaniciAdi] = useState<string | null>(null);
+  const [fullName, setFullName] = useState<string | null>(null);
+  const [hasAvatar, setHasAvatar] = useState(false);
   const [role, setRol] = useState<Role | null>(null);
   const notify = useNotify();
   const { t } = useTranslation();
@@ -63,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setAuthToken(null);
+    setId(null);
     setKullaniciAdi(null);
+    setFullName(null);
+    setHasAvatar(false);
     setRol(null);
     setStatus("anonymous");
   }, []);
@@ -93,7 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthToken(stored);
     me()
       .then((result) => {
+        setId(result.id);
         setKullaniciAdi(result.username);
+        setFullName(result.fullName);
+        setHasAvatar(result.hasAvatar);
         setRol(result.role);
         setStatus("authenticated");
       })
@@ -103,21 +122,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (usernameInput: string, password: string) => {
     const result = await apiLogin(usernameInput, password);
-    localStorage.setItem(STORAGE_KEY, result.token);
+    // token login'de her zaman dolu gelir (bkz. LoginResult) — non-null assertion burada guvenli.
+    localStorage.setItem(STORAGE_KEY, result.token as string);
     setAuthToken(result.token);
+    setId(result.id);
     setKullaniciAdi(result.username);
+    setFullName(result.fullName);
+    setHasAvatar(result.hasAvatar);
     setRol(result.role);
     setStatus("authenticated");
   }, []);
 
+  /** ProfilePanel'in updateProfile/uploadAvatar sonrasi cagirdigi kanca — bkz. AuthContextValue javadoc'u. */
+  const applyProfileUpdate = useCallback((result: LoginResult) => {
+    if (result.token) {
+      localStorage.setItem(STORAGE_KEY, result.token);
+      setAuthToken(result.token);
+    }
+    setId(result.id);
+    setKullaniciAdi(result.username);
+    setFullName(result.fullName);
+    setHasAvatar(result.hasAvatar);
+    setRol(result.role);
+  }, []);
+
   const value: AuthContextValue = {
     status,
+    id,
     username,
+    fullName,
+    hasAvatar,
     role,
     canWrite: role === "EDITOR" || role === "ADMIN",
     isAdmin: role === "ADMIN",
     login,
     logout,
+    applyProfileUpdate,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

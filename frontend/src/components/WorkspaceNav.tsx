@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthProvider";
 
-/** Dashboard'un su an gosterdigi ana alan: schema/tablo agaci mi, etiket listesi mi, kullanici yonetimi mi, yoksa bakim sayfasi mi. */
-export type WorkspaceView = "schemas" | "tags" | "users" | "maintenance";
+/** Dashboard'un su an gosterdigi ana alan: schema/tablo agaci mi, etiket listesi mi, kullanici yonetimi mi, bakim sayfasi mi, yoksa kendi profili mi. */
+export type WorkspaceView = "schemas" | "tags" | "users" | "maintenance" | "profile";
 
 interface WorkspaceNavProps {
   active: WorkspaceView;
@@ -63,6 +63,18 @@ export function WorkspaceNav({ active, onChange }: WorkspaceNavProps) {
           {t("nav.maintenance")}
         </button>
       )}
+      {/* Admin-only degil (isAdmin sarti yok): herkes KENDI profiline erisebilir. margin-top:auto
+          ile en alta itiliyor (bkz. App.css .workspace-nav-profile) — Kullanıcılar/Bakım ile
+          karismasin, "diger" menu ogelerinden gorsel olarak ayrisin diye. */}
+      <button
+        className={`workspace-nav-btn workspace-nav-profile cursor-pointer text-left${active === "profile" ? " active" : ""}`}
+        onClick={() => onChange("profile")}
+      >
+        <span className="nav-icon" aria-hidden="true">
+          ◍
+        </span>
+        {t("nav.profile")}
+      </button>
     </nav>
   );
 }

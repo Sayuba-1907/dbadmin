@@ -93,6 +93,11 @@ public class SecurityConfig {
                         // — genel "/api/** PATCH/POST/DELETE sadece EDITOR/ADMIN" kuralindan ONCE
                         // gelmeli, aksi halde VIEWER kendi bildirimini bile isaretleyemezdi.
                         .requestMatchers("/api/notifications/**").authenticated()
+                        // Kendi profilini duzenleme (isim/kullanici adi/parola/avatar) da ayni
+                        // gerekceyle rol kisitsiz — herkes SADECE KENDI profiline yazabilir
+                        // (kontrol authentication.getName()'den, path'te id yok), bu yuzden
+                        // EDITOR/ADMIN sartina takilmamali.
+                        .requestMatchers("/api/auth/me", "/api/auth/me/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                         .requestMatchers("/api/**").hasAnyRole(Role.EDITOR.name(), Role.ADMIN.name())
                         .anyRequest().authenticated())

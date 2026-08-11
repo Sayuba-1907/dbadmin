@@ -14,12 +14,16 @@ const KULLANICILAR: User[] = [
 
 const ADMIN_AUTH: AuthContextValue = {
   status: "authenticated",
+  id: 1,
   username: "admin",
+  fullName: null,
+  hasAvatar: false,
   role: "ADMIN",
   canWrite: true,
   isAdmin: true,
   login: jest.fn(),
   logout: jest.fn(),
+  applyProfileUpdate: jest.fn(),
 };
 
 function renderPanel(

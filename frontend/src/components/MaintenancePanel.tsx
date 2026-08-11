@@ -14,9 +14,23 @@ import {
 } from "../api/auditLogs";
 import { ServiceHealth, SystemSummary } from "../api/maintenance";
 import { translateAuditDetail } from "../utils/translateAuditDetail";
+import { WorkspaceView } from "./WorkspaceNav";
 
 const TARGET_TYPES: AuditTargetType[] = ["TABLE", "COLUMN", "SCHEMA", "TAG", "USER"];
 const HEALTH_SERVICES = ["postgres", "redis", "minio", "backend"] as const;
+const SUMMARY_FIELDS = ["schemaCount", "tableCount", "columnCount", "userCount"] as const;
+type SummaryField = (typeof SUMMARY_FIELDS)[number];
+
+/**
+ * Sadece Şemalar/Kullanıcılar için — ikisinin de sol menüde tıklanınca gidilecek TEK bir hedef
+ * görünümü var (WorkspaceNav "schemas"/"users"). Tablolar/Kolonlar icin boyle bir hedef yok
+ * (sema agacinin icine gomulu, tek bir "listesi" sayfasi yok) — o kartlar bilerek tiklanamaz
+ * kaliyor, tiklansaydi hangi tabloya/schema'ya gidecegi belirsiz olurdu.
+ */
+const SUMMARY_NAV_TARGETS: Partial<Record<SummaryField, WorkspaceView>> = {
+  schemaCount: "schemas",
+  userCount: "users",
+};
 
 /**
  * PrimeReact `TabView` "unstyled" modda (bkz. App.tsx'teki PrimeReactProvider) kendi p-tabview-*
@@ -71,6 +85,7 @@ interface MaintenancePanelProps {
   onPageChange: (page: number) => void;
   onBackup: () => void;
   onDownloadBackup: (key: string) => void;
+  onNavigate: (view: WorkspaceView) => void;
 }
 
 /**
@@ -102,6 +117,7 @@ export function MaintenancePanel({
   onPageChange,
   onBackup,
   onDownloadBackup,
+  onNavigate,
 }: MaintenancePanelProps) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<MaintenanceTab>("entities");
@@ -158,17 +174,34 @@ export function MaintenancePanel({
         {activeTab === "entities" && (
           <div className="maintenance-tab-panel">
             <div className="maintenance-summary-cards flex">
-              {(["schemaCount", "tableCount", "columnCount", "userCount"] as const).map((field) => (
-                <div key={field} className="summary-card">
-                  <span className="summary-card-icon" aria-hidden="true">
-                    {SUMMARY_ICONS[field]}
-                  </span>
-                  <div className="summary-card-body">
-                    <span className="summary-card-value">{summary?.[field] ?? "-"}</span>
-                    <span className="summary-card-label">{t(`maintenance.${field}`)}</span>
+              {SUMMARY_FIELDS.map((field) => {
+                const navTarget = SUMMARY_NAV_TARGETS[field];
+                const cardBody = (
+                  <>
+                    <span className="summary-card-icon" aria-hidden="true">
+                      {SUMMARY_ICONS[field]}
+                    </span>
+                    <div className="summary-card-body">
+                      <span className="summary-card-value">{summary?.[field] ?? "-"}</span>
+                      <span className="summary-card-label">{t(`maintenance.${field}`)}</span>
+                    </div>
+                  </>
+                );
+                return navTarget ? (
+                  <button
+                    key={field}
+                    type="button"
+                    className="summary-card summary-card-link"
+                    onClick={() => onNavigate(navTarget)}
+                  >
+                    {cardBody}
+                  </button>
+                ) : (
+                  <div key={field} className="summary-card">
+                    {cardBody}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

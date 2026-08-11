@@ -41,6 +41,18 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    /** Ad soyad — opsiyonel, bossa arayuzde username gosterilir. Login/JWT/audit-log denormalizasyonu bundan etkilenmez. */
+    @Column(name = "full_name")
+    private String fullName;
+
+    /** MinIO'daki profil fotografinin object key'i (ornek: {@code avatars/42}) — foto yoksa null. */
+    @Column(name = "avatar_key")
+    private String avatarKey;
+
+    /** Fotografi dogru Content-Type ile geri sunabilmek icin ayrica tutulur (bkz. UserService#updateAvatar). */
+    @Column(name = "avatar_content_type")
+    private String avatarContentType;
+
     /** JPA/Hibernate'in reflection ile nesne olusturabilmesi icin zorunlu parametresiz constructor. */
     protected User() {
     }
@@ -59,6 +71,10 @@ public class User {
         return username;
     }
 
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     public String getPasswordHash() {
         return passwordHash;
     }
@@ -73,6 +89,27 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getAvatarKey() {
+        return avatarKey;
+    }
+
+    public String getAvatarContentType() {
+        return avatarContentType;
+    }
+
+    public void setAvatar(String avatarKey, String avatarContentType) {
+        this.avatarKey = avatarKey;
+        this.avatarContentType = avatarContentType;
     }
 
     /** Sadece id'ye gore esitlik: kaydedilmemis (id=null) nesneler asla birbirine esit sayilmaz. */

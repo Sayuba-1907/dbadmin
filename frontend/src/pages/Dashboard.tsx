@@ -14,6 +14,7 @@ import { CreateSchemaForm } from "../components/CreateSchemaForm";
 import { CreateTableForm } from "../components/CreateTableForm";
 import { DashboardSkeleton } from "../components/DashboardSkeleton";
 import { MaintenancePanel } from "../components/MaintenancePanel";
+import { ProfilePanel } from "../components/ProfilePanel";
 import { UsersPanel } from "../components/UsersPanel";
 import { TableDetail } from "../components/TableDetail";
 import { TableSidebar } from "../components/TableSidebar";
@@ -698,8 +699,11 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
           onPageChange={changeAuditLogPage}
           onBackup={handleBackupAuditLogs}
           onDownloadBackup={handleDownloadBackup}
+          onNavigate={handleChangeActiveView}
         />
       )}
+
+      {activeView === "profile" && <ProfilePanel />}
 
       {activeView === "schemas" && (
         <>

@@ -1,5 +1,6 @@
 package dbadmin.backend.service;
 
+import dbadmin.backend.dto.AvatarContent;
 import dbadmin.backend.dto.UserResponse;
 import dbadmin.backend.entity.OperationType;
 import dbadmin.backend.entity.Role;
@@ -11,13 +12,17 @@ import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.UserRepository;
 import dbadmin.backend.security.UserRoleCacheService;
 import dbadmin.backend.validation.NameValidator;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Kullanici yonetiminin is mantigi (sadece ADMIN'in ulasabildigi uclarin arkasi).
@@ -30,20 +35,27 @@ public class UserService {
     /** BCrypt'in kendi siniri 72 bayt; altindaki her sey kullaniciyi zorlamayan bir alt sinir. */
     private static final int MIN_PASSWORD_LENGTH = 8;
 
+    /** Profil fotografi icin kabul edilen tipler — MinIO'ya rastgele bir dosya turu yazilmasin diye. */
+    private static final Set<String> ALLOWED_AVATAR_TYPES = Set.of("image/png", "image/jpeg", "image/webp");
+    private static final long MAX_AVATAR_BYTES = 2L * 1024 * 1024;
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserRoleCacheService userRoleCacheService;
     private final AuditLogService auditLogService;
+    private final MinioService minioService;
 
     public UserService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             UserRoleCacheService userRoleCacheService,
-            AuditLogService auditLogService) {
+            AuditLogService auditLogService,
+            MinioService minioService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userRoleCacheService = userRoleCacheService;
         this.auditLogService = auditLogService;
+        this.minioService = minioService;
     }
 
     /**
@@ -160,5 +172,105 @@ public class UserService {
                     "password must be at least " + MIN_PASSWORD_LENGTH + " characters",
                     Map.of("min", String.valueOf(MIN_PASSWORD_LENGTH)));
         }
+    }
+
+    /**
+     * Kendi profilini gunceller (bkz. requirement notu "6) User sayfasi -> User Profile").
+     * Her iki alan da opsiyonel — {@code null} olan degismez. {@code fullName} icin bicim
+     * kontrolu yok (serbest metin, Türkce karakter/bosluk dahil) — {@code username} icin ise
+     * {@code createUser}'daki AYNI kural gecerli (NameValidator + benzersizlik), cunku login/JWT/
+     * WebSocket kimlik dogrulamasi hala buna dayanir.
+     */
+    @Transactional
+    public User updateProfile(String currentUsername, String newFullName, String newUsername) {
+        User user = getUserByUsername(currentUsername);
+        if (newFullName != null) {
+            user.setFullName(newFullName.isBlank() ? null : newFullName);
+        }
+        if (newUsername != null && !newUsername.equals(currentUsername)) {
+            NameValidator.validate("username", "VALIDATION_INVALID_USERNAME", newUsername);
+            if (userRepository.existsByUsername(newUsername)) {
+                throw new ConflictException(
+                        "CONFLICT_DUPLICATE_USERNAME",
+                        "a user named '" + newUsername + "' already exists",
+                        Map.of("name", newUsername));
+            }
+            user.setUsername(newUsername);
+            // Eski username'e ait cache kaydi artik yanlis kullanici adina isaret ediyor —
+            // silinmezse bir sonraki JwtAuthenticationFilter cagrisi eski adla DB'de kullanici
+            // bulamayip 401 atardi (ayni gerekce icin bkz. changeRole/deleteUser).
+            userRoleCacheService.evict(currentUsername);
+        }
+        return user;
+    }
+
+    /** Kendi parolasini degistirir — mevcut parola dogru degilse ConflictException degil, kimlik dogrulama hatasi (401) firlatir. */
+    @Transactional
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        User user = getUserByUsername(username);
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new BadCredentialsException("current password is incorrect");
+        }
+        verifyPassword(newPassword);
+        // Yeni parola eskisiyle ayniysa "degistirdim" hissi yaratir ama hicbir sey degismez —
+        // kullaniciyi bilgilendirmek icin acikca reddedilir (bcrypt hash'ler kismi karsilastirmayi
+        // desteklemedigi icin duz metinler burada, hash'lemeden ONCE karsilastiriliyor).
+        if (currentPassword.equals(newPassword)) {
+            throw new ValidationException(
+                    "VALIDATION_PASSWORD_UNCHANGED", "new password must be different from the current password");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+    }
+
+    /** Profil fotografini MinIO'ya yukler (bkz. requirement notu — fotograf Postgres degil MinIO'da tutulur). */
+    @Transactional
+    public User updateAvatar(String username, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ValidationException("VALIDATION_MISSING_AVATAR", "avatar file is required");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_AVATAR_TYPES.contains(contentType)) {
+            throw new ValidationException(
+                    "VALIDATION_INVALID_AVATAR_TYPE",
+                    "avatar must be one of " + ALLOWED_AVATAR_TYPES,
+                    Map.of("allowed", String.join(",", ALLOWED_AVATAR_TYPES)));
+        }
+        if (file.getSize() > MAX_AVATAR_BYTES) {
+            throw new ValidationException(
+                    "VALIDATION_AVATAR_TOO_LARGE",
+                    "avatar must be at most " + MAX_AVATAR_BYTES + " bytes",
+                    Map.of("maxBytes", String.valueOf(MAX_AVATAR_BYTES)));
+        }
+
+        User user = getUserByUsername(username);
+        String key = "avatars/" + user.getId();
+        try {
+            minioService.upload(key, file.getBytes(), contentType);
+        } catch (IOException ex) {
+            throw new ValidationException("VALIDATION_INVALID_AVATAR", "avatar file could not be read");
+        }
+        user.setAvatar(key, contentType);
+        return user;
+    }
+
+    /** Profil fotografini kaldirir — hem MinIO'daki dosyayi hem User'daki referansi siler. Foto yoksa sessizce no-op. */
+    @Transactional
+    public User removeAvatar(String username) {
+        User user = getUserByUsername(username);
+        if (user.getAvatarKey() != null) {
+            minioService.delete(user.getAvatarKey());
+            user.setAvatar(null, null);
+        }
+        return user;
+    }
+
+    /** Profil fotografini MinIO'dan okur — hic yuklenmemisse 404. */
+    @Transactional(readOnly = true)
+    public AvatarContent getAvatar(User user) {
+        if (user.getAvatarKey() == null) {
+            throw new NotFoundException(
+                    "NOT_FOUND_AVATAR", "user has no avatar: " + user.getUsername(), Map.of());
+        }
+        return new AvatarContent(minioService.download(user.getAvatarKey()), user.getAvatarContentType());
     }
 }

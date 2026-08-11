@@ -1,9 +1,12 @@
 package dbadmin.backend.controller;
 
+import dbadmin.backend.dto.AvatarContent;
+import dbadmin.backend.dto.ChangePasswordRequest;
 import dbadmin.backend.dto.ErrorExamples;
 import dbadmin.backend.dto.ErrorResponse;
 import dbadmin.backend.dto.LoginRequest;
 import dbadmin.backend.dto.LoginResponse;
+import dbadmin.backend.dto.UpdateProfileRequest;
 import dbadmin.backend.entity.User;
 import dbadmin.backend.security.JwtService;
 import dbadmin.backend.service.UserService;
@@ -19,11 +22,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /** Giris ve "ben kimim" uclari. {@code /api/auth/login} kimlik dogrulamasiz erisilebilen tek API ucudur. */
 @RestController
@@ -73,8 +80,7 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
         User user = userService.getUserByUsername(request.username());
-        return new LoginResponse(
-                jwtService.generateToken(user), user.getUsername(), user.getRole());
+        return LoginResponse.of(jwtService.generateToken(user), user);
     }
 
     /**
@@ -101,7 +107,83 @@ public class AuthController {
         User user = userService.getUserByUsername(authentication.getName());
         // Token yeniden uretilmiyor: cagiran zaten gecerli bir token'la geldi, amac sadece
         // kim oldugunu soylemek. Bu yuzden token alani bos.
-        return ResponseEntity.ok(
-                new LoginResponse(null, user.getUsername(), user.getRole()));
+        return ResponseEntity.ok(LoginResponse.of(null, user));
+    }
+
+    @Operation(
+            summary = "Kendi profilini gunceller (ad soyad ve/veya kullanici adi)",
+            description = "Her iki alan da opsiyonel, null olan degismez. Kullanici adi degisirse "
+                    + "JWT'nin subject'i artik gecersiz oldugu icin cevapta TAZE bir token doner — "
+                    + "istemci bunu sessizce eskisinin yerine yazmali, logout gerekmez.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Profil guncellendi"),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Kullanici adi kurallara uymuyor.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "409",
+                description = "Bu kullanici adi zaten var.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PatchMapping("/me")
+    public LoginResponse updateProfile(
+            Authentication authentication, @RequestBody UpdateProfileRequest request) {
+        User user = userService.updateProfile(
+                authentication.getName(), request.fullName(), request.username());
+        // Sadece username gercekten degistiyse taze token uret — fullName-only guncellemede
+        // eski token hala tamamen gecerli, gereksiz yere yeni bir token dagitmaya gerek yok.
+        boolean usernameChanged = request.username() != null && !request.username().equals(authentication.getName());
+        String token = usernameChanged ? jwtService.generateToken(user) : null;
+        return LoginResponse.of(token, user);
+    }
+
+    @Operation(summary = "Kendi parolasini degistirir", description = "Mevcut parola dogru degilse 401 doner.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Parola degistirildi"),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Yeni parola cok kisa.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "Mevcut parola yanlis.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PatchMapping("/me/password")
+    public ResponseEntity<Void> changePassword(
+            Authentication authentication, @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(
+                authentication.getName(), request.currentPassword(), request.newPassword());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Profil fotografi yukler", description = "Kabul edilen tipler: image/png, image/jpeg, image/webp. En fazla 2MB.")
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public LoginResponse uploadAvatar(
+            Authentication authentication, @RequestParam("file") MultipartFile file) {
+        User user = userService.updateAvatar(authentication.getName(), file);
+        return LoginResponse.of(null, user);
+    }
+
+    @Operation(summary = "Kendi profil fotografini indirir", description = "Foto yoksa 404 doner.")
+    @GetMapping("/me/avatar")
+    public ResponseEntity<byte[]> downloadAvatar(Authentication authentication) {
+        User user = userService.getUserByUsername(authentication.getName());
+        AvatarContent avatar = userService.getAvatar(user);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(avatar.contentType()))
+                .body(avatar.content());
+    }
+
+    @Operation(summary = "Profil fotografini kaldirir", description = "Foto zaten yoksa da 200 doner (idempotent).")
+    @DeleteMapping("/me/avatar")
+    public LoginResponse removeAvatar(Authentication authentication) {
+        User user = userService.removeAvatar(authentication.getName());
+        return LoginResponse.of(null, user);
     }
 }

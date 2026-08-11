@@ -108,6 +108,6 @@ export function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return request<T>(path, { method: "PATCH", body: JSON.stringify(body) });
 }
 
-export function apiDelete(path: string): Promise<void> {
-  return request<void>(path, { method: "DELETE" });
+export function apiDelete<T = void>(path: string): Promise<T> {
+  return request<T>(path, { method: "DELETE" });
 }
