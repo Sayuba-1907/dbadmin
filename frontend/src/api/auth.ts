@@ -76,6 +76,29 @@ export function removeAvatar(): Promise<LoginResult> {
   return apiDelete<LoginResult>("/api/auth/me/avatar");
 }
 
+/** Backend'in {@code SessionResponse} DTO'suyla ayni sekil — bkz. requirement notu 9 ("Aktif Oturumlar"). */
+export interface SessionInfo {
+  jti: string;
+  issuedAt: string;
+  userAgent: string | null;
+  current: boolean;
+}
+
+/** {@code GET /api/auth/sessions} — bu kullanicinin gecerli JWT'lerinin (login yapilan her cihaz) listesi. */
+export function getSessions(): Promise<SessionInfo[]> {
+  return apiGet<SessionInfo[]>("/api/auth/sessions");
+}
+
+/** {@code DELETE /api/auth/sessions/{jti}} — tek bir oturumu sonlandirir (su anki dahil olabilir). */
+export function revokeSession(jti: string): Promise<void> {
+  return apiDelete<void>(`/api/auth/sessions/${encodeURIComponent(jti)}`);
+}
+
+/** {@code POST /api/auth/sessions/revoke-others} — "Diger Cihazlardan Cikis Yap". */
+export function revokeOtherSessions(): Promise<void> {
+  return apiPost<void>("/api/auth/sessions/revoke-others", {});
+}
+
 /**
  * {@code <img src>} tarayicinin kendi istegine Authorization header'i ekleyemez (custom header
  * eklemenin tek yolu fetch/XHR) — bu yuzden avatari once kimlikli bir fetch ile blob olarak

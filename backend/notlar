@@ -123,11 +123,11 @@ Ağustos 10:
     +3)Tablar ekleyelim. Servis Durumları, Entities
     +4)Servis Durumlarında -> Minio, Backend -> Tempo ve Loki kaldır buradan
     +5)Entities -> Ekrandakiler durabilir (Tablo, schema, kolon vs)
-    6)User sayfası -> User Profile olsun. Kullanıcı kendisininkine baksın. İsim, password değiştirebilsin. Ayrıca profil fotoğrafı ekleyebilsin. -> Photo minio tutulacak(bunu claudeye sor niye minio'da tutulmalı, postgre'de niye tutmuyoruz)
-    7)Veri (satır) görüntüleme -> dbeaverdaki gibi. Tablonun içindeyken Show Data olacak. Ama bunun paginationlı gelmesi lazım. Yani bütün veriyi değil de sayfa sayfa limite göre. İlk 20'yi getir. Sonraki 20 vs vs (20,50,100,200,500)
-    -select * from "tables" t
-    -select * from okul.dersler d -> bunları listelerken ki cıkan durumlara göre uygun olanları ekleyeceğiz.
-    8)CSV Export ekle -> minio'ya yazılacak
+    +6)User sayfası -> User Profile olsun. Kullanıcı kendisininkine baksın. İsim, password değiştirebilsin. Ayrıca profil fotoğrafı ekleyebilsin. -> Photo minio tutulacak(bunu claudeye sor niye minio'da tutulmalı, postgre'de niye tutmuyoruz)
+    +7)Veri (satır) görüntüleme -> dbeaverdaki gibi. Tablonun içindeyken Show Data olacak. Ama bunun paginationlı gelmesi lazım. Yani bütün veriyi değil de sayfa sayfa limite göre. İlk 20'yi getir. Sonraki 20 vs vs (20,50,100,200,500)
+     -select * from "tables" t
+     -select * from okul.dersler d -> bunları listelerken ki cıkan durumlara göre uygun olanları ekleyeceğiz.
+    +8)CSV Export ekle -> minio'ya yazılacak
     9)Ayarlar Sayfası
      - Profil: kullanıcı adı, email, avatar; şifre değiştirme formu (herhangi bir kullanıcı)
      - TR/EN dil toggle — altyapı zaten hazır (i18next, tr.json/en.json), sadece UI switch'i eksik (herhangi bir kullanıcı için)
@@ -137,6 +137,10 @@ Ağustos 10:
      - Maintenance da burada olsun.
     10)Audit log / activity timeline UI'ı — zaten audit log var (memory'de gördüm), bunu frontend'de PrimeReact Timeline ile görselleştirmek çok "demo'da iyi duran" bir şey.
 
+
+useful link e redis minIO tarzı şeyler de eklenebilir.
+
+sabah playwright testi yaptır hata kontrolü görelim.
 
 
 

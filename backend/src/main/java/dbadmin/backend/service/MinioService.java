@@ -50,11 +50,19 @@ public class MinioService {
         }
     }
 
-    /** Bucket'taki tum yedek dosyalarinin adlarini doner — {@code AuditLogBackupService#listBackups} bunlari tek tek indirip meta bilgisini okur. */
+    /**
+     * SADECE {@code backup-} on-ekiyle baslayan dosyalarin adlarini doner —
+     * {@code AuditLogBackupService#listBackups} bunlari tek tek indirip JSON olarak parse eder.
+     * Bucket, uygulamanin TEK MinIO klasoru (audit log yedekleri VE CSV export'lari {@code
+     * TableDataService#exportCsv} ile ayni bucket'ta, {@code csv-exports/} altinda birlikte
+     * yasiyor) — prefix filtresi olmadan CSV dosyalari da buraya duser ve JSON parse'i patlatirdi
+     * (bu bug bir kere gercekten yasandi, bkz. DECISIONS.md).
+     */
     public List<String> listBackupKeys() {
         try {
             List<String> keys = new ArrayList<>();
-            for (Result<Item> result : minioClient.listObjects(ListObjectsArgs.builder().bucket(bucket).build())) {
+            for (Result<Item> result : minioClient.listObjects(
+                    ListObjectsArgs.builder().bucket(bucket).prefix("backup-").build())) {
                 keys.add(result.get().objectName());
             }
             return keys;

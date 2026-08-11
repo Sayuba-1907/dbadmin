@@ -1,6 +1,35 @@
+/* Sayfa geneli scroll SORUNU: .App'in JSX'teki "min-h-screen" (min-height:100vh, PrimeFlex)
+   utility'si icerik uzadikca App'in KENDISINI buyutuyordu, boylece hicbir alt panelin kendi
+   overflow-y:auto'su hic devreye girmiyordu (tasan icerik yerine <body> kayiyordu, sol menu
+   dahil her sey ekrandan kaybolana kadar). height:100vh + overflow:hidden App'i viewport'a
+   SABITLER; .dashboard'daki min-height:0 (flex item'lar varsayilan olarak icerigi kadar
+   buyumeye direnir, bu satir olmadan asagidaki overflow hic tetiklenmez) ile birlikte artik
+   tasma gercekten alt panellerin (.sidebar/.detail-panel/.settings-panel/.maintenance-panel)
+   KENDI overflow-y:auto'sunda kaliyor — ust bar ve sol menu sabit kaliyor, sadece icerik kayiyor
+   (Data sekmesindeki .table-data-scroll-area ile ayni fikir, sadece sayfa capinda). */
 .App {
+  height: 100vh;
+  overflow: hidden;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
+}
+
+.dashboard {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* workspace-nav'a BILEREK overflow-y:auto verilmiyor: icerigi (Şemalar/Etiketler/Kullanıcılar +
+   hesap karti) hep kisa, ama hesap kartinin flyout'u (bkz. .workspace-nav-account-submenu)
+   absolute pozisyonla DISARI tasmasi gerekiyor — overflow-y:auto versek (CSS'te bir eksen
+   non-visible olunca digeri de auto'ya doner) flyout kirpilir/scrollbar'a donerdi (yasandi). */
+
+.sidebar {
+  overflow-y: auto;
+}
+
+.detail-panel {
+  overflow-y: auto;
 }
 
 .app-header {
@@ -255,10 +284,100 @@ select:disabled {
   font-weight: 500;
 }
 
-/* En alta sabitlenmis tek buton — flex-column icinde margin-top:auto, ustundeki butonlarin
-   itmesiyle geri kalan tum bosluk buraya "harcanir", buton en dibe yapisir. */
-.workspace-nav-profile {
+/* En alta sabitlenmis hesap karti — flex-column icinde margin-top:auto, ustundeki butonlarin
+   itmesiyle geri kalan tum bosluk buraya "harcanir", karti en dibe yapistirir. position:relative,
+   icindeki popup menunun (workspace-nav-account-menu) tam ustunde konumlanabilmesi icin. */
+.workspace-nav-account {
+  position: relative;
   margin-top: auto;
+}
+
+/* Claude Code'un hesap kartina benzer bir popup: trigger butonun TAM USTUNDE (bottom:100%)
+   acilir, cunku trigger zaten sidebar'in en altinda — asagiya acilsa ekrandan taserdi. */
+.workspace-nav-account-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  z-index: 20;
+}
+
+.workspace-nav-account-identity {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.workspace-nav-account-username {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.workspace-nav-account-role {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.workspace-nav-account-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  width: 100%;
+  cursor: pointer;
+}
+
+.workspace-nav-account-menu-item:hover,
+.workspace-nav-account-menu-item.open {
+  background-color: var(--color-surface);
+}
+
+.workspace-nav-account-submenu-arrow {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+}
+
+/* Ayarlar'in "Language" tarzi flyout'u: tetikleyici butonun SAGINDA acilir (bkz.
+   workspace-nav-account-submenu-wrapper'daki position:relative), cunku sol menu zaten ekranin
+   solunda — asagi/yukari acilsa hesap popup'inin disina taserdi. */
+.workspace-nav-account-submenu-wrapper {
+  position: relative;
+}
+
+.workspace-nav-account-submenu {
+  position: absolute;
+  left: 100%;
+  bottom: 0;
+  margin-left: var(--space-2);
+  padding: var(--space-2);
+  min-width: 160px;
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  z-index: 21;
 }
 
 .sidebar {
@@ -798,6 +917,11 @@ select:disabled {
   cursor: not-allowed;
 }
 
+.btn-sm {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+}
+
 .btn-primary {
   background-color: var(--color-accent-strong);
   border-color: var(--color-accent-strong);
@@ -983,23 +1107,119 @@ select:disabled {
   margin-bottom: 0;
 }
 
+.settings-panel {
+  flex: 1;
+  padding: var(--space-5);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settings-header {
+  margin-bottom: 0;
+}
+
+.appearance-panel {
+  flex: 1;
+  padding: var(--space-5);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 560px;
+}
+
+.appearance-header {
+  margin-bottom: 0;
+}
+
+.appearance-language-cards {
+  gap: var(--space-3);
+}
+
+.appearance-language-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  padding: var(--space-4);
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  transition: border-color var(--transition-fast);
+}
+
+.appearance-language-card:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  cursor: pointer;
+}
+
+.appearance-language-card.active {
+  border-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface-raised));
+}
+
+.appearance-language-card:disabled {
+  cursor: default;
+}
+
+.appearance-language-flag {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.appearance-language-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.settings-sessions-toolbar {
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-admin-links-title {
+  margin: 0 0 var(--space-3);
+}
+
+.settings-admin-links {
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.settings-admin-links a {
+  text-decoration: none;
+  flex: 1;
+  min-width: 200px;
+}
+
+.settings-admin-divider {
+  border-top: 1px solid var(--color-border);
+  margin-bottom: var(--space-5);
+}
+
 .maintenance-audit-header h3 {
   margin: 0;
 }
 
-.maintenance-tabs-card {
+.tab-bar-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-.maintenance-tabs {
+.tab-bar {
   display: flex;
   gap: var(--space-5);
   border-bottom: 1px solid var(--color-border);
 }
 
-.maintenance-tab {
+.tab-button {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -1011,17 +1231,17 @@ select:disabled {
   cursor: pointer;
 }
 
-.maintenance-tab:hover {
+.tab-button:hover {
   color: var(--color-text-primary);
 }
 
-.maintenance-tab-active,
-.maintenance-tab-active:hover {
+.tab-button-active,
+.tab-button-active:hover {
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
 }
 
-.maintenance-tab-panel {
+.tab-panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -1475,4 +1695,162 @@ label.checkbox-label {
 .profile-field input {
   width: 100%;
   box-sizing: border-box;
+}
+
+/* "Data" sekmesi (requirement notu 7) — gercek Postgres satirlarinin salt-okunur, sayfalanmis
+   goruntusu. TableDetail'in geri kalaniyla (kolon editoru) ayni .detail-card cercevesini
+   kullanir, sadece kendi ic duzeni burada. Tablo govdesi .column-table (yukarida) ile AYNI
+   gorsel dili kullanir (th/td border-bottom, hover, row-enter animasyonu) — sekmeler arasi
+   gecince "farkli bir uygulama" hissi vermesin.*/
+.table-data-toolbar {
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table-data-total-count {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.table-data-page-size {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Sayfa boyutu 500'e cikinca butun sayfanin degil, SADECE bu alanin kaymasi icin: sabit bir
+   max-height + kendi ic scroll'u. Baslik satiri sticky, kullanici asagi kaydirdikca da hangi
+   kolonda oldugunu gorsun diye. */
+.table-data-scroll-area {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.table-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-data-table th,
+.table-data-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-base);
+  white-space: nowrap;
+}
+
+.table-data-table th {
+  position: sticky;
+  top: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background-color: var(--color-surface);
+}
+
+.table-data-table tbody tr {
+  transition: background-color var(--transition-fast);
+  animation: row-enter 500ms ease;
+}
+
+.table-data-table tbody tr:hover {
+  background-color: var(--color-surface-raised);
+}
+
+/* Zebra-striping: cok kolonlu/satirli tablolarda goz satir takibini kaybetmesin diye — hover
+   ile cakismasin diye renk cok hafif tutuldu. */
+.table-data-table tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--color-surface-raised) 40%, transparent);
+}
+
+.table-data-text {
+  color: var(--color-text-primary);
+}
+
+.table-data-number {
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+/* DBeaver'daki gibi NULL degerleri bos birakmak yerine acikca isaretliyoruz — bos bir hucre
+   ile "gercekten NULL" ile "bos string" birbirinden ayirt edilemezdi. */
+.table-data-null {
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: var(--text-sm);
+}
+
+.table-data-bool {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+}
+
+.table-data-bool-true {
+  color: var(--color-success);
+  background-color: var(--color-success-bg);
+}
+
+.table-data-bool-false {
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface-raised);
+}
+
+.table-data-toolbar-right {
+  gap: var(--space-3);
+}
+
+/* "Satır Ekle" formu — mevcut "kolon ekle" formuyla (.add-column-form) ayni tarzda, satirin
+   kendi kart cercevesi (accent kenarlik) ile geri kalan tablodan gorsel olarak ayrisiyor. */
+.table-data-add-row-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-raised);
+}
+
+.table-data-add-row-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.table-data-add-row-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 140px;
+}
+
+.table-data-add-row-field span {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.table-data-add-row-type {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.table-data-add-row-field input,
+.table-data-add-row-field select {
+  min-width: 140px;
 }

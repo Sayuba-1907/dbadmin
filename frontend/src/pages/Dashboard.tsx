@@ -10,11 +10,14 @@ import {
 } from "../api/tables";
 import { ColumnUsage, getTagUsage } from "../api/tags";
 import { Role } from "../api/auth";
+import { AdminPanel } from "../components/AdminPanel";
+import { AppearancePanel } from "../components/AppearancePanel";
 import { CreateSchemaForm } from "../components/CreateSchemaForm";
 import { CreateTableForm } from "../components/CreateTableForm";
 import { DashboardSkeleton } from "../components/DashboardSkeleton";
-import { MaintenancePanel } from "../components/MaintenancePanel";
 import { ProfilePanel } from "../components/ProfilePanel";
+import { SessionsPanel } from "../components/SessionsPanel";
+import { UsefulLinksPanel } from "../components/UsefulLinksPanel";
 import { UsersPanel } from "../components/UsersPanel";
 import { TableDetail } from "../components/TableDetail";
 import { TableSidebar } from "../components/TableSidebar";
@@ -277,7 +280,7 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
       refreshTags().catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")));
     } else if (view === "users" && isAdmin) {
       refreshUsers().catch((err) => notifyFromError(notify, t, err, t("notifications.loadFailed")));
-    } else if (view === "maintenance" && isAdmin) {
+    } else if (view === "admin" && isAdmin) {
       refreshMaintenance().catch((err) =>
         notifyFromError(notify, t, err, t("notifications.loadFailed"))
       );
@@ -684,8 +687,14 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
         />
       )}
 
-      {activeView === "maintenance" && (
-        <MaintenancePanel
+      {activeView === "profile" && <ProfilePanel />}
+
+      {activeView === "appearance" && <AppearancePanel />}
+
+      {activeView === "sessions" && <SessionsPanel />}
+
+      {activeView === "admin" && (
+        <AdminPanel
           summary={maintenanceSummary}
           health={maintenanceHealth}
           auditLogs={auditLogs}
@@ -703,7 +712,7 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
         />
       )}
 
-      {activeView === "profile" && <ProfilePanel />}
+      {activeView === "links" && <UsefulLinksPanel />}
 
       {activeView === "schemas" && (
         <>

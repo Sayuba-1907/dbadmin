@@ -9,7 +9,6 @@ import { ConfirmProvider } from "./notifications/ConfirmProvider";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { NotificationBell } from "./components/NotificationBell";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
-import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { ThemeProvider } from "./theme/ThemeProvider";
 import { Logo } from "./components/Logo";
 import { useNotifications } from "./hooks/useNotifications";
@@ -92,7 +91,6 @@ function AppContent() {
           <button className="btn btn-link" onClick={logout}>
             {t("auth.logout")}
           </button>
-          <ThemeSwitcher />
           <LanguageSwitcher />
         </div>
       </header>

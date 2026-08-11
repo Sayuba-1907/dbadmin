@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -54,20 +55,32 @@ public class JwtService {
         this.expiration = expiration;
     }
 
+    /** Token ve onun benzersiz {@code jti}'si (Aktif Oturumlar ozelligi icin, bkz. SessionService). */
+    public record IssuedToken(String token, String jti) {
+    }
+
     /**
      * Girisi basarili olan kullanici icin token uretir. Rolu de payload'a koyariz ki her
      * istekte yetki icin veritabanina gitmeye gerek kalmasin — bunun bedeli, rolu degistirilen
      * bir kullanicinin elindeki eski token'in suresi dolana kadar eski rolle gecerli olmasidir.
+     * <p>
+     * Standart {@code jti} (JWT ID) claim'i her token'a benzersiz bir kimlik verir — token'in
+     * kendisi hicbir zaman degistirilemeyecegi (imza tutmaz) icin bu, "hangi token" sorusuna
+     * sunucunun disaridan (ör. Redis'te) tutabilecegi tek stabil referanstir. Bkz. SessionService:
+     * her jti, "Aktif Oturumlar" ekraninda bir satir, "diger cihazlardan cikis" bunlari siler.
      */
-    public String generateToken(User user) {
+    public IssuedToken generateToken(User user) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        String jti = UUID.randomUUID().toString();
+        String token = Jwts.builder()
                 .subject(user.getUsername())
+                .id(jti)
                 .claim(CLAIM_ROLE, user.getRole().name())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expiration)))
                 .signWith(key)
                 .compact();
+        return new IssuedToken(token, jti);
     }
 
     /**
@@ -77,6 +90,11 @@ public class JwtService {
      */
     public String extractUsername(String token) {
         return claims(token).getSubject();
+    }
+
+    /** Token'in {@code jti}'sini doner — SessionService'te "bu spesifik oturum" anahtari olarak kullanilir. */
+    public String extractJti(String token) {
+        return claims(token).getId();
     }
 
     /** Token gecerli mi — sadece evet/hayir isteyen yerler icin (istisna firlatmaz). */

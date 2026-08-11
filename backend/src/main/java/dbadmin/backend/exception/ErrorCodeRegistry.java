@@ -40,6 +40,13 @@ public final class ErrorCodeRegistry {
             Map.entry("VALIDATION_AVATAR_TOO_LARGE", 40018),
             Map.entry("VALIDATION_INVALID_AVATAR", 40019),
             Map.entry("VALIDATION_AUDIT_LOG_BACKUP_KEY", 40020),
+            Map.entry("VALIDATION_INVALID_PAGE_SIZE", 40021),
+            Map.entry("VALIDATION_INVALID_PAGE", 40022),
+            Map.entry("VALIDATION_UNKNOWN_COLUMN", 40023),
+            Map.entry("VALIDATION_EMPTY_ROW", 40024),
+            Map.entry("VALIDATION_NO_PRIMARY_KEY", 40025),
+            Map.entry("VALIDATION_MISSING_PRIMARY_KEY_VALUE", 40026),
+            Map.entry("VALIDATION_PRIMARY_KEY_READONLY", 40027),
             // 401
             Map.entry("AUTH_INVALID_CREDENTIALS", 40101),
             Map.entry("AUTH_REQUIRED", 40102),
@@ -54,6 +61,7 @@ public final class ErrorCodeRegistry {
             Map.entry("NOT_FOUND_ENDPOINT", 40406),
             Map.entry("NOT_FOUND_NOTIFICATION", 40407),
             Map.entry("NOT_FOUND_AVATAR", 40408),
+            Map.entry("NOT_FOUND_ROW", 40409),
             // 405
             Map.entry("VALIDATION_METHOD_NOT_ALLOWED", 40501),
             // 409

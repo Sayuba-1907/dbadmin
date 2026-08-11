@@ -204,6 +204,30 @@ public final class ErrorExamples {
               "details": { "min": "8" }
             }""";
 
+    public static final String VALIDATION_INVALID_PAGE_SIZE =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "size must be one of [20, 50, 100, 200, 500]",
+              "code": "VALIDATION_INVALID_PAGE_SIZE",
+              "errorCode": 40021,
+              "details": { "allowed": "[20, 50, 100, 200, 500]" }
+            }""";
+
+    public static final String VALIDATION_UNKNOWN_COLUMN =
+            """
+            {
+              "timestamp": "2026-07-29T09:12:31.402Z",
+              "status": 400,
+              "error": "Bad Request",
+              "message": "unknown column: adres",
+              "code": "VALIDATION_UNKNOWN_COLUMN",
+              "errorCode": 40023,
+              "details": { "column": "adres" }
+            }""";
+
     public static final String VALIDATION_MISSING_ROLE =
             """
             {

@@ -52,14 +52,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserService userService;
     private final UserRoleCacheService userRoleCacheService;
+    private final SessionService sessionService;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
             UserService userService,
-            UserRoleCacheService userRoleCacheService) {
+            UserRoleCacheService userRoleCacheService,
+            SessionService sessionService) {
         this.jwtService = jwtService;
         this.userService = userService;
         this.userRoleCacheService = userRoleCacheService;
+        this.sessionService = sessionService;
     }
 
     @Override
@@ -94,6 +97,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void assignIdentity(HttpServletRequest request, String token) {
         try {
             String username = jwtService.extractUsername(token);
+            // Imza+sure gecerli olsa bile, "Aktif Oturumlar"dan bu spesifik jti erken iptal
+            // edilmis olabilir (bkz. SessionService) — token'in kendisi hala teknik olarak
+            // "gecerli" ama artik kullanilmamasi gerekiyor, bu yuzden JwtException'la ayni
+            // sekilde ele alinip kimlik atanmiyor.
+            if (!sessionService.exists(username, jwtService.extractJti(token))) {
+                log.debug("token'in oturumu iptal edilmis (diger cihazlardan cikis), kimlik atanmadi");
+                return;
+            }
             UserDetails userDetails = loadUser(username);
 
             var authentication = new UsernamePasswordAuthenticationToken(

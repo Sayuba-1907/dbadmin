@@ -9,11 +9,15 @@ import dbadmin.backend.dto.CreateColumnRequest;
 import dbadmin.backend.dto.CreateTableRequest;
 import dbadmin.backend.dto.ErrorExamples;
 import dbadmin.backend.dto.ErrorResponse;
+import dbadmin.backend.dto.InsertRowRequest;
 import dbadmin.backend.dto.RenameRequest;
+import dbadmin.backend.dto.TableDataResponse;
 import dbadmin.backend.dto.TableResponse;
 import dbadmin.backend.dto.TableUpdateRequest;
+import dbadmin.backend.dto.UpdateRowRequest;
 import dbadmin.backend.service.ColumnSpec;
 import dbadmin.backend.service.ColumnUpdate;
+import dbadmin.backend.service.TableDataService;
 import dbadmin.backend.service.TableService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,8 +30,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -35,6 +41,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -51,9 +58,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class TableController {
 
     private final TableService tableService;
+    private final TableDataService tableDataService;
 
-    public TableController(TableService tableService) {
+    public TableController(TableService tableService, TableDataService tableDataService) {
         this.tableService = tableService;
+        this.tableDataService = tableDataService;
     }
 
     /** GET /api/tables — tum tablolarin sayfalanmis listesi. Entity degil DTO ({@link TableResponse}) doner; bkz. dto paketi neden ayri. */
@@ -83,6 +92,140 @@ public class TableController {
     @GetMapping("/{id}")
     public TableResponse get(@Parameter(description = "Tablonun id'si.", example = "1") @PathVariable Long id) {
         return TableResponse.from(tableService.getTable(id));
+    }
+
+    /**
+     * GET /api/tables/{id}/data — gercek Postgres tablosunun satirlarini sayfalanmis olarak
+     * doner (requirement notu 7, "DBeaver'daki gibi Show Data"). Metadata (Tablo/Kolon) DEGIL,
+     * {@code SELECT * FROM sema.tablo LIMIT ? OFFSET ?} calistirir — bkz. {@link TableDataService}.
+     * {@code page}/{@code size} Spring'in standart {@code Pageable}'i DEGIL: {@code size} sabit
+     * bir whitelist'e ({@code 20,50,100,200,500}) kisitli, cunku bu uc kullaniciya rastgele buyuk
+     * bir LIMIT verme imkani taniyor (tum tabloyu tek istekte cekmeyi engellemek icin).
+     */
+    @Operation(summary = "Tablonun gercek satir verisini sayfalanmis olarak getirir",
+            description = "Metadata degil, gercek Postgres tablosunda SELECT * calistirir. "
+                    + "size sadece 20, 50, 100, 200, 500 degerlerinden birini kabul eder.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Sayfa verisi dondu."),
+        @ApiResponse(responseCode = "400", description = "size whitelist disinda ya da page negatif.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "VALIDATION_INVALID_PAGE_SIZE",
+                                summary = "Gecersiz sayfa boyutu",
+                                value = ErrorExamples.VALIDATION_INVALID_PAGE_SIZE))),
+        @ApiResponse(responseCode = "404", description = "Bu id'de bir tablo yok.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_TABLE",
+                                summary = "Tablo bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_TABLE)))
+    })
+    @GetMapping("/{id}/data")
+    public TableDataResponse data(
+            @Parameter(description = "Tablonun id'si.", example = "1") @PathVariable Long id,
+            @Parameter(description = "0 tabanli sayfa numarasi.", example = "0")
+                    @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Sayfa basina satir sayisi — 20, 50, 100, 200 ya da 500.", example = "20")
+                    @RequestParam(defaultValue = "20") int size) {
+        return tableDataService.getData(id, page, size);
+    }
+
+    /**
+     * POST /api/tables/{id}/data — kullanicinin kendi satir verisini girmesi (requirement notu
+     * 7'nin devami). Metadata degil, dogrudan gercek Postgres tablosuna INSERT yapar; DDL degil
+     * DML oldugu icin {@code TableDataService} kullanilir, {@code ddl/} paketindeki executor'lar
+     * degil.
+     */
+    @Operation(summary = "Tabloya yeni bir satir ekler",
+            description = "Sadece tabloda gercekten var olan kolonlar kabul edilir. Verilmeyen "
+                    + "kolonlar DB'nin varsayilanina (varsa) ya da NULL'a duser.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Satir eklendi."),
+        @ApiResponse(responseCode = "400", description = "Bilinmeyen bir kolon adi gonderildi ya da hicbir deger verilmedi.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "VALIDATION_UNKNOWN_COLUMN",
+                                summary = "Boyle bir kolon yok",
+                                value = ErrorExamples.VALIDATION_UNKNOWN_COLUMN))),
+        @ApiResponse(responseCode = "404", description = "Bu id'de bir tablo yok.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_TABLE",
+                                summary = "Tablo bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_TABLE))),
+        @ApiResponse(responseCode = "409", description = "PRIMARY KEY/NOT NULL gibi bir Postgres kisiti ihlal edildi.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    // 201 DEGIL 204: govde donmuyor (olusan satirin bir "representation"i yok, sayfayi
+    // TableDetail.tsx zaten yeniden cekiyor) — client.ts'teki request() SADECE 204'te body
+    // parse etmeyi atlar (bkz. javadoc'u), 201+bos-govde kombinasyonu response.json()'i
+    // "Unexpected end of JSON input" ile patlatirdi (kod GERCEKTEN eklenmis olsa bile
+    // frontend'e "basarisiz" gibi gorunurdu — bu yuzden deleteColumn/delete ile ayni desen).
+    @PostMapping("/{id}/data")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void insertRow(
+            @Parameter(description = "Tablonun id'si.", example = "1") @PathVariable Long id,
+            @RequestBody InsertRowRequest request) {
+        tableDataService.insertRow(id, request.values());
+    }
+
+    /**
+     * PATCH /api/tables/{id}/data — var olan bir satirin duzenlenmesi (requirement notu 7'nin
+     * devami, "veri duzenleme"). Satir {@code pk} ile bulunur, sadece {@code values}'taki
+     * kolonlar guncellenir; PK kolonlari degistirilemez (bkz. {@link TableDataService#updateRow}).
+     */
+    @Operation(summary = "Var olan bir satiri gunceller",
+            description = "Satir, tablonun PRIMARY KEY kolonlariyla (pk) bulunur. PK'siz bir "
+                    + "tabloda satir tekil olarak duzenlenemez (400). PK kolonlari values icinde olamaz.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Satir guncellendi."),
+        @ApiResponse(responseCode = "400", description = "PK eksik/yanlis, bilinmeyen kolon, PK degistirilmeye "
+                + "calisildi ya da tabloda PRIMARY KEY yok.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Bu id'de bir tablo yok, ya da pk'ya uyan bir satir yok.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "409", description = "PRIMARY KEY/NOT NULL/UNIQUE gibi bir Postgres kisiti ihlal edildi.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PatchMapping("/{id}/data")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateRow(
+            @Parameter(description = "Tablonun id'si.", example = "1") @PathVariable Long id,
+            @RequestBody UpdateRowRequest request) {
+        tableDataService.updateRow(id, request.pk(), request.values());
+    }
+
+    /**
+     * GET /api/tables/{id}/data/csv-export — requirement notu 8 ("CSV Export ekle -> minio'ya
+     * yazilacak"). {@code getData}'nin aksine sayfalanmis DEGIL, tum satirlar tek dosyada.
+     * {@link TableDataService#exportCsv} dosyayi hem MinIO'ya yazar (kalici kopya/izlenebilirlik)
+     * hem de burada donen byte[] ile ayni istekte tarayiciya indirilir.
+     */
+    @Operation(summary = "Tablonun tum verisini CSV olarak disari aktarir",
+            description = "Sayfalama yok, tablonun tum satirlari tek bir CSV dosyasina yazilir. "
+                    + "Dosya MinIO'ya yuklenir ve ayni yanitla tarayiciya da indirilir.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "CSV dosyasi dondu.",
+                content = @Content(mediaType = "text/csv")),
+        @ApiResponse(responseCode = "404", description = "Bu id'de bir tablo yok.",
+                content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = @Schema(implementation = ErrorResponse.class),
+                        examples = @ExampleObject(name = "NOT_FOUND_TABLE",
+                                summary = "Tablo bulunamadi",
+                                value = ErrorExamples.NOT_FOUND_TABLE)))
+    })
+    @GetMapping("/{id}/data/csv-export")
+    public ResponseEntity<byte[]> exportCsv(
+            @Parameter(description = "Tablonun id'si.", example = "1") @PathVariable Long id) {
+        TableDataService.CsvExportResult result = tableDataService.exportCsv(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + result.fileName() + "\"")
+                .body(result.content());
     }
 
     /**

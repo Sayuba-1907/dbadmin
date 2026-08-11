@@ -155,15 +155,15 @@ export function MaintenancePanel({
         <h2>{t("maintenance.title")}</h2>
       </div>
 
-      <div className="maintenance-tabs-card detail-card">
-        <div className="maintenance-tabs" role="tablist">
+      <div className="tab-bar-card detail-card">
+        <div className="tab-bar" role="tablist">
           {MAINTENANCE_TABS.map((tab) => (
             <button
               key={tab}
               type="button"
               role="tab"
               aria-selected={activeTab === tab}
-              className={`maintenance-tab ${activeTab === tab ? "maintenance-tab-active" : ""}`}
+              className={`tab-button ${activeTab === tab ? "tab-button-active" : ""}`}
               onClick={() => setActiveTab(tab)}
             >
               {t(`maintenance.${TAB_LABEL_KEYS[tab]}`)}
@@ -172,7 +172,7 @@ export function MaintenancePanel({
         </div>
 
         {activeTab === "entities" && (
-          <div className="maintenance-tab-panel">
+          <div className="tab-panel">
             <div className="maintenance-summary-cards flex">
               {SUMMARY_FIELDS.map((field) => {
                 const navTarget = SUMMARY_NAV_TARGETS[field];
@@ -207,7 +207,7 @@ export function MaintenancePanel({
         )}
 
         {activeTab === "serviceStatus" && (
-          <div className="maintenance-tab-panel">
+          <div className="tab-panel">
             <div className="maintenance-summary-cards flex">
               {HEALTH_SERVICES.map((service) => {
                 const up = health?.[service] ?? false;
@@ -235,7 +235,7 @@ export function MaintenancePanel({
         )}
 
         {activeTab === "auditLog" && (
-          <div className="maintenance-tab-panel">
+          <div className="tab-panel">
             <div className="maintenance-audit-header flex align-items-center justify-content-between">
               <h3>{t("maintenance.auditLogTitle")}</h3>
               <Button
@@ -347,7 +347,7 @@ export function MaintenancePanel({
         )}
 
         {activeTab === "backups" && (
-          <div className="maintenance-tab-panel">
+          <div className="tab-panel">
             <DataTable
               value={backupList}
               dataKey="key"
