@@ -9,7 +9,11 @@ import dbadmin.backend.service.MaintenanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -54,9 +58,21 @@ public class MaintenanceController {
     }
 
     @Operation(summary = "MinIO'daki gecmis yedeklerin listesini doner (Req-2.6)",
-            description = "Sadece gorunurluk icin — indirme/geri yukleme yok, dosyalarin kendisine MinIO console'dan bakilir.")
+            description = "Gorunurluk icin — gecmis geri yukleme hala yok, sadece listeleme ve tekil dosya indirme.")
     @GetMapping("/audit-logs/backups")
     public List<AuditLogBackupListItemDto> listBackups() {
         return auditLogBackupService.listBackups();
+    }
+
+    @Operation(summary = "Tek bir yedek dosyasinin JSON icerigini indirir",
+            description = "key, /audit-logs/backups listesindeki 'key' alaniyla birebir ayni olmali "
+                    + "(backup-<timestamp>.json formati) — baska bir sey kabul edilmez (400).")
+    @GetMapping("/audit-logs/backups/{key}")
+    public ResponseEntity<byte[]> downloadBackup(@PathVariable String key) {
+        byte[] content = auditLogBackupService.downloadBackup(key);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + key + "\"")
+                .body(content);
     }
 }

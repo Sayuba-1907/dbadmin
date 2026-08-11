@@ -115,6 +115,28 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    # Bildirim push'unu in-process ApplicationEventPublisher yerine kalici bir kuyruktan
+    # gecirmek icin (bkz. backend/notlar "RabbitMQ koyulacak notification icin"). management
+    # image'i, Redisinsight/MinIO console gibi tarayicidan kuyruklari gormek icin secildi.
+    image: rabbitmq:3-management-alpine
+    container_name: dbadmin_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-dbadmin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guvenlisifrerabbit}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - dbadmin-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     container_name: dbadmin_backend
@@ -146,12 +168,18 @@ services:
       APP_MINIO_ACCESS_KEY: ${APP_MINIO_ACCESS_KEY:-}
       APP_MINIO_SECRET_KEY: ${APP_MINIO_SECRET_KEY:-}
       APP_MINIO_BUCKET: ${APP_MINIO_BUCKET:-audit-log-backups}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-dbadmin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guvenlisifrerabbit}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       tempo:
         condition: service_started
@@ -211,6 +239,7 @@ volumes:
   tempo_data:
   loki_data:
   minio_data:
+  rabbitmq_data:
 
 networks:
   dbadmin-net:

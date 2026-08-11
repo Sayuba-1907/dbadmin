@@ -13,6 +13,8 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -31,6 +33,10 @@ public class AuditLogBackupService {
 
     private static final DateTimeFormatter KEY_TIMESTAMP =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss'Z'").withZone(ZoneOffset.UTC);
+    // #backup asagida urettigi formatla birebir ayni — indirme ucu MinIO'ya rastgele bir key
+    // ("../../etc/passwd" gibi) geciremesin diye path parametresi buraya karsi dogrulanir.
+    private static final Pattern KEY_PATTERN =
+            Pattern.compile("backup-\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}Z\\.json");
 
     private final AuditLogRepository auditLogRepository;
     private final AuditLogService auditLogService;
@@ -89,5 +95,14 @@ public class AuditLogBackupService {
                 })
                 .sorted(Comparator.comparing(AuditLogBackupListItemDto::backedUpAt).reversed())
                 .toList();
+    }
+
+    /** Tek bir yedek dosyasinin ham JSON icerigini doner — {@code MaintenanceController} bunu indirme yaniti olarak yollar. */
+    public byte[] downloadBackup(String key) {
+        if (!KEY_PATTERN.matcher(key).matches()) {
+            throw new ValidationException(
+                    "VALIDATION_AUDIT_LOG_BACKUP_KEY", "invalid backup key: " + key, Map.of("key", key));
+        }
+        return minioService.download(key);
     }
 }

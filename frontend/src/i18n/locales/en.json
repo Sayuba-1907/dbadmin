@@ -135,7 +135,8 @@
     "colBackedUpAt": "Backed Up At",
     "colBackedUpBy": "By",
     "colRowCount": "Row Count",
-    "colBackupFile": "File"
+    "colBackupFile": "File",
+    "downloadBackup": "Download"
   },
   "notificationBell": {
     "buttonLabel": "Notifications",
@@ -186,7 +187,8 @@
     "kullaniciDeleted": "User deleted",
     "kullaniciDeleteFailed": "Failed to delete user",
     "auditLogBackupSucceeded": "Backed up {{count}} audit log entries",
-    "auditLogBackupFailed": "Failed to back up audit log"
+    "auditLogBackupFailed": "Failed to back up audit log",
+    "auditLogBackupDownloadFailed": "Failed to download backup file"
   },
   "validation": {
     "required": "Please fill out this field"

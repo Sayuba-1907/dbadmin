@@ -1,35 +1,43 @@
 package dbadmin.backend.service;
 
+import dbadmin.backend.config.RabbitConfig;
 import dbadmin.backend.entity.DataTable;
 import dbadmin.backend.entity.Notification;
 import dbadmin.backend.entity.NotificationType;
 import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.repository.NotificationRepository;
 import java.util.Map;
-import org.springframework.context.ApplicationEventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Tablo sahipligi temelli, hedefli bildirimlerin yazildigi ve okundugu tek nokta — bkz.
  * requirement-websocket-notifications.md. {@link TableService}'in mutasyon metodlari {@link
  * #create} cagirir; DB satiri {@code AuditLogService} ile ayni ilkeyle (cagiranin transaction'ina
  * katilir, fail-closed) yazilir. WebSocket push'u ise bu sinifin sorumlulugunda degil: {@link
- * #create} sadece bir {@link NotificationCreatedEvent} yayinlar, push'u commit sonrasi calisan
- * ayri bir dinleyici yapar (bkz. Faz 3/NotificationPushListener) — boylece DB yazimi (garanti) ile
- * anlik bildirim (best-effort) birbirinden ayrisir (Req-3.4).
+ * #create} sadece transaction commit olduktan sonra RabbitMQ'ya bir {@link NotificationMessage}
+ * publish eder (bkz. backend/notlar "RabbitMQ koyulacak notification icin"), push'u kuyruktan
+ * tuketen ayri bir dinleyici yapar (bkz. websocket/RabbitNotificationListener) — boylece DB yazimi
+ * (garanti) ile anlik bildirim (best-effort) birbirinden ayrisir (Req-3.4).
  */
 @Service
 public class NotificationService {
 
-    private final NotificationRepository notificationRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
-    public NotificationService(NotificationRepository notificationRepository, ApplicationEventPublisher eventPublisher) {
+    private final NotificationRepository notificationRepository;
+    private final RabbitTemplate rabbitTemplate;
+
+    public NotificationService(NotificationRepository notificationRepository, RabbitTemplate rabbitTemplate) {
         this.notificationRepository = notificationRepository;
-        this.eventPublisher = eventPublisher;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     /**
@@ -41,6 +49,7 @@ public class NotificationService {
      * @param triggeredByUsername ayni kullanicinin adi — {@link Notification#tableName} gibi mesajda
      *                               gosterilecek metin icin denormalize edilir
      */
+    @Transactional
     public void create(DataTable table, Long triggeredByUserId, String triggeredByUsername,
             NotificationType type, String message) {
         Long ownerId = table.getCreatedByUserId();
@@ -50,9 +59,26 @@ public class NotificationService {
         Notification notification = new Notification(
                 ownerId, table.getId(), table.getName(), triggeredByUsername, type, message);
         Notification saved = notificationRepository.save(notification);
-        eventPublisher.publishEvent(new NotificationCreatedEvent(
+        NotificationMessage notificationMessage = new NotificationMessage(
                 saved.getId(), ownerId, saved.getTableId(), saved.getTableName(),
-                saved.getTriggeredByUsername(), saved.getType(), saved.getMessage(), saved.getCreatedAt()));
+                saved.getTriggeredByUsername(), saved.getType(), saved.getMessage(), saved.getCreatedAt());
+        // AFTER_COMMIT: eski @TransactionalEventListener(phase = AFTER_COMMIT) ile ayni sebep
+        // (Req-3.5) — rollback olabilecek bir islem icin RabbitMQ'ya "yalan" bir bildirim
+        // publish edilmemeli. Publish hatasi (broker erisilemez vs.) fail-open'dir: DB'ye
+        // yazilmis Notification satiri kalicidir, kullanici sonraki girisinde ilk-yukleme
+        // sayacindan zaten gorecek (Req-3.4).
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    rabbitTemplate.convertAndSend(
+                            RabbitConfig.NOTIFICATION_EXCHANGE, RabbitConfig.NOTIFICATION_ROUTING_KEY, notificationMessage);
+                } catch (Exception ex) {
+                    log.warn("Bildirim RabbitMQ'ya publish edilirken hata (notificationId={}): {}",
+                            saved.getId(), ex.getMessage());
+                }
+            }
+        });
     }
 
     /** Bildirim merkezi (Req-2.6): sadece isteyenin kendi bildirimleri, rol kisiti yok (Req-3.6). */

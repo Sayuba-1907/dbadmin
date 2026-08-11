@@ -226,6 +226,14 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
     }
 
+    @Test
+    @WithMockUser(username = "admin", roles = "VIEWER")
+    void viewer_yedekIndiremez() throws Exception {
+        mockMvc.perform(get("/api/maintenance/audit-logs/backups/backup-2026-01-01T00-00-00Z.json"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("AUTH_FORBIDDEN")));
+    }
+
     /** Paylasilan container'da audit_log bos olabilecegi icin yedeklenecek en az bir satir once garanti edilir. */
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")

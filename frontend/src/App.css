@@ -1107,6 +1107,19 @@ select:disabled {
   color: var(--color-accent);
 }
 
+.backup-file-download {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.backup-file-download:hover {
+  text-decoration: underline;
+}
+
 .backup-row-count {
   font-family: var(--font-mono);
   color: var(--color-text-secondary);

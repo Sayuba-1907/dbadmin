@@ -6,6 +6,7 @@ import {
   AuditLogBackupResult,
   AuditLogFilters,
   backupAuditLogs,
+  downloadBackupFile,
   getAuditLogs,
   getBackupList,
 } from "../api/auditLogs";
@@ -116,5 +117,6 @@ export function useMaintenance() {
     changeFilters,
     changePage,
     backup,
+    downloadBackup: downloadBackupFile,
   };
 }

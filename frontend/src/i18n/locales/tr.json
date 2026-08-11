@@ -135,7 +135,8 @@
     "colBackedUpAt": "Yedekleme Zamanı",
     "colBackedUpBy": "Kim",
     "colRowCount": "Satır Sayısı",
-    "colBackupFile": "Dosya"
+    "colBackupFile": "Dosya",
+    "downloadBackup": "İndir"
   },
   "notificationBell": {
     "buttonLabel": "Bildirimler",
@@ -186,7 +187,8 @@
     "kullaniciDeleted": "Kullanıcı silindi",
     "kullaniciDeleteFailed": "Kullanıcı silinemedi",
     "auditLogBackupSucceeded": "{{count}} audit log kaydı yedeklendi",
-    "auditLogBackupFailed": "Audit log yedeklenemedi"
+    "auditLogBackupFailed": "Audit log yedeklenemedi",
+    "auditLogBackupDownloadFailed": "Yedek dosyası indirilemedi"
   },
   "validation": {
     "required": "Lütfen bu alanı doldurun"

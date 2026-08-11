@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./client";
+import { API_BASE_URL, apiGet, apiPost, getAuthToken } from "./client";
 import { Page } from "./notifications";
 
 /** Backend's OperationType enum, same values (bkz. entity/OperationType.java). */
@@ -102,4 +102,30 @@ export interface AuditLogBackupListItem {
 /** {@code GET /api/maintenance/audit-logs/backups} (Req-2.6) — MinIO'daki gecmis yedeklerin listesi, sadece goruntuleme. */
 export function getBackupList(): Promise<AuditLogBackupListItem[]> {
   return apiGet<AuditLogBackupListItem[]>("/api/maintenance/audit-logs/backups");
+}
+
+/**
+ * {@code GET /api/maintenance/audit-logs/backups/{key}} (Req-2.6 genisletmesi) — yanit dosya
+ * govdesi (blob), JSON degil; client.ts'teki apiGet her zaman {@code response.json()} bekledigi
+ * icin burada ayri, ham bir fetch cagrisi yapilir. Tarayicinin indirme diyalogunu tetiklemek icin
+ * gecici bir {@code <a download>} elemani olusturulup hemen kaldirilir.
+ */
+export async function downloadBackupFile(key: string): Promise<void> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${API_BASE_URL}/api/maintenance/audit-logs/backups/${encodeURIComponent(key)}`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+  );
+  if (!response.ok) {
+    throw new Error(`backup indirilemedi: ${response.status}`);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = key;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

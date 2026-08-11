@@ -11,6 +11,7 @@ import {
   AuditLogFilters,
   AuditOperationType,
   AuditTargetType,
+  downloadBackupFile,
 } from "../api/auditLogs";
 import { ServiceHealth, SystemSummary } from "../api/maintenance";
 import { translateAuditDetail } from "../utils/translateAuditDetail";
@@ -54,6 +55,7 @@ interface MaintenancePanelProps {
   onFilterChange: (filters: AuditLogFilters) => void;
   onPageChange: (page: number) => void;
   onBackup: () => void;
+  onDownloadBackup: (key: string) => void;
 }
 
 /**
@@ -84,6 +86,7 @@ export function MaintenancePanel({
   onFilterChange,
   onPageChange,
   onBackup,
+  onDownloadBackup,
 }: MaintenancePanelProps) {
   const { t, i18n } = useTranslation();
   const [userIdInput, setUserIdInput] = useState("");
@@ -279,7 +282,14 @@ export function MaintenancePanel({
             field="key"
             header={t("maintenance.colBackupFile")}
             body={(row: AuditLogBackupListItem) => (
-              <span className="mono backup-file-key">{row.key}</span>
+              <button
+                type="button"
+                className="mono backup-file-key backup-file-download"
+                title={t("maintenance.downloadBackup")}
+                onClick={() => onDownloadBackup(row.key)}
+              >
+                {row.key}
+              </button>
             )}
           />
         </DataTable>

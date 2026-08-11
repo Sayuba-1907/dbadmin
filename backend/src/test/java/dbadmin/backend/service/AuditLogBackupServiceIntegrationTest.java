@@ -128,6 +128,27 @@ class AuditLogBackupServiceIntegrationTest extends AbstractIntegrationTest {
         assertEquals(1, found.rowCount());
     }
 
+    /** Yeni indirme ucunun (Req-2.6 genisletmesi) gercek yuklenmis dosyayi eksiksiz dondurdugunu dogrular. */
+    @Test
+    void downloadBackup_gecerliKey_dosyaIcerigineDoner() throws Exception {
+        resetAuditLog();
+        schemaService.createSchema("download_test_sema");
+        AuditLogBackupResponse result = auditLogBackupService.backup();
+
+        byte[] content = auditLogBackupService.downloadBackup(result.key());
+
+        JsonNode file = objectMapper.readTree(content);
+        assertEquals("admin", file.get("meta").get("backedUpBy").asText());
+        assertEquals(1, file.get("meta").get("rowCount").asInt());
+    }
+
+    /** Path traversal / rastgele MinIO key'i denemesi (bkz. AuditLogBackupService#KEY_PATTERN) — format tutmuyorsa MinIO'ya hic gidilmemeli. */
+    @Test
+    void downloadBackup_gecersizKeyFormati_validationExceptionFirlatir() {
+        assertThrows(ValidationException.class,
+                () -> auditLogBackupService.downloadBackup("../../etc/passwd"));
+    }
+
     private JsonNode readBackupFile(String key) throws Exception {
         try (var stream = minioClient.getObject(
                 GetObjectArgs.builder().bucket(bucket).object(key).build())) {

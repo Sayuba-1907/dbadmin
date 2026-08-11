@@ -6,6 +6,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.containers.RabbitMQContainer;
 
 // Shared real Postgres for every integration test - not H2, not a mock,
 // per the assignment's testing requirement. Uses Testcontainers' documented
@@ -43,10 +44,17 @@ public abstract class AbstractIntegrationTest {
                     .withExposedPorts(9000)
                     .waitingFor(Wait.forHttp("/minio/health/live").forPort(9000));
 
+    // Bildirim push'u artik RabbitMQ uzerinden gectigi icin (bkz. NotificationService/
+    // RabbitNotificationListener) push'u dogrulayan testler gercek bir broker'a ihtiyac duyar —
+    // Redis/MinIO'yla ayni gerekce.
+    static final RabbitMQContainer RABBITMQ =
+            new RabbitMQContainer("rabbitmq:3-management-alpine");
+
     static {
         POSTGRES.start();
         REDIS.start();
         MINIO.start();
+        RABBITMQ.start();
     }
 
     @DynamicPropertySource
@@ -60,5 +68,9 @@ public abstract class AbstractIntegrationTest {
                 () -> "http://" + MINIO.getHost() + ":" + MINIO.getMappedPort(9000));
         registry.add("app.minio.access-key", () -> "testminioadmin");
         registry.add("app.minio.secret-key", () -> "testminiosecret");
+        registry.add("spring.rabbitmq.host", RABBITMQ::getHost);
+        registry.add("spring.rabbitmq.port", RABBITMQ::getAmqpPort);
+        registry.add("spring.rabbitmq.username", RABBITMQ::getAdminUsername);
+        registry.add("spring.rabbitmq.password", RABBITMQ::getAdminPassword);
     }
 }

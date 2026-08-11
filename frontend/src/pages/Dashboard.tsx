@@ -125,6 +125,7 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
     changeFilters: changeAuditLogFilters,
     changePage: changeAuditLogPage,
     backup: backupAuditLogsHook,
+    downloadBackup: downloadBackupHook,
   } = useMaintenance();
   const { isAdmin } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -648,6 +649,14 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
     }
   }
 
+  async function handleDownloadBackup(key: string) {
+    try {
+      await downloadBackupHook(key);
+    } catch (err) {
+      notifyFromError(notify, t, err, t("notifications.auditLogBackupDownloadFailed"));
+    }
+  }
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -688,6 +697,7 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
           onFilterChange={changeAuditLogFilters}
           onPageChange={changeAuditLogPage}
           onBackup={handleBackupAuditLogs}
+          onDownloadBackup={handleDownloadBackup}
         />
       )}
 
