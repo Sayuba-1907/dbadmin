@@ -47,6 +47,7 @@ public final class ErrorCodeRegistry {
             Map.entry("VALIDATION_NO_PRIMARY_KEY", 40025),
             Map.entry("VALIDATION_MISSING_PRIMARY_KEY_VALUE", 40026),
             Map.entry("VALIDATION_PRIMARY_KEY_READONLY", 40027),
+            Map.entry("VALIDATION_INVALID_EMAIL", 40028),
             // 401
             Map.entry("AUTH_INVALID_CREDENTIALS", 40101),
             Map.entry("AUTH_REQUIRED", 40102),
@@ -73,6 +74,7 @@ public final class ErrorCodeRegistry {
             Map.entry("CONFLICT_DUPLICATE_USERNAME", 40906),
             Map.entry("CONFLICT_COLUMN_NOT_UNIQUE", 40907),
             Map.entry("CONFLICT_LAST_ADMIN", 40908),
+            Map.entry("CONFLICT_DUPLICATE_EMAIL", 40909),
             // 500
             Map.entry("INTERNAL_ERROR", 50001),
             // 502 — disaridaki bir bagimlilik basarisiz oldu (uygulamanin kendi hatasi degil)

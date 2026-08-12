@@ -14,6 +14,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Tam satiri cekmeden sadece var/yok bilgisini doner — uniqueness kontrolu icin daha ucuz. */
     boolean existsByUsername(String username);
 
+    /** Profil guncellemesinde email benzersizligi icin — uniqueness kontrolu icin existsByUsername'in ayni deseni. */
+    boolean existsByEmail(String email);
+
     /** Tablo sahipligi backfill'i (TableOwnerBackfillRunner) icin: ilk ADMIN'i id'ye gore secer, sonuc deterministik olsun diye. */
     Optional<User> findFirstByRoleOrderByIdAsc(Role role);
 }

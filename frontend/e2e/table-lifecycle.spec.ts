@@ -94,6 +94,14 @@ test("tablo olustur, kolon ekle/sil ve geri al, sonra tabloyu temizle", async ({
   const confirmDialog = page.getByRole("alertdialog");
   await confirmDialog.getByRole("button", { name: "Sil" }).click();
   await expect(page.getByText("Tablo silindi")).toBeVisible();
+  // Gercek DELETE istegi hemen gitmez: Dashboard.tsx#handleDeleteTablo, "Geri Al" penceresi
+  // (NOTIFICATION_DURATION_MS=5s) boyunca sadece iyimser/optimistic olarak UI'dan kaldirir,
+  // asil istegi bir setTimeout ile erteler. Hemen reload edersek o zamanlayici (eski sayfayla
+  // birlikte) hic ateslenmez ve tablo backend'de KALIR — toast'in kendiliginden kapanmasini
+  // beklemek gecikmenin gectigini garanti eder. (Asagidaki toHaveCount(0) da aslinda bunu
+  // kanitlamiyordu: reload sonrasi hicbir sema acik olmadigi icin buton zaten hic render
+  // olmuyordu, tablo backend'de kalsa da kalmasa da sonuc ayniydi.)
+  await expect(page.getByText("Tablo silindi")).toBeHidden({ timeout: 8000 });
 
   await page.reload();
   await expect(page.getByRole("button", { name: tableName })).toHaveCount(0);

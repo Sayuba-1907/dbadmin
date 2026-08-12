@@ -21,6 +21,7 @@ export interface LoginResult {
   id: number;
   username: string;
   fullName: string | null;
+  email: string | null;
   role: Role;
   hasAvatar: boolean;
 }
@@ -35,14 +36,15 @@ export function me(): Promise<LoginResult> {
 }
 
 /**
- * Kendi profilini gunceller (ad soyad ve/veya kullanici adi). username degisirse donen
+ * Kendi profilini gunceller (ad soyad, kullanici adi ve/veya e-posta). username degisirse donen
  * {@code token} dolu gelir — AuthProvider bunu sessizce eskisinin yerine yazmali.
  */
 export function updateProfile(
   fullName: string | null,
-  username: string | null
+  username: string | null,
+  email: string | null
 ): Promise<LoginResult> {
-  return apiPatch<LoginResult>("/api/auth/me", { fullName, username });
+  return apiPatch<LoginResult>("/api/auth/me", { fullName, username, email });
 }
 
 export function changePassword(currentPassword: string, newPassword: string): Promise<void> {

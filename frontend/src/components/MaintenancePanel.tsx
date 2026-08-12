@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Paginator, PaginatorPageChangeEvent } from "primereact/paginator";
+import { Timeline } from "primereact/timeline";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import {
@@ -40,6 +41,12 @@ const SUMMARY_NAV_TARGETS: Partial<Record<SummaryField, WorkspaceView>> = {
  */
 const MAINTENANCE_TABS = ["entities", "serviceStatus", "auditLog", "backups"] as const;
 type MaintenanceTab = (typeof MAINTENANCE_TABS)[number];
+
+/** Audit log iki farkli gorunumde okunabilir: DataTable (tarama/filtreleme icin) ve Timeline
+ *  ("demo'da iyi duran" bir kronolojik akis, bkz. requirement notu 10). Ikisi de ayni
+ *  auditLogs/page/pageSize state'ini paylasir, sadece render sekli degisiyor. */
+const AUDIT_VIEWS = ["table", "timeline"] as const;
+type AuditView = (typeof AUDIT_VIEWS)[number];
 
 const TAB_LABEL_KEYS: Record<MaintenanceTab, string> = {
   entities: "tabEntities",
@@ -121,6 +128,7 @@ export function MaintenancePanel({
 }: MaintenancePanelProps) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<MaintenanceTab>("entities");
+  const [auditView, setAuditView] = useState<AuditView>("table");
   const [userIdInput, setUserIdInput] = useState("");
   const [targetTypeInput, setTargetTypeInput] = useState<AuditTargetType | "">("");
   const [targetIdInput, setTargetIdInput] = useState("");
@@ -238,12 +246,28 @@ export function MaintenancePanel({
           <div className="tab-panel">
             <div className="maintenance-audit-header flex align-items-center justify-content-between">
               <h3>{t("maintenance.auditLogTitle")}</h3>
-              <Button
-                className="btn btn-primary"
-                label={t("maintenance.backup")}
-                loading={backingUp}
-                onClick={onBackup}
-              />
+              <div className="flex align-items-center" style={{ gap: "var(--space-3)" }}>
+                <div className="audit-view-toggle" role="tablist">
+                  {AUDIT_VIEWS.map((view) => (
+                    <button
+                      key={view}
+                      type="button"
+                      role="tab"
+                      aria-selected={auditView === view}
+                      className={`btn btn-sm ${auditView === view ? "btn-primary" : "btn-secondary"}`}
+                      onClick={() => setAuditView(view)}
+                    >
+                      {t(`maintenance.view${view === "table" ? "Table" : "Timeline"}`)}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  className="btn btn-primary"
+                  label={t("maintenance.backup")}
+                  loading={backingUp}
+                  onClick={onBackup}
+                />
+              </div>
             </div>
 
             <form
@@ -295,47 +319,92 @@ export function MaintenancePanel({
               </button>
             </form>
 
-            <DataTable
-              // "Detail" hucresi (translateAuditDetail) dil disindaki bir kaynaga (i18n.language)
-              // bagli — DataTable'in kendisi bunu bir prop olarak izlemedigi icin (satirlar sadece
-              // `value` referansi degisince yeniden render ediliyor), dil degisince tabloyu
-              // key ile yeniden monte ederek satirlarin taze cevirtilmesini garanti ediyoruz.
-              key={i18n.language}
-              value={auditLogs}
-              dataKey="id"
-              loading={loading}
-              className="audit-log-table w-full"
-              emptyMessage={t("maintenance.auditLogEmpty")}
-            >
-              <Column
-                field="createdAt"
-                header={t("maintenance.colCreatedAt")}
-                body={(row: AuditLog) => new Date(row.createdAt).toLocaleString()}
-              />
-              <Column field="username" header={t("maintenance.colUsername")} />
-              <Column
-                field="operationType"
-                header={t("maintenance.colOperationType")}
-                body={(row: AuditLog) => (
+            {auditView === "table" ? (
+              <DataTable
+                // "Detail" hucresi (translateAuditDetail) dil disindaki bir kaynaga (i18n.language)
+                // bagli — DataTable'in kendisi bunu bir prop olarak izlemedigi icin (satirlar sadece
+                // `value` referansi degisince yeniden render ediliyor), dil degisince tabloyu
+                // key ile yeniden monte ederek satirlarin taze cevirtilmesini garanti ediyoruz.
+                key={i18n.language}
+                value={auditLogs}
+                dataKey="id"
+                loading={loading}
+                className="audit-log-table w-full"
+                emptyMessage={t("maintenance.auditLogEmpty")}
+              >
+                <Column
+                  field="createdAt"
+                  header={t("maintenance.colCreatedAt")}
+                  body={(row: AuditLog) => new Date(row.createdAt).toLocaleString()}
+                />
+                <Column field="username" header={t("maintenance.colUsername")} />
+                <Column
+                  field="operationType"
+                  header={t("maintenance.colOperationType")}
+                  body={(row: AuditLog) => (
+                    <span
+                      className={`operation-badge operation-${operationCategory(row.operationType)}`}
+                    >
+                      {row.operationType}
+                    </span>
+                  )}
+                />
+                <Column
+                  header={t("maintenance.colTarget")}
+                  body={(row: AuditLog) => (
+                    <span className="mono">{`${row.targetType}#${row.targetId}`}</span>
+                  )}
+                />
+                <Column
+                  field="detail"
+                  header={t("maintenance.colDetail")}
+                  body={(row: AuditLog) => translateAuditDetail(row.detail, i18n.language)}
+                />
+              </DataTable>
+            ) : auditLogs.length === 0 ? (
+              <p className="audit-timeline-empty">{t("maintenance.auditLogEmpty")}</p>
+            ) : (
+              <Timeline
+                key={i18n.language}
+                value={auditLogs}
+                dataKey="id"
+                className="audit-timeline"
+                pt={{
+                  event: { className: "audit-timeline-event" },
+                  opposite: { className: "audit-timeline-opposite" },
+                  separator: { className: "audit-timeline-separator" },
+                  marker: { className: "audit-timeline-marker" },
+                  connector: { className: "audit-timeline-connector" },
+                  content: { className: "audit-timeline-content" },
+                }}
+                opposite={(row: AuditLog) => new Date(row.createdAt).toLocaleString()}
+                marker={(row: AuditLog) => (
                   <span
-                    className={`operation-badge operation-${operationCategory(row.operationType)}`}
-                  >
-                    {row.operationType}
-                  </span>
+                    className={`audit-timeline-dot operation-${operationCategory(row.operationType)}`}
+                    aria-hidden="true"
+                  />
+                )}
+                content={(row: AuditLog) => (
+                  <div className="audit-timeline-card">
+                    <div className="audit-timeline-card-header flex align-items-center justify-content-between">
+                      <span
+                        className={`operation-badge operation-${operationCategory(row.operationType)}`}
+                      >
+                        {row.operationType}
+                      </span>
+                      <span className="audit-timeline-card-meta">
+                        {row.username}
+                        {" · "}
+                        <span className="mono">{`${row.targetType}#${row.targetId}`}</span>
+                      </span>
+                    </div>
+                    <p className="audit-timeline-card-detail">
+                      {translateAuditDetail(row.detail, i18n.language)}
+                    </p>
+                  </div>
                 )}
               />
-              <Column
-                header={t("maintenance.colTarget")}
-                body={(row: AuditLog) => (
-                  <span className="mono">{`${row.targetType}#${row.targetId}`}</span>
-                )}
-              />
-              <Column
-                field="detail"
-                header={t("maintenance.colDetail")}
-                body={(row: AuditLog) => translateAuditDetail(row.detail, i18n.language)}
-              />
-            </DataTable>
+            )}
 
             <Paginator
               first={page * pageSize}

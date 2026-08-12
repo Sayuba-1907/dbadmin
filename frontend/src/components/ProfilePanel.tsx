@@ -27,10 +27,11 @@ const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp"];
 export function ProfilePanel() {
   const { t } = useTranslation();
   const notify = useNotify();
-  const { username, fullName, hasAvatar, applyProfileUpdate } = useAuth();
+  const { username, fullName, email, hasAvatar, applyProfileUpdate } = useAuth();
 
   const [fullNameInput, setFullNameInput] = useState(fullName ?? "");
   const [usernameInput, setUsernameInput] = useState(username ?? "");
+  const [emailInput, setEmailInput] = useState(email ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -87,7 +88,11 @@ export function ProfilePanel() {
     event.preventDefault();
     setSavingProfile(true);
     try {
-      const result = await updateProfile(fullNameInput.trim() || null, usernameInput.trim());
+      const result = await updateProfile(
+        fullNameInput.trim() || null,
+        usernameInput.trim(),
+        emailInput.trim() || null
+      );
       applyProfileUpdate(result);
       notify(200, t("profile.profileSaved"));
     } catch (err) {
@@ -222,6 +227,15 @@ export function ProfilePanel() {
           <label className="profile-field">
             <span>{t("profile.username")}</span>
             <InputText value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} />
+          </label>
+          <label className="profile-field">
+            <span>{t("profile.email")}</span>
+            <InputText
+              type="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              placeholder={t("profile.emailPlaceholder")}
+            />
           </label>
           <Button
             className="btn btn-primary"

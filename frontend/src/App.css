@@ -1189,18 +1189,18 @@ select:disabled {
 
 .settings-admin-links {
   gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
 }
 
 .settings-admin-links a {
   text-decoration: none;
   flex: 1;
   min-width: 200px;
+  max-width: 280px;
 }
 
 .settings-admin-divider {
   border-top: 1px solid var(--color-border);
-  margin-bottom: var(--space-5);
 }
 
 .maintenance-audit-header h3 {
@@ -1363,6 +1363,114 @@ select:disabled {
   color: var(--color-text-secondary);
   background-color: var(--color-surface-raised);
   border: 1px solid var(--color-border);
+}
+
+.audit-view-toggle {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* PrimeReactProvider global "unstyled: true" oldugu icin (bkz. App.tsx) Timeline hicbir p-timeline-*
+   class'i basmiyor, sadece data-pc-section attributelari kaliyor — pt={{ event: {className...} }}
+   ile kendi class'larimizi bastigimiz icin asagida ONLARI hedefliyoruz (schema-tree'deki
+   [data-pc-section="toggler"] deseniyle ayni gerekce). */
+.audit-timeline {
+  margin-top: var(--space-3);
+}
+
+.audit-timeline-event {
+  display: flex;
+  position: relative;
+  min-height: 0;
+}
+
+.audit-timeline-opposite {
+  flex: 0 0 150px;
+  padding: 0 var(--space-3) var(--space-4) 0;
+  text-align: right;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.audit-timeline-separator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0;
+}
+
+.audit-timeline-marker {
+  align-self: baseline;
+  margin-top: 4px;
+}
+
+.audit-timeline-connector {
+  flex-grow: 1;
+  width: 2px;
+  min-height: var(--space-3);
+  background-color: var(--color-border);
+  margin: 2px 0;
+}
+
+.audit-timeline-content {
+  flex: 1;
+  padding: 0 0 var(--space-4);
+  min-width: 0;
+}
+
+.audit-timeline-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.audit-timeline-dot.operation-created {
+  background-color: var(--color-success);
+}
+
+.audit-timeline-dot.operation-deleted {
+  background-color: var(--color-danger);
+}
+
+.audit-timeline-dot.operation-changed {
+  background-color: var(--color-text-secondary);
+}
+
+.audit-timeline-card {
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  transition: border-color var(--transition-fast);
+}
+
+.audit-timeline-card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.audit-timeline-card-header {
+  gap: var(--space-3);
+}
+
+.audit-timeline-card-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.audit-timeline-card-detail {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
+
+.audit-timeline-empty {
+  color: var(--color-text-secondary);
+  padding: var(--space-4) 0;
 }
 
 .backup-file-key {

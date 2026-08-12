@@ -10,6 +10,7 @@ function renderNav(role: AuthContextValue["role"]) {
     id: 1,
     username: "test",
     fullName: null,
+    email: null,
     hasAvatar: false,
     role,
     canWrite: role === "EDITOR" || role === "ADMIN",

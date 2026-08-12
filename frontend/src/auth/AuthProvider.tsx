@@ -27,6 +27,7 @@ export interface AuthContextValue {
   id: number | null;
   username: string | null;
   fullName: string | null;
+  email: string | null;
   hasAvatar: boolean;
   role: Role | null;
   /** role EDITOR ya da ADMIN ise true — "kimisi update edebilsin kimisi edemesin" burada okunur. */
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [id, setId] = useState<number | null>(null);
   const [username, setKullaniciAdi] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [hasAvatar, setHasAvatar] = useState(false);
   const [role, setRol] = useState<Role | null>(null);
   const notify = useNotify();
@@ -79,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setId(null);
     setKullaniciAdi(null);
     setFullName(null);
+    setEmail(null);
     setHasAvatar(false);
     setRol(null);
     setStatus("anonymous");
@@ -112,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setId(result.id);
         setKullaniciAdi(result.username);
         setFullName(result.fullName);
+        setEmail(result.email);
         setHasAvatar(result.hasAvatar);
         setRol(result.role);
         setStatus("authenticated");
@@ -128,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setId(result.id);
     setKullaniciAdi(result.username);
     setFullName(result.fullName);
+    setEmail(result.email);
     setHasAvatar(result.hasAvatar);
     setRol(result.role);
     setStatus("authenticated");
@@ -142,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setId(result.id);
     setKullaniciAdi(result.username);
     setFullName(result.fullName);
+    setEmail(result.email);
     setHasAvatar(result.hasAvatar);
     setRol(result.role);
   }, []);
@@ -151,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     id,
     username,
     fullName,
+    email,
     hasAvatar,
     role,
     canWrite: role === "EDITOR" || role === "ADMIN",

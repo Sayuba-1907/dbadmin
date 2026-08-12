@@ -24,13 +24,15 @@ public record LoginResponse(
         @Schema(description = "Kullanici adi.", example = "admin") String username,
         @Schema(description = "Ad soyad — bossa frontend username'i gosterir.", example = "Salih Bayraktar")
                 String fullName,
+        @Schema(description = "E-posta — opsiyonel, girilmemisse null.", example = "salih@example.com")
+                String email,
         @Schema(description = "Kullanicinin rolu.", example = "ADMIN") Role role,
         @Schema(description = "Profil fotografi yuklenmis mi — true ise GET /api/auth/me/avatar'dan cekilebilir.")
                 boolean hasAvatar) {
 
     public static LoginResponse of(String token, User user) {
         return new LoginResponse(
-                token, user.getId(), user.getUsername(), user.getFullName(), user.getRole(),
+                token, user.getId(), user.getUsername(), user.getFullName(), user.getEmail(), user.getRole(),
                 user.getAvatarKey() != null);
     }
 }

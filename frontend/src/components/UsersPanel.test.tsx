@@ -17,6 +17,7 @@ const ADMIN_AUTH: AuthContextValue = {
   id: 1,
   username: "admin",
   fullName: null,
+  email: null,
   hasAvatar: false,
   role: "ADMIN",
   canWrite: true,

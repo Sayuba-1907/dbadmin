@@ -12,6 +12,7 @@ function renderLoginPage(login: AuthContextValue["login"]) {
     id: null,
     username: null,
     fullName: null,
+    email: null,
     hasAvatar: false,
     role: null,
     canWrite: false,

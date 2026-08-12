@@ -45,6 +45,10 @@ public class User {
     @Column(name = "full_name")
     private String fullName;
 
+    /** Iletisim e-postasi — opsiyonel, girisle ilgisi yok (login hala username uzerinden). */
+    @Column(name = "email")
+    private String email;
+
     /** MinIO'daki profil fotografinin object key'i (ornek: {@code avatars/42}) — foto yoksa null. */
     @Column(name = "avatar_key")
     private String avatarKey;
@@ -97,6 +101,14 @@ public class User {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getAvatarKey() {

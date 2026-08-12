@@ -148,7 +148,7 @@ public class AuthController {
     public LoginResponse updateProfile(
             Authentication authentication, @RequestBody UpdateProfileRequest request, HttpServletRequest httpRequest) {
         User user = userService.updateProfile(
-                authentication.getName(), request.fullName(), request.username());
+                authentication.getName(), request.fullName(), request.username(), request.email());
         // Sadece username gercekten degistiyse taze token uret — fullName-only guncellemede
         // eski token hala tamamen gecerli, gereksiz yere yeni bir token dagitmaya gerek yok.
         boolean usernameChanged = request.username() != null && !request.username().equals(authentication.getName());

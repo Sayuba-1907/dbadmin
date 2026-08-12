@@ -10,5 +10,7 @@ public record UpdateProfileRequest(
         @Schema(description = "Yeni ad soyad. Null ise degismez.", example = "Salih Bayraktar")
                 String fullName,
         @Schema(description = "Yeni kullanici adi. Null ise degismez.", example = "salih_b")
-                String username) {
+                String username,
+        @Schema(description = "Yeni e-posta. Null ise degismez, bos string temizler.", example = "salih@example.com")
+                String email) {
 }

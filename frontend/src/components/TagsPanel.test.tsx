@@ -19,6 +19,7 @@ const EDITOR_AUTH: AuthContextValue = {
   id: 1,
   username: "test_kullanici",
   fullName: null,
+  email: null,
   hasAvatar: false,
   role: "EDITOR",
   canWrite: true,

@@ -11,6 +11,7 @@ import dbadmin.backend.exception.NotFoundException;
 import dbadmin.backend.exception.ValidationException;
 import dbadmin.backend.repository.UserRepository;
 import dbadmin.backend.security.UserRoleCacheService;
+import dbadmin.backend.validation.EmailValidator;
 import dbadmin.backend.validation.NameValidator;
 import java.io.IOException;
 import java.util.List;
@@ -176,13 +177,16 @@ public class UserService {
 
     /**
      * Kendi profilini gunceller (bkz. requirement notu "6) User sayfasi -> User Profile").
-     * Her iki alan da opsiyonel — {@code null} olan degismez. {@code fullName} icin bicim
+     * Uc alan da opsiyonel — {@code null} olan degismez. {@code fullName} icin bicim
      * kontrolu yok (serbest metin, Türkce karakter/bosluk dahil) — {@code username} icin ise
      * {@code createUser}'daki AYNI kural gecerli (NameValidator + benzersizlik), cunku login/JWT/
-     * WebSocket kimlik dogrulamasi hala buna dayanir.
+     * WebSocket kimlik dogrulamasi hala buna dayanir. {@code email} sadece bicim + benzersizlik
+     * kontrolunden gecer, login/JWT ona dayanmaz — bos string gelirse (username/fullName'den
+     * farkli olarak "isblank => temizle" degil, aciyken bos gonderilmesi zaten formdan gelmez)
+     * yine de temizlemeye izin verilir.
      */
     @Transactional
-    public User updateProfile(String currentUsername, String newFullName, String newUsername) {
+    public User updateProfile(String currentUsername, String newFullName, String newUsername, String newEmail) {
         User user = getUserByUsername(currentUsername);
         if (newFullName != null) {
             user.setFullName(newFullName.isBlank() ? null : newFullName);
@@ -200,6 +204,20 @@ public class UserService {
             // silinmezse bir sonraki JwtAuthenticationFilter cagrisi eski adla DB'de kullanici
             // bulamayip 401 atardi (ayni gerekce icin bkz. changeRole/deleteUser).
             userRoleCacheService.evict(currentUsername);
+        }
+        if (newEmail != null) {
+            if (newEmail.isBlank()) {
+                user.setEmail(null);
+            } else if (!newEmail.equals(user.getEmail())) {
+                EmailValidator.validate(newEmail);
+                if (userRepository.existsByEmail(newEmail)) {
+                    throw new ConflictException(
+                            "CONFLICT_DUPLICATE_EMAIL",
+                            "a user with email '" + newEmail + "' already exists",
+                            Map.of("email", newEmail));
+                }
+                user.setEmail(newEmail);
+            }
         }
         return user;
     }
