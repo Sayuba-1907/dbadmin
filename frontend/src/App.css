@@ -24,8 +24,14 @@
    absolute pozisyonla DISARI tasmasi gerekiyor — overflow-y:auto versek (CSS'te bir eksen
    non-visible olunca digeri de auto'ya doner) flyout kirpilir/scrollbar'a donerdi (yasandi). */
 
+/* react-window'un List'i KENDI ic kaydirmasini yapiyor (bkz. .schema-tree-scroll asagida), o
+   yuzden .sidebar artik overflow-y:auto DEGIL — bunun yerine bir flex container: arama/buton
+   satirlari dogal yuksekliginde sabit kalir, agac (schema-tree-scroll) flex:1 ile kalan TUM
+   alani kaplar ve List'in style={{height:"100%"}}'u buna gore cozulur. */
 .sidebar {
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .detail-panel {
@@ -446,31 +452,24 @@ select:disabled {
   border-color: var(--color-border-strong);
 }
 
-/* Sidebar agaci artik PrimeReact'in Tree bileseni — unstyled modda p-* class'lari hic
-   eklenmedigi icin (bkz. NotificationProvider/ConfirmProvider'daki ayni not) Tree'nin kendi
-   yapisal parcalarini (liste/dugum/toggler) buradaki data-pc-section/role secicileriyle
-   kendimiz giydiriyoruz. Icerigin kendisi (isim, renk noktasi, Edit/Delete, surukle-birak)
-   hala tamamen bizim nodeTemplate'imizde (TabloSidebar.tsx).*/
-.schema-tree {
+/* Sidebar agaci (schema -> tablo -> kolon) artik PrimeReact Tree DEGIL — react-window'un
+   sanallastirilmis List'i uzerine kurulu DUZ bir liste (bkz. TableSidebar.tsx'teki FlatRow
+   javadoc'u: PrimeReact Tree'de hicbir surumde virtualization yoktu, binlerce tablolu bir
+   schema'da butun agac DOM'a basiliyor, bu da saniyelerce donmaya yol aciyordu). Her satir
+   {@code .sidebar-row}, derinligini {@code data-depth} attribute'uyla tasir (0=schema,
+   1=tablo, 2=kolon) — girinti tek bir attribute selector ile cozuluyor, PrimeReact'in
+   [role="group"] ic ice yapisina gerek kalmadi. */
+.schema-tree-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   margin-top: var(--space-3);
 }
 
-.schema-tree [role="tree"],
-.schema-tree [role="group"] {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.schema-tree {
+  height: 100%;
 }
 
-.schema-tree [role="treeitem"] {
-  list-style: none;
-}
-
-.schema-tree > [role="tree"] > [role="treeitem"] {
-  margin-bottom: 2px;
-}
-
-.schema-tree [data-pc-section="content"] {
+.sidebar-row {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -480,7 +479,17 @@ select:disabled {
     outline-color var(--transition-base);
 }
 
-.schema-tree [data-pc-section="toggler"] {
+/* Uc seviyeye kadar inebilen bir agacta 24px'lik girinti cok hizli yer yiyordu (3 seviye =
+   72px, 240px'lik sidebar'in ucte birinden fazlasi) — 16px/seviye kullanildi. */
+.sidebar-row[data-depth="1"] {
+  padding-left: 16px;
+}
+
+.sidebar-row[data-depth="2"] {
+  padding-left: 32px;
+}
+
+.sidebar-toggler {
   flex-shrink: 0;
   width: 22px;
   height: 22px;
@@ -493,33 +502,17 @@ select:disabled {
   cursor: pointer;
   color: var(--color-text-secondary);
   border-radius: var(--radius-sm);
+  font-size: 10px;
 }
 
-.schema-tree [data-pc-section="toggler"]:hover {
+.sidebar-toggler:hover {
   background-color: var(--color-surface-raised);
-}
-
-.schema-tree [data-pc-section="togglericon"] {
-  width: 11px;
-  height: 11px;
-}
-
-/* Gercek yaprak dugumlerde (kolon/bos-durum/yukleniyor satirlari) de bir toggler butonu render
-   ediliyor (hizalama icin, temada normalde gorunmez kilinir) — bizde tema yok, elle gizliyoruz.
-   aria-level bu derinlikte PrimeReact tarafindan hic set edilmiyor (bir kutuphane garipligi),
-   o yuzden seviyeye gore degil ICERIGE gore hedefliyoruz — :has() ile "icinde kolon/bos-durum/
-   yukleniyor gorunumu olan content" secilip onun togglerini gizliyoruz. Schema ve tablo
-   dugumlerinin togglerlari boylece dokunulmadan gorunur/tiklanabilir kalir. */
-.schema-tree
-  [data-pc-section="content"]:has(> .sidebar-column-item, > .sidebar-column-loading, > .empty-hint)
-  [data-pc-section="toggler"] {
-  visibility: hidden;
 }
 
 /* min-width: 0 olmadan flex ogeleri varsayilan olarak kendi icerik genisliklerinin altina
    kuculemiyor — sidebar'in dar (240px) alaninda uc seviyeli agacta (schema>tablo>kolon) bu,
    PK/tip rozetlerinin tasmasina yol aciyordu. Bu tek satir butun agac icin kok neden duzeltmesi. */
-.schema-tree [data-pc-section="content"] {
+.sidebar-row {
   min-width: 0;
 }
 
@@ -527,7 +520,6 @@ select:disabled {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px var(--space-2);
   font-size: var(--text-sm);
   min-width: 0;
 }
@@ -543,19 +535,9 @@ select:disabled {
 }
 
 .sidebar-column-loading {
-  padding: 5px var(--space-2);
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 4px;
-}
-
-/* Uc seviyeye kadar inebilen bir agacta 24px'lik girinti cok hizli yer yiyordu (3 seviye =
-   72px, 240px'lik sidebar'in ucte birinden fazlasi) — 16px'e dusuruldu. */
-.schema-tree [role="group"] {
-  margin: 2px 0 4px;
-  padding: 0 0 0 10px;
-  border-left: 1px solid var(--color-border);
-  margin-left: 16px;
 }
 
 .schema-header-row {

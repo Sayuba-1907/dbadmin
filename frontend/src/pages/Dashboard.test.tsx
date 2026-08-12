@@ -372,15 +372,11 @@ test("tabloyu surukleyip baska schema'nin uzerine birakinca o schema'ya tasir", 
   await waitFor(() => expect(screen.getByText("kayitlar")).toBeInTheDocument());
 
   // Schema varsayilan kapali baslar; icindeki tabloyu gormek icin acmak lazim. Isme tiklamak
-  // artik genisletmiyor (Tree'nin kendi ayri toggler butonu var, bkz. TableSidebar.tsx) —
-  // toggler'i "kayitlar" satirinin en yakin treeitem'i icinde arayip ona tikliyoruz.
-  const kayitlarNode = screen.getByText("kayitlar").closest('[role="treeitem"]') as HTMLElement;
-  // Toggler'in erisilebilir bir adi yok (sadece aria-hidden bir SVG icon), o yuzden role
-  // sorgusu yerine PrimeReact'in kendi kararli data-pc-section niteligiyle buluyoruz.
-  fireEvent.click(kayitlarNode.querySelector('[data-pc-section="toggler"]') as HTMLElement);
+  // da genisletir (bkz. TableSidebar.tsx'teki toggleSchema) ama testte ayni satirdaki ayri
+  // toggler butonuna (.sidebar-toggler) tiklamak niyeti daha acik ifade ediyor.
+  const kayitlarRow = screen.getByText("kayitlar").closest(".schema-header-row") as HTMLElement;
+  fireEvent.click(kayitlarRow.querySelector(".sidebar-toggler") as HTMLElement);
   const tableItem = await screen.findByText("kullanicilar");
-  // Drop handler'lari artik <li> (treeitem) uzerinde degil, onun icindeki schema-header-row
-  // div'inde — bkz. TableSidebar.tsx'teki nodeTemplate.
   const targetDropZone = screen.getByText("ogrenciler").closest(".schema-header-row");
   expect(targetDropZone).not.toBeNull();
 

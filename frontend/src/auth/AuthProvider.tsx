@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { LoginResult, Role, me, login as apiLogin } from "../api/auth";
-import { setAuthToken, setOnUnauthorized } from "../api/client";
+import { ApiError, setAuthToken, setOnUnauthorized } from "../api/client";
 import { useNotify } from "../notifications/NotificationProvider";
 
 /** Sayfa yenilendiginde giris durumunu hatirlamak icin token buraya yazilir. */
@@ -120,7 +120,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRol(result.role);
         setStatus("authenticated");
       })
-      .catch(() => logout());
+      .catch((error) => {
+        // Sadece token gercekten gecersiz/suresi dolmussa (401 AUTH_REQUIRED) localStorage'daki
+        // token'i silip disari atalim. Aksi halde (network hatasi, backend'in gecici yavasligi/
+        // 500'u) gecerli olabilecek bir token'i silmis oluruz — kullanici hicbir sey yapmadan
+        // "logout" edilmis gibi görünür. Bu durumda sadece ekrani acip token'i saklı tutuyoruz,
+        // bir sonraki basarili istek oturumu kendiliginden dogrular.
+        if (error instanceof ApiError && error.status === 401) {
+          logout();
+        } else {
+          setStatus("anonymous");
+        }
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TableSummary, deleteSchema, getWorkspace } from "../api/schemas";
 import {
@@ -146,6 +146,22 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
   const notify = useNotify();
   const { t } = useTranslation();
 
+  // handleDeleteSchema/handleChangeTableSchema asagida useCallback ile TAMAMEN kararli
+  // (bagimlilik listesi bos/degismeyen) tutuluyor — bkz. TableSidebar.tsx'teki Tree/memo
+  // yorumu: TableSidebar binlerce tabloyu tek agacta renderliyor ve PrimeReact'in bu Tree
+  // bileseninde virtualization yok, o yuzden Tree'ye giden HERHANGI bir prop (dolayisiyla
+  // nodeTemplate'in referans aldigi bu handler'lar) referans degistirdiginde Tree butun
+  // agaci yeniden kuruyor — saniyelerce donmaya yol aciyordu. Ama bu iki fonksiyonun
+  // calisirken selectedId/draft/tableSummariesBySchema'nin GUNCEL degerine ihtiyaci var; bu
+  // yuzden onlari reactive closure yerine ref'ten okuyorlar — boylece fonksiyonlar hicbir
+  // zaman yeniden kurulmuyor ama her zaman en guncel degeri gorüyor.
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const tableSummariesBySchemaRef = useRef(tableSummariesBySchema);
+  tableSummariesBySchemaRef.current = tableSummariesBySchema;
+
   /**
    * Sidebar'in tablo ozetlerini (tableSummariesBySchema) tek istekte tazeler — GET
    * /api/schemalar/schemaList, schema+tablo agacini backend'de tek sorguda birlestirip
@@ -156,7 +172,7 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
    * fonksiyon her cagrildiginda hook'un kendi verisini de ({@code refreshSchemas}) birlikte
    * tazeliyor; boylece iki kaynak (workspace agaci + sema listesi) senkron kalir.
    */
-  async function refreshWorkspace() {
+  const refreshWorkspace = useCallback(async () => {
     const workspace = await getWorkspace();
     setTableSummariesBySchema(
       Object.fromEntries(
@@ -167,27 +183,36 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
       )
     );
     await refreshSchemas();
-  }
+  }, [refreshSchemas]);
 
   /** Bir tabloyu secip TAM detayini (columns dahil) id'siyle ceker ve duzenleme taslagini kurar. */
-  async function selectTable(id: number) {
-    setSelectedId(id);
-    try {
-      const table = await selectTableHook(id);
-      setDraft(buildTableDraft(table));
-    } catch (err) {
-      notifyFromError(notify, t, err, t("notifications.loadFailed"));
-      setSelectedId(null);
-      clearTableSelection();
-      setDraft(null);
-    }
-  }
+  // useCallback: TableSidebar binlerce tabloyu tek bir agac olarak renderliyor ve her satiri
+  // memo'yla koruyor (bkz. TableSidebar.tsx'teki TableNodeButton yorumu) — bu SADECE onSelect
+  // (asagida handleSelectTablo araciligiyla buraya baglaniyor) her render'da ayni referansi
+  // koruduğunda ise yarar. Sade bir "function selectTable(){}" bildirimi Dashboard her
+  // render olduğunda YENI bir fonksiyon olurdu, bu da memo'yu boşa çıkarıp binlerce satırın
+  // yeniden render olmasina (gözle görülür bir gecikmeye) yol açardı.
+  const selectTable = useCallback(
+    async (id: number) => {
+      setSelectedId(id);
+      try {
+        const table = await selectTableHook(id);
+        setDraft(buildTableDraft(table));
+      } catch (err) {
+        notifyFromError(notify, t, err, t("notifications.loadFailed"));
+        setSelectedId(null);
+        clearTableSelection();
+        setDraft(null);
+      }
+    },
+    [selectTableHook, notify, t, clearTableSelection]
+  );
 
-  function clearSelection() {
+  const clearSelection = useCallback(() => {
     setSelectedId(null);
     clearTableSelection();
     setDraft(null);
-  }
+  }, [clearTableSelection]);
 
   // Bildirim panelinden "bu tabloya git" istegi (bkz. DashboardProps.navigateToTableId).
   // confirmDiscardIfDirty() BILEREK cagrilmiyor: bir bildirime tiklamak acik bir kullanici
@@ -249,15 +274,20 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
   })();
 
   /** Kaydedilmemis degisiklik varken baska bir tabloya/gorunume gecmeden once onay ister. */
-  function confirmDiscardIfDirty(): boolean {
+  const confirmDiscardIfDirty = useCallback((): boolean => {
     return !isDirty || window.confirm(t("tabloDetail.confirmDiscardChanges"));
-  }
+  }, [isDirty, t]);
 
-  function handleSelectTablo(id: number) {
-    if (confirmDiscardIfDirty()) {
-      selectTable(id);
-    }
-  }
+  // useCallback: dogrudan TableSidebar'a onSelect olarak geciyor — bkz. yukaridaki selectTable
+  // yorumu, ayni sebep (kararli referans, binlerce satirin memo'suna zarar vermemek icin).
+  const handleSelectTablo = useCallback(
+    (id: number) => {
+      if (confirmDiscardIfDirty()) {
+        selectTable(id);
+      }
+    },
+    [confirmDiscardIfDirty, selectTable]
+  );
 
   /**
    * Her sekmeye GIRILDIGINDE (burada) ilgili veri tazelenir — component hic unmount olmadigi
@@ -429,14 +459,17 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
     }
   }
 
-  async function handleRenameSchema(id: number, name: string) {
-    try {
-      await renameSchemaHook(id, name);
-      notify(200, t("notifications.schemaRenamed"));
-    } catch (err) {
-      notifyFromError(notify, t, err, t("notifications.schemaRenameFailed"));
-    }
-  }
+  const handleRenameSchema = useCallback(
+    async (id: number, name: string) => {
+      try {
+        await renameSchemaHook(id, name);
+        notify(200, t("notifications.schemaRenamed"));
+      } catch (err) {
+        notifyFromError(notify, t, err, t("notifications.schemaRenameFailed"));
+      }
+    },
+    [renameSchemaHook, notify, t]
+  );
 
   /**
    * handleDeleteTablo ile ayni geri-alinabilir-silme deseni (bkz. oradaki aciklama) — ama burada
@@ -445,36 +478,41 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
    * ekstra bir onay zaten TableSidebar icinde (window.confirm ile, tablo sayisini gostererek)
    * gosteriliyor, burasi sadece asil silme/geri-alma mekanigini yonetiyor.
    */
-  function handleDeleteSchema(id: number) {
-    const tableIdsInSchema = new Set((tableSummariesBySchema[id] ?? []).map((tbl) => tbl.id));
-    setSchemasOptimistic((prev) => prev.filter((s) => s.id !== id));
-    setTableSummariesBySchema((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    if (selectedId !== null && tableIdsInSchema.has(selectedId)) {
-      clearSelection();
-    }
-
-    const timerId = window.setTimeout(async () => {
-      try {
-        await deleteSchema(id);
-      } catch (err) {
-        notifyFromError(notify, t, err, t("notifications.schemaDeleteFailed"));
-      } finally {
-        await refreshWorkspace();
+  const handleDeleteSchema = useCallback(
+    (id: number) => {
+      const tableIdsInSchema = new Set(
+        (tableSummariesBySchemaRef.current[id] ?? []).map((tbl) => tbl.id)
+      );
+      setSchemasOptimistic((prev) => prev.filter((s) => s.id !== id));
+      setTableSummariesBySchema((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      if (selectedIdRef.current !== null && tableIdsInSchema.has(selectedIdRef.current)) {
+        clearSelection();
       }
-    }, NOTIFICATION_DURATION_MS);
 
-    notify(204, t("notifications.schemaDeleted"), {
-      label: t("common.undo"),
-      onClick: () => {
-        window.clearTimeout(timerId);
-        refreshWorkspace();
-      },
-    });
-  }
+      const timerId = window.setTimeout(async () => {
+        try {
+          await deleteSchema(id);
+        } catch (err) {
+          notifyFromError(notify, t, err, t("notifications.schemaDeleteFailed"));
+        } finally {
+          await refreshWorkspace();
+        }
+      }, NOTIFICATION_DURATION_MS);
+
+      notify(204, t("notifications.schemaDeleted"), {
+        label: t("common.undo"),
+        onClick: () => {
+          window.clearTimeout(timerId);
+          refreshWorkspace();
+        },
+      });
+    },
+    [setSchemasOptimistic, clearSelection, notify, t, refreshWorkspace]
+  );
 
   /**
    * Geri alinabilir silme: backend'de gercek bir DROP TABLE calistigi icin, silindikten SONRA
@@ -524,19 +562,22 @@ export function Dashboard({ navigateToTableId, onNavigated }: DashboardProps = {
    * olmayan) bir tablo suruklendiyse, bugunku gibi aninda uygulanir (o tablo icin acik bir
    * duzenleme oturumu yok, ertelenecek bir sey de yok).
    */
-  async function handleChangeTableSchema(id: number, schemaId: number) {
-    if (draft && draft.tableId === id) {
-      setDraft((prev) => (prev ? { ...prev, schemaId } : prev));
-      return;
-    }
-    try {
-      await changeTableSchemaHook(id, schemaId);
-      await refreshWorkspace();
-      notify(200, t("notifications.tableSchemaChanged"));
-    } catch (err) {
-      notifyFromError(notify, t, err, t("notifications.tableSchemaChangeFailed"));
-    }
-  }
+  const handleChangeTableSchema = useCallback(
+    async (id: number, schemaId: number) => {
+      if (draftRef.current && draftRef.current.tableId === id) {
+        setDraft((prev) => (prev ? { ...prev, schemaId } : prev));
+        return;
+      }
+      try {
+        await changeTableSchemaHook(id, schemaId);
+        await refreshWorkspace();
+        notify(200, t("notifications.tableSchemaChanged"));
+      } catch (err) {
+        notifyFromError(notify, t, err, t("notifications.tableSchemaChangeFailed"));
+      }
+    },
+    [changeTableSchemaHook, refreshWorkspace, notify, t]
+  );
 
   async function handleCreateTag(name: string) {
     try {
