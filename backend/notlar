@@ -140,12 +140,59 @@ Ağustos 10:
 Son gün:
     1)README'ye mimari diyagramı + GIF demo — kod değil ama GitHub'da en çok etkiyi bu yapar. -> Git'e koymalık
     2)Bunu git'e koymayacaksın ama elinde bulunsun. ADR, Requirement Listesi, Dev task çıkarmaca. Test caseler vs. Yani bir yazılım projesinin sürecini belgeleştirelim
+    3)Kullandığımız teknolojilerin temelini, neyi çözdüğünü, örnek senaryolar, ve mülakatlarda junior-mid unvanı için neler sorulabileceği.
+    4)
 
 
 
 
+Ufuk ile beraber:
+2)Index olayına bak (+1)
+3)n+1 olayına bak (+1)
+4)equals/hashcode (+1)
+6)RabbitMQ -> Fan-out/Fan-in. (+1)
+5)docker-compose & docker hub (+1)
+1)1 tane entity, bir tane controller, 1 tane servis, 1 tane repository (+1)
+7)grafana (+1)
+8)Bean, Component, Service anotasyonları (+1)
+
+
+8)java primitive vs Object
+9)Async niye var threadpool nedir?
+
+
+Kitap -> Designing Data Intensive Applications
+
+
+21ms'den başlayıp 17'ye kadar düştü
+
+
+ Seq Scan on columns  (cost=0.00..10418.75 rows=10 width=38) (actual time=1.218..21.302 rows=10 loops=1)
+   Filter: (table_id = 25000)
+   Rows Removed by Filter: 500050
+   Buffers: shared hit=4168
+ Planning:
+   Buffers: shared hit=74 dirtied=1
+ Planning Time: 0.375 ms
+ Execution Time: 21.345 ms
+(8 rows)
+
+ Bitmap Heap Scan on columns  (cost=4.50..43.16 rows=10 width=38) (actual time=0.064..0.144 rows=10 loops=1)
+   Recheck Cond: (table_id = 25000)
+   Heap Blocks: exact=10
+   Buffers: shared hit=3 read=13
+   ->  Bitmap Index Scan on idx_column_table_id  (cost=0.00..4.50 rows=10 width=0) (actual time=0.048..0.049 rows=10 loops=1)
+         Index Cond: (table_id = 25000)
+         Buffers: shared hit=3 read=3
+ Planning:
+   Buffers: shared hit=84 read=5
+ Planning Time: 0.653 ms
+ Execution Time: 0.219 ms
 
 
 
-
-
+1)Zed, Herdr
+https://github.com/hqhq1025/skill-optimizer
+http://skills-rank.com/
+https://github.com/trending
+https://github.com/obra/superpowers

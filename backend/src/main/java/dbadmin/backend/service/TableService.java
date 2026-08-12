@@ -131,6 +131,28 @@ public class TableService {
     }
 
     /**
+     * SADECE OGRETICI/DEMO AMACLI — gercek uygulama akisinin bir parcasi degil, N+1 problemini
+     * canli gostermek icin var. Bilinclidir bir anti-pattern uygular: once tabloya ait kolon
+     * id'lerini TEK bir sorguyla ceker ({@link ColumnRepository#findIdsByTableId}), ardindan
+     * her id icin AYRI AYRI {@code columnRepository.findById(...)} cagirir — "id listesi al,
+     * sonra tek tek dongude sorgula" seklindeki klasik N+1 hatasi. N kolonlu bir tablo icin
+     * toplam 1 + N sorgu uretir (ornegin 5 kolon = 6 sorgu). Dogru yaklasim tek bir
+     * {@code columnRepository.findAllById(ids)} (tek bir {@code IN (...)} sorgusu) olurdu —
+     * bkz. TableRepository'deki {@code @EntityGraph} yorumlari, ayni sorunun tablo/kolon
+     * iliskisindeki gercek cozumu icin.
+     */
+    @Transactional(readOnly = true)
+    public List<DataColumn> listColumnsNPlusOneDemo(Long tableId) {
+        List<Long> columnIds = columnRepository.findIdsByTableId(tableId); // Sorgu 1
+        return columnIds.stream()
+                .map(columnId -> columnRepository.findById(columnId) // Sorgu 2..N+1: her kolon icin ayri!
+                        .orElseThrow(() -> new NotFoundException(
+                                "NOT_FOUND_COLUMN", "column not found: " + columnId,
+                                Map.of("id", String.valueOf(columnId)))))
+                .toList();
+    }
+
+    /**
      * Yeni tablo olusturur: once metadata (DataTable + DataColumn satirlari) DB'ye yazilir, sonra ayni
      * transaction icinde gercek {@code CREATE TABLE} calistirilir. DDL patlarsa metadata insert'i
      * de otomatik geri alinir — iki katman asla birbirinden kopmaz.

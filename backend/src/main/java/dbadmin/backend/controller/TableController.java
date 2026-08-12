@@ -95,6 +95,19 @@ public class TableController {
     }
 
     /**
+     * GET /api/tables/{id}/n-plus-one-demo — SADECE OGRETICI/DEMO AMACLI, gercek API'nin bir
+     * parcasi degil (Swagger'da da bilerek gizli tutuluyor, bkz. hidden=true). N+1 problemini
+     * canli gostermek icin var: {@link TableService#listColumnsNPlusOneDemo} bilinclidir kolon
+     * id'lerini tek sorguda cekip her birini AYRI bir sorguyla tekrar ceker. Bir tablonun 5
+     * kolonu varsa toplam 6 sorgu (1 + 5) atilir.
+     */
+    @Operation(hidden = true)
+    @GetMapping("/{id}/n-plus-one-demo")
+    public List<ColumnResponse> nPlusOneDemo(@PathVariable Long id) {
+        return tableService.listColumnsNPlusOneDemo(id).stream().map(ColumnResponse::from).toList();
+    }
+
+    /**
      * GET /api/tables/{id}/data — gercek Postgres tablosunun satirlarini sayfalanmis olarak
      * doner (requirement notu 7, "DBeaver'daki gibi Show Data"). Metadata (Tablo/Kolon) DEGIL,
      * {@code SELECT * FROM sema.tablo LIMIT ? OFFSET ?} calistirir — bkz. {@link TableDataService}.
