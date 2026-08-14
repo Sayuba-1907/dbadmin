@@ -1,88 +1,92 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 580" width="1400" height="580" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 800" width="1100" height="800" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>DBAdmin dual-write mechanism</title>
+  <desc>A table/column change flows from the browser into one Spring Boot transactional method. The name is validated once, then two writers run: Hibernate/JPA writes metadata rows (tablo, kolon, tag), and a JdbcTemplate DDL executor builds and runs the real CREATE/ALTER/DROP TABLE statement by string concatenation. Both land on the same PostgreSQL database. The DDL is not covered by the transaction's rollback the way the metadata write is.</desc>
+
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    <marker id="arrow-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1e293b"/>
+    </marker>
+    <marker id="arrow-jpa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4f46e5"/>
+    </marker>
+    <marker id="arrow-ddl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d97706"/>
     </marker>
   </defs>
 
-  <rect x="0" y="0" width="1400" height="580" fill="#ffffff"/>
+  <rect x="0" y="0" width="1100" height="800" fill="#ffffff"/>
 
-  <text x="700" y="30" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">DBAdmin — Architecture</text>
+  <text x="550" y="26" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b">The dual write</text>
+  <text x="550" y="46" text-anchor="middle" font-size="12" fill="#64748b">Every table/column change in DBAdmin writes twice, from inside one transaction</text>
 
-  <!-- group containers -->
-  <rect x="60" y="330" width="580" height="200" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4"/>
-  <text x="350" y="356" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="1" fill="#475569">DATA</text>
-
-  <rect x="680" y="330" width="660" height="200" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6 4"/>
-  <text x="1010" y="356" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="1" fill="#475569">OBSERVABILITY</text>
-
-  <!-- arrows: backend fan-out (drawn first, under boxes) -->
-  <g stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
-    <path d="M590,254 L110,380"/>
-    <path d="M626.7,254 L280,380"/>
-    <path d="M663.3,254 L420,380"/>
-    <path d="M700,254 L560,380"/>
-    <path d="M736.7,254 L880,380"/>
-    <path d="M773.3,254 L1005,380"/>
-    <path d="M810,254 L1130,380"/>
-    <path d="M700,114 L700,190"/>
-    <path d="M810,425 L825,425"/>
-    <path d="M880,470 Q1067,510 1200,470"/>
-    <path d="M1005,470 Q1120,505 1200,470"/>
-    <path d="M1130,470 Q1175,495 1200,470"/>
-  </g>
-
-  <text x="700" y="156" text-anchor="middle" font-size="12" fill="#334155" style="paint-order: stroke; stroke: #ffffff; stroke-width: 5px;">REST /api</text>
+  <!-- transaction boundary -->
+  <rect x="40" y="140" width="1020" height="360" rx="18" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <rect x="120" y="128" width="260" height="24" rx="6" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="250" y="144" text-anchor="middle" font-size="11" fill="#64748b">single @Transactional method</text>
 
   <!-- Browser -->
-  <rect x="590" y="50" width="220" height="64" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
-  <text x="700" y="76" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Browser</text>
-  <text x="700" y="94" text-anchor="middle" font-size="11" fill="#475569">React + TypeScript · :3000</text>
+  <rect x="450" y="66" width="200" height="50" rx="10" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
+  <text x="550" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">Browser</text>
+  <text x="550" y="104" text-anchor="middle" font-size="10" fill="#64748b">edits a table</text>
+
+  <line x1="550" y1="116" x2="550" y2="159" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrow-ink)"/>
+  <text x="568" y="141" font-size="10" fill="#64748b">REST /api</text>
 
   <!-- Backend -->
-  <rect x="590" y="190" width="220" height="64" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
-  <text x="700" y="216" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">Spring Boot Backend</text>
-  <text x="700" y="234" text-anchor="middle" font-size="11" fill="#475569">Java 21 · :8081</text>
+  <rect x="400" y="160" width="300" height="56" rx="10" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
+  <text x="550" y="184" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">Spring Boot backend</text>
+  <text x="550" y="200" text-anchor="middle" font-size="10" fill="#64748b">TabloService — one write, one method</text>
 
-  <!-- Data boxes -->
-  <rect x="80" y="380" width="120" height="90" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
-  <text x="140" y="402" text-anchor="middle" font-size="12.5" font-weight="700" fill="#065f46">PostgreSQL 15</text>
-  <text x="140" y="418" text-anchor="middle" font-size="10" fill="#475569">JPA metadata</text>
-  <text x="140" y="431" text-anchor="middle" font-size="10" fill="#475569">+ JdbcTemplate DDL</text>
+  <line x1="550" y1="216" x2="550" y2="259" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrow-ink)"/>
+  <text x="568" y="241" font-size="10" fill="#64748b">validated name</text>
 
-  <rect x="220" y="380" width="120" height="90" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
-  <text x="280" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#065f46">Redis</text>
-  <text x="280" y="428" text-anchor="middle" font-size="10" fill="#475569">cache</text>
+  <!-- Validation gate -->
+  <rect x="330" y="260" width="440" height="66" rx="10" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="550" y="284" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">NameValidator</text>
+  <text x="550" y="300" text-anchor="middle" font-size="9.5" fill="#475569">2–30 chars · must not start uppercase · letters / digits / underscore only</text>
+  <text x="550" y="314" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">the only guard before the DDL string below gets built</text>
 
-  <rect x="360" y="380" width="120" height="90" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
-  <text x="420" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#065f46">RabbitMQ</text>
-  <text x="420" y="428" text-anchor="middle" font-size="10" fill="#475569">notifications</text>
+  <!-- fan-out -->
+  <line x1="450" y1="326" x2="195" y2="371" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arrow-jpa)"/>
+  <line x1="650" y1="326" x2="915" y2="371" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow-ddl)"/>
 
-  <rect x="500" y="380" width="120" height="90" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
-  <text x="560" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#065f46">MinIO</text>
-  <text x="560" y="428" text-anchor="middle" font-size="10" fill="#475569">audit backups</text>
+  <!-- JPA node -->
+  <rect x="60" y="372" width="260" height="118" rx="10" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="190" y="396" text-anchor="middle" font-size="13" font-weight="700" fill="#3730a3">Hibernate / JPA</text>
+  <text x="190" y="412" text-anchor="middle" font-size="10" fill="#64748b">org.hibernate.SQL</text>
 
-  <!-- Observability boxes -->
-  <rect x="700" y="380" width="110" height="90" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="755" y="406" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">postgres_</text>
-  <text x="755" y="420" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">exporter</text>
-  <text x="755" y="436" text-anchor="middle" font-size="10" fill="#475569">db stats</text>
+  <rect x="67" y="426" width="74" height="24" rx="12" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1"/>
+  <text x="104" y="442" text-anchor="middle" font-size="9.5" fill="#3730a3">tablo</text>
+  <rect x="153" y="426" width="74" height="24" rx="12" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1"/>
+  <text x="190" y="442" text-anchor="middle" font-size="9.5" fill="#3730a3">kolon</text>
+  <rect x="239" y="426" width="74" height="24" rx="12" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1"/>
+  <text x="276" y="442" text-anchor="middle" font-size="9.5" fill="#3730a3">tag</text>
 
-  <rect x="825" y="380" width="110" height="90" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="880" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#92400e">Prometheus</text>
-  <text x="880" y="428" text-anchor="middle" font-size="10" fill="#475569">scrapes exporters</text>
+  <text x="190" y="472" text-anchor="middle" font-size="9" fill="#64748b">writes/updates metadata rows</text>
 
-  <rect x="950" y="380" width="110" height="90" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="1005" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#92400e">Tempo</text>
-  <text x="1005" y="428" text-anchor="middle" font-size="10" fill="#475569">traces</text>
+  <!-- DDL node -->
+  <rect x="780" y="372" width="280" height="118" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+  <text x="920" y="396" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">JdbcTemplate executor</text>
+  <text x="920" y="412" text-anchor="middle" font-size="9.5" fill="#64748b">TableDdlExecutor / SchemaDdlExecutor</text>
 
-  <rect x="1075" y="380" width="110" height="90" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="1130" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#92400e">Loki</text>
-  <text x="1130" y="428" text-anchor="middle" font-size="10" fill="#475569">logs</text>
+  <rect x="790" y="424" width="260" height="50" rx="6" fill="#1e293b"/>
+  <text x="800" y="442" font-size="9" font-family="Consolas, Monaco, monospace" fill="#fbbf24">ALTER TABLE "urunler"</text>
+  <text x="800" y="458" font-size="9" font-family="Consolas, Monaco, monospace" fill="#fbbf24">ADD COLUMN "urun_adi" text;</text>
 
-  <rect x="1200" y="380" width="110" height="90" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="1255" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#92400e">Grafana</text>
-  <text x="1255" y="428" text-anchor="middle" font-size="10" fill="#475569">dashboards</text>
+  <!-- convergence -->
+  <line x1="190" y1="490" x2="465" y2="587" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arrow-jpa)"/>
+  <line x1="920" y1="490" x2="635" y2="587" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow-ddl)"/>
 
-  <text x="700" y="565" text-anchor="middle" font-size="12" font-style="italic" fill="#64748b">Every write happens twice: JPA metadata + real Postgres DDL, in one transaction.</text>
+  <!-- Postgres cylinder -->
+  <rect x="430" y="588" width="240" height="76" fill="#334155" stroke="#1e293b" stroke-width="1.5"/>
+  <ellipse cx="550" cy="664" rx="120" ry="16" fill="#334155" stroke="#1e293b" stroke-width="1.5"/>
+  <ellipse cx="550" cy="588" rx="120" ry="16" fill="#3f4f66" stroke="#1e293b" stroke-width="1.5"/>
+  <text x="550" y="623" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">PostgreSQL 15</text>
+  <text x="550" y="641" text-anchor="middle" font-size="10" fill="#cbd5e1">one real database</text>
+
+  <text x="550" y="702" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">Postgres DDL isn't covered by the transaction's rollback the way the metadata write is —</text>
+  <text x="550" y="718" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">if the DDL succeeds and something fails after, it stays applied.</text>
+
+  <line x1="140" y1="746" x2="960" y2="746" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="550" y="766" text-anchor="middle" font-size="11" fill="#94a3b8">Also talks to: Redis (cache) · RabbitMQ (notifications) · MinIO (audit backups) · Prometheus / Grafana / Tempo / Loki (observability)</text>
 </svg>
