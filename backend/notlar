@@ -196,3 +196,18 @@ https://github.com/hqhq1025/skill-optimizer
 http://skills-rank.com/
 https://github.com/trending
 https://github.com/obra/superpowers
+
+
+14 Ağustos:
+
+1)Tech Stack -> Redis, RabbitMQ eklenebilir. Grafana, prometheus tarafı da eklenebilir
+2) http://localhost:8081/api -> ayaktayken açılmıyor
+3)Otel ile loglamadan bahsedilebilir
+4)Running without Docker (local development) -> dockersız kaldırmazsın
+5)ADR'lar -> kritik kararlar olsun. Niye redis veya rabbitmq konuldu. Playwright vs.
+
+Şema:
+1)Redis, RabbitMQ, Minio
+2)Grafanaya kadarki süreç (OTel de dahil edilsin.
+4)Projeye koyduğun teknolojilerinn neden konduğunu bilmen lazım.
+5)e2e,unit,integration testleri arasındaki farklar neler?

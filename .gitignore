@@ -14,3 +14,7 @@
 # assignment brief (not part of the codebase)
 DBAdmin_Assignment_INTERN.docx
 .~lock.*#
+
+# retroactive SDLC docs (requirements/ADR/backlog/test-case catalog) — for personal
+# reference only, not part of the codebase
+process-docs/

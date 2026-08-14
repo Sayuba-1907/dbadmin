@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 640" width="760" height="640" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>MinIO object storage mechanism</title>
+  <desc>Three unrelated write paths converge on MinIO, an S3-compatible object store: an admin-triggered audit log backup as a JSON dump (fail-closed — database rows are only deleted after the upload succeeds), a CSV export of table data, and a user's avatar upload. Each concern gets its own bucket.</desc>
+
+  <defs>
+    <marker id="arrow-minio" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0891b2"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="640" fill="#ffffff"/>
+  <text x="380" y="30" text-anchor="middle" font-size="19" font-weight="700" fill="#1e293b">MinIO — object storage</text>
+  <text x="380" y="50" text-anchor="middle" font-size="11.5" fill="#64748b">S3-compatible — same client code would work against real AWS S3</text>
+
+  <rect x="60" y="90" width="220" height="46" rx="8" fill="#ffffff" stroke="#1e293b" stroke-width="1.4"/>
+  <text x="170" y="112" text-anchor="middle" font-size="10.5" fill="#1e293b">ADMIN: back up audit log</text>
+  <text x="170" y="127" text-anchor="middle" font-size="9" fill="#64748b">(then DB rows are deleted)</text>
+
+  <rect x="270" y="200" width="220" height="46" rx="8" fill="#ffffff" stroke="#1e293b" stroke-width="1.4"/>
+  <text x="380" y="222" text-anchor="middle" font-size="10.5" fill="#1e293b">Any user: export table data</text>
+  <text x="380" y="237" text-anchor="middle" font-size="9" fill="#64748b">as CSV</text>
+
+  <rect x="480" y="90" width="220" height="46" rx="8" fill="#ffffff" stroke="#1e293b" stroke-width="1.4"/>
+  <text x="590" y="112" text-anchor="middle" font-size="10.5" fill="#1e293b">User: upload avatar</text>
+  <text x="590" y="127" text-anchor="middle" font-size="9" fill="#64748b">profile picture</text>
+
+  <line x1="170" y1="136" x2="240" y2="360" stroke="#0891b2" stroke-width="1.4" marker-end="url(#arrow-minio)"/>
+  <text x="130" y="250" font-size="9.5" fill="#0e7490" font-style="italic">JSON dump</text>
+  <text x="130" y="264" font-size="8.5" fill="#64748b" font-style="italic">fail-closed: DB kept</text>
+  <text x="130" y="276" font-size="8.5" fill="#64748b" font-style="italic">if the upload fails</text>
+
+  <line x1="380" y1="246" x2="380" y2="359" stroke="#0891b2" stroke-width="1.4" marker-end="url(#arrow-minio)"/>
+  <text x="392" y="300" font-size="9.5" fill="#0e7490" font-style="italic">CSV bytes</text>
+
+  <line x1="590" y1="136" x2="520" y2="360" stroke="#0891b2" stroke-width="1.4" marker-end="url(#arrow-minio)"/>
+  <text x="565" y="250" font-size="9.5" fill="#0e7490" font-style="italic">image bytes</text>
+
+  <rect x="280" y="360" width="200" height="72" fill="#0891b2" stroke="#0e7490" stroke-width="1.4"/>
+  <ellipse cx="380" cy="432" rx="100" ry="14" fill="#0891b2" stroke="#0e7490" stroke-width="1.4"/>
+  <ellipse cx="380" cy="360" rx="100" ry="14" fill="#22a9c4" stroke="#0e7490" stroke-width="1.4"/>
+  <text x="380" y="398" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">MinIO</text>
+  <text x="380" y="415" text-anchor="middle" font-size="10" fill="#e0f7fa">one bucket per concern</text>
+
+  <line x1="140" y1="500" x2="620" y2="500" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="380" y="524" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">Backups, exports and avatars share the same storage mechanism</text>
+  <text x="380" y="542" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">but never the same bucket — no accidental cross-concern access</text>
+</svg>

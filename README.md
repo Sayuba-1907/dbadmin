@@ -9,13 +9,16 @@ metadata and the actual database schema always stay in sync.
 
 ## Stack
 
-| Layer      | Tech                                              |
-|------------|----------------------------------------------------|
-| Database   | PostgreSQL 15                                      |
-| Backend    | Spring Boot, Java 21, Spring Data JPA, Maven       |
-| Frontend   | React + TypeScript                                 |
-| Testing    | JUnit, Testcontainers (real Postgres, no mocks/H2) |
-| Containers | Docker, Docker Compose                             |
+| Layer         | Tech                                              |
+|---------------|----------------------------------------------------|
+| Database      | PostgreSQL 15                                      |
+| Backend       | Spring Boot, Java 21, Spring Data JPA, Maven       |
+| Frontend      | React + TypeScript                                 |
+| Cache         | Redis                                              |
+| Messaging     | RabbitMQ                                           |
+| Observability | Prometheus, Grafana                                |
+| Testing       | JUnit, Testcontainers (real Postgres, no mocks/H2) |
+| Containers    | Docker, Docker Compose                             |
 
 ## Architecture
 
@@ -32,6 +35,19 @@ reports, audit backups) — see [`DECISIONS.md`](./DECISIONS.md) for why each pi
 
 ![DBAdmin architecture: browser talks to the Spring Boot backend, which dual-writes to Postgres (JPA metadata + JdbcTemplate DDL) and talks to Redis/RabbitMQ/MinIO, while exporting metrics/traces/logs to Prometheus/Tempo/Loki, visualized in Grafana](./docs/architecture.svg)
 
+### Supporting services, one mechanism at a time
+
+Each of these was added to learn the technology (per the mentor's notes), not because the
+project's load demanded it — see [`DECISIONS.md`](./DECISIONS.md) for the full "why".
+
+![Redis role-cache mechanism: JwtAuthenticationFilter checks a Redis Hash for the user's role, falls back to Postgres on a miss and writes through with a 30-minute TTL, evicts explicitly on role change, and fails open if Redis is unreachable](./docs/redis-flow.svg)
+
+![RabbitMQ notification delivery: a table change by a non-owner publishes to a queue only on transaction commit, a listener consumes it and pushes over WebSocket to the owner, with retry and a dead letter queue on failure](./docs/rabbitmq-flow.svg)
+
+![MinIO object storage: three independent upload paths - audit log backup as JSON (fail-closed), CSV table export, and avatar upload - each into its own bucket](./docs/minio-flow.svg)
+
+![Observability pipeline: the backend exports traces to Tempo and trace-correlated structured logs to Loki directly, with no OTel Collector in between; Prometheus pulls metrics from /actuator/prometheus and from postgres_exporter; Grafana queries all three](./docs/observability-flow.svg)
+
 ### Demo
 
 ![DBAdmin demo: logging in and creating a table, which dual-writes metadata and a real Postgres table](./docs/demo.gif)
@@ -39,7 +55,6 @@ reports, audit backups) — see [`DECISIONS.md`](./DECISIONS.md) for why each pi
 ## Prerequisites
 
 - Docker & Docker Compose
-- (Only if running services outside Docker) Java 21 + Maven, Node.js for the frontend
 
 ## Setup
 
@@ -64,7 +79,7 @@ reports, audit backups) — see [`DECISIONS.md`](./DECISIONS.md) for why each pi
    ```
    This is the only command needed — it brings up all six services, **including the frontend**
    (built by `frontend/Dockerfile` and served by nginx). `npm start` is not part of running the
-   app; see "Running without Docker" below for when it is still useful.
+   app.
 
    Naming services (`docker compose up -d db backend`) starts *only* those — a frequent reason
    for "the frontend didn't come up". After changing any source file, `--build` is required:
@@ -73,7 +88,7 @@ reports, audit backups) — see [`DECISIONS.md`](./DECISIONS.md) for why each pi
 
 4. Open the app:
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8081/api
+   - Swagger UI: http://localhost:8081/swagger-ui.html
    - Postgres: `localhost:${DB_PORT}` (default `5433`, mapped so it doesn't collide with a local Postgres install on 5432)
 
 5. Stop everything:
@@ -81,24 +96,6 @@ reports, audit backups) — see [`DECISIONS.md`](./DECISIONS.md) for why each pi
    docker compose down       # keeps data (named volume `pgdata`)
    docker compose down -v    # also wipes the database
    ```
-
-## Running without Docker (local development)
-
-These are development conveniences, not how the app is meant to be run — the deliverable is
-`docker compose up -d --build` above.
-
-- **Backend**: needs a Postgres instance reachable at the URL/credentials in
-  `backend/src/main/resources/application.properties` (or via `SPRING_DATASOURCE_*` env vars),
-  then from `backend/`: `./mvnw spring-boot:run`
-- **Frontend**: from `frontend/`: `npm install && npm start` — CRA's dev server, worth using while
-  writing UI code because of hot reload. It listens on the same port 3000 as the frontend
-  container, so **stop one before starting the other** (`docker compose stop frontend`), otherwise
-  the port is taken and the container fails to publish it.
-
-  Note there is no dev-server proxy: `frontend/src/api/client.ts` calls `http://localhost:8081`
-  directly and the backend allows that origin via CORS (`config/WebConfig.java`). Both the dev
-  server and the nginx container reach the backend the same way — through the port published on
-  the host, not over the compose network. Changing the backend port means changing both files.
 
 ## Running tests
 
@@ -150,14 +147,5 @@ Postgres `timestamp`); it is fixed at creation and cannot be changed afterwards.
 Validation failures and conflicts return a consistent JSON error body (status, error, message,
 machine-readable `code`, and a `details` map) via a centralized `@RestControllerAdvice`. The
 frontend shows these as colour-coded notifications (green/amber/red by HTTP status).
-
-## Project structure
-
-```
-backend/    Spring Boot app (entity / repository / service / controller / dto / ddl / validation)
-frontend/   React + TypeScript app (dashboard, table sidebar, column detail, i18n TR/EN)
-DECISIONS.md   ADR-lite decision journal — what was chosen, what was ruled out, and why
-docker-compose.yml   db + backend + frontend, one container each
-```
 
 See [`DECISIONS.md`](./DECISIONS.md) for the reasoning behind notable design choices.
