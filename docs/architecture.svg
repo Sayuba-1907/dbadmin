@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 800" width="1100" height="800" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
   <title>DBAdmin dual-write mechanism</title>
-  <desc>A table/column change flows from the browser into one Spring Boot transactional method. The name is validated once, then two writers run: Hibernate/JPA writes metadata rows (tablo, kolon, tag), and a JdbcTemplate DDL executor builds and runs the real CREATE/ALTER/DROP TABLE statement by string concatenation. Both land on the same PostgreSQL database. The DDL is not covered by the transaction's rollback the way the metadata write is.</desc>
+  <desc>A table/column change flows from the browser into one Spring Boot transactional method. The name is validated once, then two writers run: Hibernate/JPA writes metadata rows (tables, columns, tag), and a JdbcTemplate DDL executor builds and runs the real CREATE/ALTER/DROP TABLE statement by string concatenation. Both land on the same PostgreSQL database. The DDL is not covered by the transaction's rollback the way the metadata write is.</desc>
 
   <defs>
     <marker id="arrow-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -35,7 +35,7 @@
   <!-- Backend -->
   <rect x="400" y="160" width="300" height="56" rx="10" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
   <text x="550" y="184" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">Spring Boot backend</text>
-  <text x="550" y="200" text-anchor="middle" font-size="10" fill="#64748b">TabloService — one write, one method</text>
+  <text x="550" y="200" text-anchor="middle" font-size="10" fill="#64748b">TableService — one write, one method</text>
 
   <line x1="550" y1="216" x2="550" y2="259" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrow-ink)"/>
   <text x="568" y="241" font-size="10" fill="#64748b">validated name</text>
@@ -56,9 +56,9 @@
   <text x="190" y="412" text-anchor="middle" font-size="10" fill="#64748b">org.hibernate.SQL</text>
 
   <rect x="67" y="426" width="74" height="24" rx="12" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1"/>
-  <text x="104" y="442" text-anchor="middle" font-size="9.5" fill="#3730a3">tablo</text>
+  <text x="104" y="442" text-anchor="middle" font-size="9.5" fill="#3730a3">tables</text>
   <rect x="153" y="426" width="74" height="24" rx="12" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1"/>
-  <text x="190" y="442" text-anchor="middle" font-size="9.5" fill="#3730a3">kolon</text>
+  <text x="190" y="442" text-anchor="middle" font-size="9.5" fill="#3730a3">columns</text>
   <rect x="239" y="426" width="74" height="24" rx="12" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1"/>
   <text x="276" y="442" text-anchor="middle" font-size="9.5" fill="#3730a3">tag</text>
 
@@ -70,8 +70,8 @@
   <text x="920" y="412" text-anchor="middle" font-size="9.5" fill="#64748b">TableDdlExecutor / SchemaDdlExecutor</text>
 
   <rect x="790" y="424" width="260" height="50" rx="6" fill="#1e293b"/>
-  <text x="800" y="442" font-size="9" font-family="Consolas, Monaco, monospace" fill="#fbbf24">ALTER TABLE "urunler"</text>
-  <text x="800" y="458" font-size="9" font-family="Consolas, Monaco, monospace" fill="#fbbf24">ADD COLUMN "urun_adi" text;</text>
+  <text x="800" y="442" font-size="9" font-family="Consolas, Monaco, monospace" fill="#fbbf24">ALTER TABLE "products"</text>
+  <text x="800" y="458" font-size="9" font-family="Consolas, Monaco, monospace" fill="#fbbf24">ADD COLUMN "price" numeric;</text>
 
   <!-- convergence -->
   <line x1="190" y1="490" x2="465" y2="587" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arrow-jpa)"/>
