@@ -17,6 +17,63 @@ metadata and the actual database schema always stay in sync.
 | Testing    | JUnit, Testcontainers (real Postgres, no mocks/H2) |
 | Containers | Docker, Docker Compose                             |
 
+## Architecture
+
+The defining property of this app: **every write happens twice.** Creating a table (or
+adding/renaming/deleting a column) writes metadata rows (`Tablo`/`Kolon`) through Hibernate *and*
+runs the matching `CREATE`/`ALTER`/`DROP TABLE` against Postgres through a hand-built `JdbcTemplate`
+executor, in the same `@Transactional` method. The two must never drift apart — see
+[`CLAUDE.md`](./CLAUDE.md) for the consequences of that (SQL logging, injection surface,
+non-transactional DDL).
+
+Everything besides the db/backend/frontend trio is observability or infra plumbing added while
+working through the assignment's stretch goals (indexing, N+1, async notifications, scheduled
+reports, audit backups) — see [`DECISIONS.md`](./DECISIONS.md) for why each piece was added.
+
+```mermaid
+flowchart LR
+    subgraph client["Browser"]
+        UI["React + TypeScript\n:3000"]
+    end
+
+    subgraph app["Application"]
+        BE["Spring Boot backend\n:8081"]
+    end
+
+    subgraph data["Data"]
+        PG[("PostgreSQL 15\nmetadata + real tables")]
+        Redis[("Redis\ncache")]
+        RMQ["RabbitMQ\nnotification queue"]
+        Minio[("MinIO\naudit log backups")]
+    end
+
+    subgraph obs["Observability"]
+        Prom["Prometheus"]
+        Graf["Grafana"]
+        Tempo["Tempo\ntraces"]
+        Loki["Loki\nlogs"]
+        PgExp["postgres_exporter"]
+    end
+
+    UI -- "REST /api" --> BE
+    BE -- "JPA metadata writes\n(Tablo/Kolon/Tag)" --> PG
+    BE -- "JdbcTemplate real DDL\nCREATE/ALTER/DROP TABLE" --> PG
+    BE --> Redis
+    BE --> RMQ
+    BE --> Minio
+    BE -- "spans" --> Tempo
+    BE -- "logs" --> Loki
+    BE -- "metrics" --> Prom
+    PgExp -- "db metrics" --> Prom
+    Prom --> Graf
+    Tempo --> Graf
+    Loki --> Graf
+```
+
+### Demo
+
+![DBAdmin demo: logging in and creating a table, which dual-writes metadata and a real Postgres table](./docs/demo.gif)
+
 ## Prerequisites
 
 - Docker & Docker Compose
