@@ -30,45 +30,7 @@ Everything besides the db/backend/frontend trio is observability or infra plumbi
 working through the assignment's stretch goals (indexing, N+1, async notifications, scheduled
 reports, audit backups) — see [`DECISIONS.md`](./DECISIONS.md) for why each piece was added.
 
-```mermaid
-flowchart LR
-    subgraph client["Browser"]
-        UI["React + TypeScript\n:3000"]
-    end
-
-    subgraph app["Application"]
-        BE["Spring Boot backend\n:8081"]
-    end
-
-    subgraph data["Data"]
-        PG[("PostgreSQL 15\nmetadata + real tables")]
-        Redis[("Redis\ncache")]
-        RMQ["RabbitMQ\nnotification queue"]
-        Minio[("MinIO\naudit log backups")]
-    end
-
-    subgraph obs["Observability"]
-        Prom["Prometheus"]
-        Graf["Grafana"]
-        Tempo["Tempo\ntraces"]
-        Loki["Loki\nlogs"]
-        PgExp["postgres_exporter"]
-    end
-
-    UI -- "REST /api" --> BE
-    BE -- "JPA metadata writes\n(Tablo/Kolon/Tag)" --> PG
-    BE -- "JdbcTemplate real DDL\nCREATE/ALTER/DROP TABLE" --> PG
-    BE --> Redis
-    BE --> RMQ
-    BE --> Minio
-    BE -- "spans" --> Tempo
-    BE -- "logs" --> Loki
-    BE -- "metrics" --> Prom
-    PgExp -- "db metrics" --> Prom
-    Prom --> Graf
-    Tempo --> Graf
-    Loki --> Graf
-```
+![DBAdmin architecture: browser talks to the Spring Boot backend, which dual-writes to Postgres (JPA metadata + JdbcTemplate DDL) and talks to Redis/RabbitMQ/MinIO, while exporting metrics/traces/logs to Prometheus/Tempo/Loki, visualized in Grafana](./docs/architecture.svg)
 
 ### Demo
 
